@@ -5,6 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 export function UsersPage() {
   return (
@@ -14,11 +16,16 @@ export function UsersPage() {
           <CardTitle className="text-3xl">👥 Users</CardTitle>
           <CardDescription>User management coming soon</CardDescription>
         </CardHeader>
-        <CardContent className="text-center">
+        <CardContent className="text-center space-y-4">
           <p className="text-muted-foreground">
             This page will contain user management features including user
             profiles, permissions, and account settings.
           </p>
+          <div className="pt-4">
+            <Button asChild>
+              <Link to="/users/1">View Sample User Profile</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
