@@ -1,22 +1,21 @@
-import "./App.css";
-import { AppLayout } from "./components/layout/app-layout";
+import { Routes, Route } from "react-router-dom";
+import { AppLayout } from "./layouts/AppLayout";
+import { DashboardPage } from "./pages/DashboardPage";
+import { UsersPage } from "./pages/UsersPage";
+import { FormsPage } from "./pages/FormsPage";
 import { ThemeProvider } from "./components/theme-provider";
 
-function App() {
+export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="rems-ui-theme">
       <AppLayout>
-        <div className="px-4 lg:px-6">
-          <div className="flex flex-col items-center justify-center min-h-96">
-            <h1 className="text-3xl font-bold mb-4">Welcome to REMS</h1>
-            <p className="text-muted-foreground">
-              Real Estate Management System
-            </p>
-          </div>
-        </div>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/forms" element={<FormsPage />} />
+        </Routes>
       </AppLayout>
     </ThemeProvider>
   );
 }
-
-export default App;

@@ -1,22 +1,14 @@
-"use client";
-
 import * as React from "react";
 import {
-  IconBuilding,
+  IconChartBar,
+  IconDashboard,
   IconFileDescription,
-  IconUsers,
-  IconDatabase,
-  IconReport,
-  IconFileWord,
-  IconSettings,
-  IconHelp,
-  IconSearch,
+  IconFolder,
   IconInnerShadowTop,
+  IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -36,53 +28,29 @@ const data = {
   },
   navMain: [
     {
-      title: "Overview",
-      url: "#",
-      icon: IconFileDescription,
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: IconDashboard,
+    },
+    {
+      title: "Users",
+      url: "/users",
+      icon: IconUsers,
     },
     {
       title: "Forms",
-      url: "#",
-      icon: IconBuilding,
+      url: "/forms",
+      icon: IconFileDescription,
     },
     {
-      title: "Candidates",
+      title: "Analytics",
       url: "#",
-      icon: IconUsers,
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
+      icon: IconChartBar,
     },
     {
-      title: "Get Help",
+      title: "Projects",
       url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
+      icon: IconFolder,
     },
   ],
 };
@@ -99,7 +67,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="#">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Tatweer</span>
+                <span className="text-base font-semibold">Acme Inc.</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -107,8 +75,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
