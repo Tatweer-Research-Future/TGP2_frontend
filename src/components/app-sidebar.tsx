@@ -20,11 +20,35 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+// Sample users to demonstrate consistent avatar assignment
+const users = [
+  {
+    name: "Sarah Johnson",
+    email: "sarah.johnson@example.com",
+  },
+  {
+    name: "Alex Chen",
+    email: "alex.chen@example.com",
+  },
+  {
+    name: "Maria Rodriguez",
+    email: "maria@example.com",
+  },
+  {
+    name: "John Smith",
+    email: "john.smith@example.com",
+  },
+];
+
+// Get a random user from the sample users
+// In a real app, this would be your authenticated user
+const randomUser = users[Math.floor(Math.random() * users.length)] || users[0];
+
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: randomUser.name,
+    email: randomUser.email,
+    // No avatar provided - our ConsistentAvatar component will assign one
   },
   navMain: [
     {
