@@ -24,8 +24,8 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/users" element={<UsersPage />} />
-                <Route path="/users/:id" element={<UserDetailPage />} />
+                <Route path="/candidates" element={<UsersPage />} />
+                <Route path="/candidates/:id" element={<UserDetailPage />} />
                 <Route path="/forms" element={<FormsPage />} />
                 <Route path="/summary" element={<SummaryPage />} />
               </Routes>

@@ -14,15 +14,18 @@ type Props = {
 const statusMeta = {
   not_interviewed: {
     label: "Not Interviewed",
-    className: "bg-gray-100 text-gray-800 border-gray-200",
+    className: "bg-red-50 text-red-700 border-red-200",
+    dotClass: "bg-red-500",
   },
   in_progress: {
     label: "In Progress",
-    className: "bg-amber-100 text-amber-800 border-amber-200",
+    className: "bg-slate-100 text-slate-700 border-slate-200",
+    dotClass: "bg-slate-500",
   },
   interviewed: {
     label: "Interviewed",
-    className: "bg-emerald-600 text-white border-transparent",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dotClass: "bg-emerald-500",
   },
 } as const;
 
@@ -44,7 +47,10 @@ export function CandidateCard({ candidate }: Props) {
               {candidate.fullName}
             </CardTitle>
             <div className="mt-2">
-              <Badge className={meta.className}>{meta.label}</Badge>
+              <Badge className={meta.className}>
+                <span className={`inline-block size-2 rounded-full ${meta.dotClass}`} />
+                {meta.label}
+              </Badge>
             </div>
           </div>
           <div className="text-right">
@@ -73,7 +79,7 @@ export function CandidateCard({ candidate }: Props) {
       </CardContent>
       <CardFooter className="justify-end">
         <Button asChild size="sm" variant="outline">
-          <Link to={`/users/${candidate.id}`}>
+          <Link to={`/candidates/${candidate.id}`}>
             <IconEye className="size-4" /> View
           </Link>
         </Button>
