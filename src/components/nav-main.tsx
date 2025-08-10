@@ -27,7 +27,7 @@ export function NavMain({
           {items.map((item) => {
             const isActive =
               location.pathname === item.url ||
-              (location.pathname === "/" && item.url === "/dashboard");
+              (location.pathname === "/" && item.url === "/overview");
 
             return (
               <SidebarMenuItem key={item.title}>
