@@ -39,18 +39,21 @@ import { candidates as allCandidates } from "@/lib/candidates";
 const statusMeta = {
   not_interviewed: {
     label: "Not Interviewed",
-    className: "bg-red-50 text-red-700 border-red-200",
-    dotClass: "bg-red-500",
+    className:
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
+    dotClass: "bg-red-500 dark:bg-red-400",
   },
   in_progress: {
     label: "In Progress",
-    className: "bg-slate-100 text-slate-700 border-slate-200",
-    dotClass: "bg-slate-500",
+    className:
+      "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600",
+    dotClass: "bg-slate-500 dark:bg-slate-300",
   },
   interviewed: {
     label: "Interviewed",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    dotClass: "bg-emerald-500",
+    className:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
+    dotClass: "bg-emerald-500 dark:bg-emerald-400",
   },
 } as const;
 
