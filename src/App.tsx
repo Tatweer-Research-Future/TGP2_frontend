@@ -6,6 +6,7 @@ import { UserDetailPage } from "./pages/UserDetailPage";
 import { FormsPage } from "./pages/FormsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ThemeProvider } from "./components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           }
         />
       </Routes>
+      <Toaster richColors position="top-right" />
     </ThemeProvider>
   );
 }
