@@ -3,7 +3,6 @@ import {
   IconChartBar,
   IconDashboard,
   IconFileDescription,
-  IconFolder,
   IconInnerShadowTop,
   IconUsers,
 } from "@tabler/icons-react";
@@ -67,14 +66,9 @@ const data = {
       icon: IconFileDescription,
     },
     {
-      title: "Analytics",
-      url: "#",
+      title: "Summary",
+      url: "/summary",
       icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
     },
   ],
 };

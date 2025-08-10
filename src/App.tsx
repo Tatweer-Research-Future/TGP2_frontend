@@ -4,6 +4,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { UsersPage } from "./pages/UsersPage";
 import { UserDetailPage } from "./pages/UserDetailPage";
 import { FormsPage } from "./pages/FormsPage";
+import { SummaryPage } from "./pages/SummaryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -26,6 +27,7 @@ export default function App() {
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/:id" element={<UserDetailPage />} />
                 <Route path="/forms" element={<FormsPage />} />
+                <Route path="/summary" element={<SummaryPage />} />
               </Routes>
             </AppLayout>
           }
