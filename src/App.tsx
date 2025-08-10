@@ -4,7 +4,6 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { UsersPage } from "./pages/UsersPage";
 import { UserDetailPage } from "./pages/UserDetailPage";
 import { FormsPage } from "./pages/FormsPage";
-import { SummaryPage } from "./pages/SummaryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ThemeProvider } from "./components/theme-provider";
@@ -35,7 +34,6 @@ export default function App() {
                       element={<UserDetailPage />}
                     />
                     <Route path="/forms" element={<FormsPage />} />
-                    <Route path="/summary" element={<SummaryPage />} />
                     <Route path="/account" element={<AccountPage />} />
                   </Routes>
                 </AppLayout>
