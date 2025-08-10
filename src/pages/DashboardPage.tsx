@@ -1,13 +1,17 @@
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
+import { candidates } from "@/lib/candidates";
 
 import data from "../app/dashboard/data.json";
 
 export function DashboardPage() {
+  const total = candidates.length;
+  const interviewed = candidates.filter((c) => c.status === "interviewed").length;
+  const notInterviewed = candidates.filter((c) => c.status === "not_interviewed").length;
   return (
     <>
-      <SectionCards />
+      <SectionCards total={total} interviewed={interviewed} notInterviewed={notInterviewed} />
       <div className="px-4 lg:px-6">
         <ChartAreaInteractive />
       </div>

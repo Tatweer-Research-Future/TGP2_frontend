@@ -29,98 +29,11 @@ import {
   IconCheck,
   IconClock,
   IconMinus,
+  IconCopy,
 } from "@tabler/icons-react";
+import { toast } from "sonner";
 
-// Candidate status type
-type CandidateStatus = "not_interviewed" | "in_progress" | "interviewed";
-
-// Dummy candidates data
-const dummyCandidates = [
-  {
-    id: "1",
-    fullName: "Ahmed Hassan Mohammed",
-    email: "ahmed.hassan@example.com",
-    status: "interviewed" as CandidateStatus,
-    appliedDate: "2024-01-15",
-  },
-  {
-    id: "2",
-    fullName: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    status: "in_progress" as CandidateStatus,
-    appliedDate: "2024-01-20",
-  },
-  {
-    id: "3",
-    fullName: "Omar Al-Rashid",
-    email: "omar.rashid@example.com",
-    status: "not_interviewed" as CandidateStatus,
-    appliedDate: "2024-01-22",
-  },
-  {
-    id: "4",
-    fullName: "Maria Rodriguez",
-    email: "maria.rodriguez@example.com",
-    status: "interviewed" as CandidateStatus,
-    appliedDate: "2024-01-18",
-  },
-  {
-    id: "5",
-    fullName: "Alex Chen",
-    email: "alex.chen@example.com",
-    status: "in_progress" as CandidateStatus,
-    appliedDate: "2024-01-25",
-  },
-  {
-    id: "6",
-    fullName: "Fatima Al-Zahra",
-    email: "fatima.zahra@example.com",
-    status: "not_interviewed" as CandidateStatus,
-    appliedDate: "2024-01-28",
-  },
-  {
-    id: "7",
-    fullName: "David Wilson",
-    email: "david.wilson@example.com",
-    status: "interviewed" as CandidateStatus,
-    appliedDate: "2024-01-12",
-  },
-  {
-    id: "8",
-    fullName: "Layla Mahmoud",
-    email: "layla.mahmoud@example.com",
-    status: "in_progress" as CandidateStatus,
-    appliedDate: "2024-01-30",
-  },
-  {
-    id: "9",
-    fullName: "Robert Brown",
-    email: "robert.brown@example.com",
-    status: "not_interviewed" as CandidateStatus,
-    appliedDate: "2024-02-01",
-  },
-  {
-    id: "10",
-    fullName: "Noor Ibrahim",
-    email: "noor.ibrahim@example.com",
-    status: "interviewed" as CandidateStatus,
-    appliedDate: "2024-01-08",
-  },
-  {
-    id: "11",
-    fullName: "Michael Davis",
-    email: "michael.davis@example.com",
-    status: "in_progress" as CandidateStatus,
-    appliedDate: "2024-02-03",
-  },
-  {
-    id: "12",
-    fullName: "Amina Youssef",
-    email: "amina.youssef@example.com",
-    status: "not_interviewed" as CandidateStatus,
-    appliedDate: "2024-02-05",
-  },
-];
+import { candidates as allCandidates } from "@/lib/candidates";
 
 // Visual style + icon for each status
 const statusMeta = {
@@ -153,7 +66,7 @@ export function UsersPage() {
 
   // Filter and search logic
   const filteredCandidates = useMemo(() => {
-    return dummyCandidates.filter((candidate) => {
+    return allCandidates.filter((candidate) => {
       const matchesSearch =
         candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -182,6 +95,61 @@ export function UsersPage() {
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
+  };
+
+  // Copy all visible emails (current page) to clipboard
+  const handleCopyVisibleEmails = async () => {
+    const emails = paginatedCandidates.map((c) => c.email);
+    if (emails.length === 0) {
+      toast.info("No emails to copy");
+      return;
+    }
+    const text = emails.join(", ");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        toast.success(`Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`);
+      } catch (_) {
+        toast.error("Failed to copy emails");
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+  };
+
+  // Copy all visible names (current page) to clipboard
+  const handleCopyVisibleNames = async () => {
+    const names = paginatedCandidates.map((c) => c.fullName);
+    if (names.length === 0) {
+      toast.info("No names to copy");
+      return;
+    }
+    const text = names.join(", ");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`Copied ${names.length} name${names.length > 1 ? "s" : ""}`);
+    } catch (err) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand("copy");
+        toast.success(`Copied ${names.length} name${names.length > 1 ? "s" : ""}`);
+      } catch (_) {
+        toast.error("Failed to copy names");
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
   };
 
   return (
@@ -263,8 +231,38 @@ export function UsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Candidate</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <span>Candidate</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground"
+                      onClick={handleCopyVisibleNames}
+                      title="Copy all visible names"
+                    >
+                      <IconCopy className="size-4" />
+                      <span className="sr-only">Copy all visible names</span>
+                    </Button>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    <span>Email</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground"
+                      onClick={handleCopyVisibleEmails}
+                      title="Copy all visible emails"
+                    >
+                      <IconCopy className="size-4" />
+                      <span className="sr-only">Copy all visible emails</span>
+                    </Button>
+                  </div>
+                </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Applied Date</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
