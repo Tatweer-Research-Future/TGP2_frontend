@@ -26,6 +26,9 @@ import {
   IconEye,
   IconChevronLeft,
   IconChevronRight,
+  IconCheck,
+  IconClock,
+  IconMinus,
 } from "@tabler/icons-react";
 
 // Candidate status type
@@ -119,11 +122,27 @@ const dummyCandidates = [
   },
 ];
 
-const statusLabels = {
-  not_interviewed: { label: "Not Interviewed", variant: "outline" as const },
-  in_progress: { label: "In Progress", variant: "secondary" as const },
-  interviewed: { label: "Interviewed", variant: "default" as const },
-};
+// Visual style + icon for each status
+const statusMeta = {
+  not_interviewed: {
+    label: "Not Interviewed",
+    // neutral gray chip
+    className: "bg-gray-100 text-gray-800 border-gray-200",
+    icon: IconMinus,
+  },
+  in_progress: {
+    label: "In Progress",
+    // amber chip for in-progress state
+    className: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: IconClock,
+  },
+  interviewed: {
+    label: "Interviewed",
+    // success green chip with white text
+    className: "bg-emerald-600 text-white border-transparent",
+    icon: IconCheck,
+  },
+} as const;
 
 const ITEMS_PER_PAGE = 8;
 
@@ -192,19 +211,35 @@ export function UsersPage() {
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-2 min-w-[200px]">
-                <IconFilter className="size-4 text-muted-foreground" />
+              <div className="flex items-center gap-2 min-w-[240px]">
                 <Select value={statusFilter} onValueChange={handleFilterChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={
+                        <span className="inline-flex items-center gap-2">
+                          <IconFilter className="text-muted-foreground" />
+                          Filter by status
+                        </span>
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">
+                      <IconFilter className="opacity-70" />
+                      All Statuses
+                    </SelectItem>
                     <SelectItem value="not_interviewed">
+                      <IconMinus className="text-gray-500" />
                       Not Interviewed
                     </SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="interviewed">Interviewed</SelectItem>
+                    <SelectItem value="in_progress">
+                      <IconClock className="text-amber-600" />
+                      In Progress
+                    </SelectItem>
+                    <SelectItem value="interviewed">
+                      <IconCheck className="text-emerald-600" />
+                      Interviewed
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -245,41 +280,46 @@ export function UsersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedCandidates.map((candidate) => (
-                  <TableRow key={candidate.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <ConsistentAvatar
-                          user={{
-                            name: candidate.fullName,
-                            email: candidate.email,
-                          }}
-                          className="size-8"
-                        />
-                        <span className="font-medium">
-                          {candidate.fullName}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{candidate.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusLabels[candidate.status].variant}>
-                        {statusLabels[candidate.status].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(candidate.appliedDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/users/${candidate.id}`}>
-                          <IconEye className="size-4" />
-                          View
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                paginatedCandidates.map((candidate) => {
+                  const meta = statusMeta[candidate.status];
+                  const IconComp = meta.icon;
+                  return (
+                    <TableRow key={candidate.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <ConsistentAvatar
+                            user={{
+                              name: candidate.fullName,
+                              email: candidate.email,
+                            }}
+                            className="size-8"
+                          />
+                          <span className="font-medium">
+                            {candidate.fullName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{candidate.email}</TableCell>
+                      <TableCell>
+                        <Badge className={meta.className}>
+                          <IconComp className="size-3" />
+                          {meta.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(candidate.appliedDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={`/users/${candidate.id}`}>
+                            <IconEye className="size-4" />
+                            View
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
