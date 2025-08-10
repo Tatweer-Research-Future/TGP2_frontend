@@ -65,11 +65,7 @@ const data = {
       url: "/forms",
       icon: IconFileDescription,
     },
-    {
-      title: "Summary",
-      url: "/summary",
-      icon: IconChartBar,
-    },
+    // Summary merged into Dashboard
   ],
 };
 
