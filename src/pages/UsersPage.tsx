@@ -35,25 +35,22 @@ import { toast } from "sonner";
 
 import { candidates as allCandidates } from "@/lib/candidates";
 
-// Visual style + icon for each status
+// Visual style for each status (colors aligned with Pending/Completed/Declined)
 const statusMeta = {
   not_interviewed: {
     label: "Not Interviewed",
-    // neutral gray chip
-    className: "bg-gray-100 text-gray-800 border-gray-200",
-    icon: IconMinus,
+    className: "bg-red-50 text-red-700 border-red-200",
+    dotClass: "bg-red-500",
   },
   in_progress: {
     label: "In Progress",
-    // amber chip for in-progress state
-    className: "bg-amber-100 text-amber-800 border-amber-200",
-    icon: IconClock,
+    className: "bg-slate-100 text-slate-700 border-slate-200",
+    dotClass: "bg-slate-500",
   },
   interviewed: {
     label: "Interviewed",
-    // success green chip with white text
-    className: "bg-emerald-600 text-white border-transparent",
-    icon: IconCheck,
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dotClass: "bg-emerald-500",
   },
 } as const;
 
@@ -157,7 +154,7 @@ export function UsersPage() {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">All Candidates</h1>
+          <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
           <p className="text-muted-foreground">
             Manage and review candidate applications
           </p>
@@ -280,7 +277,6 @@ export function UsersPage() {
               ) : (
                 paginatedCandidates.map((candidate) => {
                   const meta = statusMeta[candidate.status];
-                  const IconComp = meta.icon;
                   return (
                     <TableRow key={candidate.id}>
                       <TableCell>
@@ -300,7 +296,7 @@ export function UsersPage() {
                       <TableCell>{candidate.email}</TableCell>
                       <TableCell>
                         <Badge className={meta.className}>
-                          <IconComp className="size-3" />
+                          <span className={`inline-block size-2 rounded-full ${meta.dotClass}`} />
                           {meta.label}
                         </Badge>
                       </TableCell>
@@ -309,7 +305,7 @@ export function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" asChild>
-                          <Link to={`/users/${candidate.id}`}>
+                          <Link to={`/candidates/${candidate.id}`}>
                             <IconEye className="size-4" />
                             View
                           </Link>
