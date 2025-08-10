@@ -206,8 +206,8 @@ export function UserDetailPage() {
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Main Tabs */}
-      <Tabs defaultValue="information" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="information" className="w-full gap-4">
+        <TabsList className="grid w-full grid-cols-2 mb-2">
           <TabsTrigger value="information">Information</TabsTrigger>
           <TabsTrigger value="interview">Interview</TabsTrigger>
         </TabsList>
@@ -311,11 +311,11 @@ export function UserDetailPage() {
                   </div>
                 </div>
                 <Separator />
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <span className="font-medium text-muted-foreground">
                     Language Proficiency:
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mt-1">
                     <Badge variant="secondary">
                       Arabic: {dummyUser.arabicProficiency}
                     </Badge>
@@ -357,11 +357,11 @@ export function UserDetailPage() {
                   </div>
                 </div>
                 <Separator />
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <span className="font-medium text-muted-foreground">
                     Selected Fields:
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 mt-1">
                     {dummyUser.fieldsChosen.map((field, index) => (
                       <Badge key={index} variant="default">
                         {field}
