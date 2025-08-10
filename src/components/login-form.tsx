@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login } from "@/services/auth";
+// auth handled via context
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 // import AubergineImage from "@/assets/avatars/Aubergine.svg";
 
@@ -14,6 +15,8 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login: authLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,9 +26,10 @@ export function LoginForm({
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const data = await login({ email, password });
+      const data = await authLogin({ email, password });
       toast.success(`Welcome ${data.user?.name || data.user?.email}`);
-      navigate("/dashboard");
+      const redirectTo = (location.state as any)?.from?.pathname || "/overview";
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message =
         (err as any)?.data?.detail || (err as Error)?.message || "Login failed";

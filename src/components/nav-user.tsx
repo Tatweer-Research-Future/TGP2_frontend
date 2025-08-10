@@ -30,6 +30,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useTheme } from "@/components/theme-provider";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function NavUser({
   user,
@@ -42,6 +45,8 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { setTheme } = useTheme();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <SidebarMenu>
@@ -89,7 +94,7 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/account")}>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
@@ -125,7 +130,18 @@ export function NavUser({
               </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  await logout();
+                  toast.success("Logged out");
+                } catch (e) {
+                  // Even if backend fails, clear local state and continue
+                } finally {
+                  navigate("/login", { replace: true });
+                }
+              }}
+            >
               <IconLogout />
               Log out
             </DropdownMenuItem>

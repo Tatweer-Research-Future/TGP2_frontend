@@ -19,41 +19,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-// Sample users to demonstrate consistent avatar assignment
-const users = [
-  {
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-  },
-  {
-    name: "Alex Chen",
-    email: "alex.chen@example.com",
-  },
-  {
-    name: "Maria Rodriguez",
-    email: "maria@example.com",
-  },
-  {
-    name: "John Smith",
-    email: "john.smith@example.com",
-  },
-];
-
-// Get a random user from the sample users
-// In a real app, this would be your authenticated user
-const randomUser = users[Math.floor(Math.random() * users.length)] || users[0];
+import { useAuth } from "@/context/AuthContext";
 
 const data = {
-  user: {
-    name: randomUser.name,
-    email: randomUser.email,
-    // No avatar provided - our ConsistentAvatar component will assign one
-  },
+  // Nav items only; user comes from auth
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/overview",
       icon: IconDashboard,
     },
     {
@@ -80,6 +53,7 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -101,7 +75,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        {user ? (
+          <NavUser user={{ name: user.name, email: user.email }} />
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );
