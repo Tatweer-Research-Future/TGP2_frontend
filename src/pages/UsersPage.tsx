@@ -242,72 +242,59 @@ export function UsersPage() {
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
             <p className="text-muted-foreground">
               Manage and review candidate applications
             </p>
           </div>
-          <Button onClick={fetchCandidates} variant="outline" size="sm">
-            <IconRefresh className="size-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+          <div className="flex w-full md:w-auto md:max-w-3xl items-center gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-        {/* Search and Filter Bar */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Search Input */}
-              <div className="relative flex-1">
-                <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-10"
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={handleFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue
+                  placeholder={
+                    <span className="inline-flex items-center gap-2">
+                      <IconFilter className="text-muted-foreground" />
+                      Filter status
+                    </span>
+                  }
                 />
-              </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <IconFilter className="opacity-70" />
+                  All Statuses
+                </SelectItem>
+                <SelectItem value="not_interviewed">
+                  <IconMinus className="text-gray-500" />
+                  Not Interviewed
+                </SelectItem>
+                <SelectItem value="interviewed">
+                  <IconCheck className="text-emerald-600" />
+                  Interviewed
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-              {/* Status Filter */}
-              <div className="flex items-center gap-2 min-w-[240px]">
-                <Select value={statusFilter} onValueChange={handleFilterChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={
-                        <span className="inline-flex items-center gap-2">
-                          <IconFilter className="text-muted-foreground" />
-                          Filter by status
-                        </span>
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      <IconFilter className="opacity-70" />
-                      All Statuses
-                    </SelectItem>
-                    <SelectItem value="not_interviewed">
-                      <IconMinus className="text-gray-500" />
-                      Not Interviewed
-                    </SelectItem>
-                    <SelectItem value="interviewed">
-                      <IconCheck className="text-emerald-600" />
-                      Interviewed
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Results Summary */}
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {paginatedCandidates.length} of{" "}
-              {filteredCandidates.length} candidates
-            </div>
-          </CardContent>
-        </Card>
+            {/* <Button onClick={fetchCandidates} variant="outline" size="sm">
+              <IconRefresh className="size-4 mr-2" />
+              Refresh
+            </Button> */}
+          </div>
+        </div>
       </div>
 
       {/* Candidates Table */}
@@ -470,6 +457,10 @@ export function UsersPage() {
               </div>
             </div>
           )}
+          <div className="my-4 text-sm text-muted-foreground">
+            Showing {paginatedCandidates.length} of {filteredCandidates.length}{" "}
+            candidates
+          </div>
         </CardContent>
       </Card>
     </div>
