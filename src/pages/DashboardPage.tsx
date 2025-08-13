@@ -4,6 +4,7 @@ import { CandidateCard } from "@/components/candidate-card";
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 import { toast } from "sonner";
+import { Loader } from "@/components/ui/loader";
 
 export function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -43,8 +44,8 @@ export function DashboardPage() {
       <>
         <SectionCards total={0} interviewed={0} notInterviewed={0} />
         <div className="px-4 lg:px-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Loading candidates...</div>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader />
           </div>
         </div>
       </>

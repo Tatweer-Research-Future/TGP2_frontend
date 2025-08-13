@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
+import { Loader } from "@/components/ui/loader";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
@@ -403,7 +404,9 @@ export function UserDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-6 py-8">
-        <div className="text-center text-muted-foreground">Loading user...</div>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader />
+        </div>
       </div>
     );
   }
