@@ -191,7 +191,7 @@ export type BackendUserDetail = {
     other_city?: string | null;
     reached_by?: string | null;
     nationality?: string | null;
-    other_files?: string | null;
+    other_files?: string[] | string | null;
     full_name_en?: string | null;
     aditional_info?: string | null;
     graduation_year?: string | null;
@@ -219,6 +219,12 @@ export type BackendUserDetail = {
         duration?: string | null;
       }> | null;
       englishProficiency?: string | null;
+      institutionName?: string | null;
+      technicalSkills?: Array<{
+        skill?: string | null;
+        medium?: string | null;
+        proficiency?: string | null;
+      }> | null;
     } | null;
   } | null;
 };

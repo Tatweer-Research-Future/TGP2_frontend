@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -12,7 +19,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
@@ -28,15 +34,23 @@ import {
 import {
   IconMail,
   IconPhone,
-  IconMapPin,
+  IconFileUpload,
   IconCalendar,
-  IconGenderMale,
   IconSchool,
   IconBriefcase,
   IconDownload,
-  IconUser,
   IconClipboardList,
+  IconLanguage,
+  IconTags,
+  IconFile,
+  IconFileText,
+  IconFileDescription,
+  IconFileSpreadsheet,
+  IconFileZip,
+  IconFileCode,
+  IconExternalLink,
 } from "@tabler/icons-react";
+import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
 import {
   getUserDetailById,
@@ -63,6 +77,7 @@ type UserDetail = {
   gpa?: string;
   arabicProficiency?: string;
   englishProficiency?: string;
+  graduationYear?: string;
   technicalSkills: Array<{
     skill: string;
     proficiency: string;
@@ -77,6 +92,8 @@ type UserDetail = {
   fieldsChosen: string[];
   resumeUrl?: string;
   socials: { github?: string | null; linkedin?: string | null };
+  otherFiles: string[]; // normalized list of file URLs
+  interviewedByMe: boolean;
 };
 
 function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
@@ -84,6 +101,19 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   const info = add.additional_information ?? {};
 
   const fullName = add.full_name_en || add.full_name || data.name || "";
+
+  // Normalize other files: include cert (single) and other_files (array or string)
+  const otherFilesRaw = add.other_files;
+  const otherFiles: string[] = [];
+  if (typeof add.cert === "string" && add.cert.trim())
+    otherFiles.push(add.cert.trim());
+  if (Array.isArray(otherFilesRaw)) {
+    for (const f of otherFilesRaw) {
+      if (typeof f === "string" && f.trim()) otherFiles.push(f.trim());
+    }
+  } else if (typeof otherFilesRaw === "string" && otherFilesRaw.trim()) {
+    otherFiles.push(otherFilesRaw.trim());
+  }
 
   return {
     id: String(data.id),
@@ -99,7 +129,14 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     gpa: info.gpa ?? undefined,
     arabicProficiency: (info as any).arabicProficiency ?? undefined,
     englishProficiency: info.englishProficiency ?? undefined,
-    technicalSkills: [],
+    graduationYear: (add as any).graduation_year ?? undefined,
+    technicalSkills: Array.isArray((info as any).technicalSkills)
+      ? ((info as any).technicalSkills as any[]).map((t) => ({
+          skill: (t?.skill ?? "") as string,
+          medium: (t?.medium ?? "") as string,
+          proficiency: (t?.proficiency ?? "") as string,
+        }))
+      : [],
     workExperience: (info.workExperience ?? []) as UserDetail["workExperience"],
     coursesTaken: (info.coursesTaken ?? []) as UserDetail["coursesTaken"],
     fieldsChosen: (info.fieldsChosen ?? []) as string[],
@@ -108,7 +145,61 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
       github: add.github ?? null,
       linkedin: add.linkedin ?? null,
     },
+    otherFiles,
+    interviewedByMe: Boolean((data as any).interviewed_by_me),
   };
+}
+
+// Helper to compute graduation status text and whether it is upcoming or past
+function getGraduationInfo(graduationYear?: string): {
+  text: string;
+  isFuture: boolean;
+} {
+  if (!graduationYear) return { text: "Unknown", isFuture: false };
+  // Expecting formats like "2025-02" or ISO date string
+  let date: Date | null = null;
+  if (/^\d{4}-\d{2}$/.test(graduationYear)) {
+    date = new Date(`${graduationYear}-01`);
+  } else {
+    const parsed = new Date(graduationYear);
+    date = isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (!date) return { text: graduationYear, isFuture: false };
+  const now = new Date();
+  const isFuture = date.getTime() > now.getTime();
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+  });
+  return { text: formatter.format(date), isFuture };
+}
+
+// Pick a file icon based on extension
+function getFileIconComponent(url: string) {
+  const ext = (url.split(".").pop() || "").toLowerCase();
+  if (["pdf"].includes(ext)) return IconFileText; // use text icon for consistency
+  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext))
+    return IconFileDescription;
+  if (["xls", "xlsx", "csv"].includes(ext)) return IconFileSpreadsheet;
+  if (["zip", "rar", "7z"].includes(ext)) return IconFileZip;
+  if (
+    [
+      "json",
+      "js",
+      "ts",
+      "py",
+      "java",
+      "c",
+      "cpp",
+      "cs",
+      "html",
+      "css",
+      "md",
+    ].includes(ext)
+  )
+    return IconFileCode;
+  if (["doc", "docx", "rtf", "txt"].includes(ext)) return IconFileText;
+  return IconFile;
 }
 
 // Dynamic interview form types
@@ -175,6 +266,7 @@ function transformBackendForm(
 
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<UserDetail | null>(null);
 
@@ -239,6 +331,11 @@ export function UserDetailPage() {
 
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
+    // Prevent submission if already interviewed
+    if (user.interviewedByMe) {
+      toast.error("This candidate has already been interviewed.");
+      return;
+    }
     // Validate required fields
     const missing = new Set<number>();
     for (const field of form.fields) {
@@ -283,11 +380,22 @@ export function UserDetailPage() {
       setIsSubmitting(true);
       await submitForm(payload);
       setShowSubmitDialog(false);
-      toast.success("Interview submitted successfully");
+
+      // Show success feedback and redirect
+      toast.success(
+        "Interview submitted successfully! Redirecting to candidates...",
+        {
+          duration: 2000,
+        }
+      );
+
+      // Redirect after a short delay to let user see the success message
+      setTimeout(() => {
+        navigate("/candidates");
+      }, 2000);
     } catch (err) {
       console.error("Failed to submit interview form", err);
       toast.error("Failed to submit interview form");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -308,8 +416,15 @@ export function UserDetailPage() {
     );
   }
 
+  // Filter out empty work experience entries (no project, company, or duration)
+  const experienceRows = (user.workExperience ?? []).filter((exp) =>
+    [exp.project, exp.company, exp.duration].some((v) =>
+      typeof v === "string" ? v.trim().length > 0 : Boolean(v)
+    )
+  );
+
   return (
-    <div className="container mx-auto px-6 py-8 space-y-6">
+    <div className="container mx-auto px-6 py-2 space-y-6">
       {/* Main Tabs */}
       <Tabs defaultValue="information" className="w-full gap-4">
         <TabsList className="grid w-full grid-cols-2 mb-2">
@@ -351,22 +466,6 @@ export function UserDetailPage() {
                       <span>{user.phoneNo || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <IconMapPin className="size-4 text-muted-foreground" />
-                      <span>{user.city || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconCalendar className="size-4 text-muted-foreground" />
-                      <span>
-                        {user.birthdate
-                          ? new Date(user.birthdate).toLocaleDateString()
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconGenderMale className="size-4 text-muted-foreground" />
-                      <span>{user.gender || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
                       {user.resumeUrl ? (
                         <Button
                           onClick={() => window.open(user.resumeUrl!, "_blank")}
@@ -382,109 +481,161 @@ export function UserDetailPage() {
                         </Button>
                       )}
                     </div>
+                    <div className="flex items-center gap-2">
+                      <IconCalendar className="size-4 text-muted-foreground" />
+                      <span>
+                        {user.birthdate
+                          ? new Date(user.birthdate).toLocaleDateString()
+                          : "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaUniversity className="size-4 text-muted-foreground" />
+                      <span>{user.institutionName || "-"}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {user.socials.github && (
+                        <a
+                          href={user.socials.github}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
+                          title="GitHub"
+                        >
+                          <FaGithub className="size-4" />
+                          <span className="text-sm">GitHub</span>
+                        </a>
+                      )}
+                      {user.socials.linkedin && (
+                        <a
+                          href={user.socials.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
+                          title="LinkedIn"
+                        >
+                          <FaLinkedin className="size-4" />
+                          <span className="text-sm">LinkedIn</span>
+                        </a>
+                      )}
+                      {/* {!user.socials.github && !user.socials.linkedin && (
+                        <span className="text-muted-foreground">-</span>
+                      )} */}
+                    </div>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <Card>
-              <CardHeader>
+          {/* We add 'items-stretch' to the grid to make all cards in a row the same height */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            {/* Card 1: Academic Performance (GPA) */}
+            {/* IMPROVED: Added flex layout to the card for better vertical alignment and spacing. */}
+            <Card className="flex flex-col gap-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
-                  <IconUser className="size-5" />
-                  Personal Information
+                  <IconSchool className="size-5" />
+                  <span>Academic Performance</span>
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      Date of Birth:
-                    </span>
-                    <p>
-                      {user.birthdate
-                        ? new Date(user.birthdate).toLocaleDateString()
-                        : "-"}
-                    </p>
+              <CardContent className="pt-0 flex-1 flex items-center ">
+                {/* GPA metric vertically centered within card */}
+                <div className="flex items-baseline gap-1.5">
+                  <div className="text-5xl font-bold tracking-tighter">
+                    {user.gpa && !isNaN(parseFloat(user.gpa))
+                      ? parseFloat(user.gpa).toFixed(2)
+                      : "—"}
                   </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      Gender:
-                    </span>
-                    <p>{user.gender || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      City:
-                    </span>
-                    <p>{user.city || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      Qualification:
-                    </span>
-                    <p>{user.qualification || "-"}</p>
+                  <div className="text-lg font-medium text-muted-foreground">
+                    {user.gpa && !isNaN(parseFloat(user.gpa))
+                      ? parseFloat(user.gpa) > 5
+                        ? "/100"
+                        : "/4.0"
+                      : ""}
                   </div>
                 </div>
-                <Separator />
-                <div className="space-y-3">
-                  <span className="font-medium text-muted-foreground">
-                    Language Proficiency:
-                  </span>
-                  <div className="flex gap-2 mt-1">
-                    <Badge variant="secondary">
-                      English: {user.englishProficiency || "-"}
+              </CardContent>
+
+              <CardFooter className="pt-0">
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    Graduation date
+                  </div>
+                  <Badge
+                    variant={
+                      getGraduationInfo(user.graduationYear).isFuture
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    <IconCalendar className="mr-1.5 size-3.5" />
+                    {getGraduationInfo(user.graduationYear).text}
+                  </Badge>
+                </div>
+              </CardFooter>
+            </Card>
+
+            {/* Card 2: Language Proficiency */}
+            <Card className="flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <IconLanguage className="size-5" />
+                  <span>Language Proficiency</span>
+                </CardTitle>
+                {/* A description can be added here if needed in the future */}
+                {/* <CardDescription>Self-reported levels</CardDescription> */}
+              </CardHeader>
+              <CardContent className="flex-grow pt-2">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold">English</div>
+                    <Badge
+                      variant="secondary"
+                      className="min-w-16 justify-center"
+                    >
+                      {user.englishProficiency || "—"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold">Arabic</div>
+                    <Badge
+                      variant="secondary"
+                      className="min-w-16 justify-center"
+                    >
+                      {user.arabicProficiency || "—"}
                     </Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Educational Information */}
-            <Card>
+            {/* Card 3: Selected Fields */}
+            <Card className="flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <IconSchool className="size-5" />
-                  Educational Information
+                  <IconTags className="size-5" />
+                  <span>Selected Fields</span>
                 </CardTitle>
+                <CardDescription>
+                  Areas of interest for opportunities.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      Field of Study:
-                    </span>
-                    <p>{user.fieldOfStudy || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      Institution:
-                    </span>
-                    <p>{user.institutionName || "-"}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">
-                      GPA:
-                    </span>
-                    <p>{user.gpa || "-"}</p>
-                  </div>
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  <span className="font-medium text-muted-foreground">
-                    Selected Fields:
-                  </span>
-                  <div className="flex flex-wrap gap-2 mt-1">
+              <CardContent className="flex-grow pt-0">
+                {user.fieldsChosen.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
                     {user.fieldsChosen.map((field, index) => (
                       <Badge key={index} variant="default">
                         {field}
                       </Badge>
                     ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No fields selected.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -506,98 +657,191 @@ export function UserDetailPage() {
                 </TabsList>
 
                 <TabsContent value="skills" className="mt-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Skill</TableHead>
-                        <TableHead>Proficiency</TableHead>
-                        <TableHead>Medium/Tools</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {user.technicalSkills.map((skill, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {skill.skill}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                skill.proficiency === "Expert"
-                                  ? "default"
-                                  : skill.proficiency === "Advanced"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                            >
-                              {skill.proficiency}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{skill.medium}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  {user.technicalSkills && user.technicalSkills.length > 0 ? (
+                    <div className="flex justify-center">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Skill</TableHead>
+                            <TableHead>Proficiency</TableHead>
+                            <TableHead>Medium/Tools</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {user.technicalSkills.map((skill, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {skill.skill}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    skill.proficiency === "Expert"
+                                      ? "default"
+                                      : skill.proficiency === "Advanced"
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                >
+                                  {skill.proficiency}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{skill.medium}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      No technical skills to display
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="experience" className="mt-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead>Duration</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {user.workExperience.map((exp, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {exp.project}
-                          </TableCell>
-                          <TableCell>{exp.company}</TableCell>
-                          <TableCell>{exp.duration}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  {experienceRows.length > 0 ? (
+                    <div className="flex justify-center">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Project</TableHead>
+                            <TableHead>Company</TableHead>
+                            <TableHead>Duration</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {experienceRows.map((exp, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {exp.project}
+                              </TableCell>
+                              <TableCell>{exp.company}</TableCell>
+                              <TableCell>{exp.duration}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      No work experience to display
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="courses" className="mt-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course Name</TableHead>
-                        <TableHead>Provider</TableHead>
-                        <TableHead>Date Completed</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {user.coursesTaken.map((course, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {course.name}
-                          </TableCell>
-                          <TableCell>{course.entity}</TableCell>
-                          <TableCell>
-                            {course.date
-                              ? new Date(course.date).toLocaleDateString()
-                              : "-"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  {user.coursesTaken && user.coursesTaken.length > 0 ? (
+                    <div className="flex justify-center">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course Name</TableHead>
+                            <TableHead>Provider</TableHead>
+                            <TableHead>Date Completed</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {user.coursesTaken.map((course, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {course.name}
+                              </TableCell>
+                              <TableCell>{course.entity}</TableCell>
+                              <TableCell>
+                                {course.date
+                                  ? new Date(course.date).toLocaleDateString()
+                                  : "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      No courses to display
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <IconFileUpload className="size-5" />
+                <span>Uploaded Files</span>
+              </CardTitle>
+              <CardDescription>
+                Documents provided by the candidate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {user.otherFiles && user.otherFiles.length > 0 ? (
+                <div className="space-y-2">
+                  {user.otherFiles.map((url, idx) => {
+                    const FileIcon = getFileIconComponent(url);
+                    const name = decodeURIComponent(
+                      url.split("/").pop() || url
+                    );
+                    return (
+                      <div
+                        key={`${url}-${idx}`}
+                        className="flex items-center justify-between rounded-md border p-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileIcon className="size-5 text-muted-foreground" />
+                          <span className="truncate">{name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" asChild>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5"
+                            >
+                              <IconExternalLink className="size-4" /> Open
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground italic">
+                  No uploaded files to display
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Interview Tab */}
-        <TabsContent value="interview" className="space-y-8">
+        <TabsContent
+          value="interview"
+          className={`space-y-8 relative ${
+            user.interviewedByMe ? "overflow-hidden max-h-screen" : ""
+          }`}
+        >
+          {/* Overlay for already interviewed users - covers entire content */}
+          {user.interviewedByMe && (
+            <div className="absolute inset-0 h-full z-20 flex items-start justify-center backdrop-blur-sm bg-white/70 dark:bg-black/50">
+              <div className="text-center mt-20 text-foreground">
+                <h3 className="text-xl font-semibold mb-2">
+                  Already Interviewed
+                </h3>
+                <p className="text-muted-foreground">
+                  This candidate has already been interviewed by you.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Interview Header - Professional Candidate Banner */}
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-6">
                 <div className="relative">
@@ -684,8 +928,15 @@ export function UserDetailPage() {
 
           {form &&
             form.fields.map((field) => (
-              <Card key={field.id}>
-                <CardContent className="pt-6 space-y-6">
+              <Card
+                key={field.id}
+                className={
+                  invalidFields.has(field.id)
+                    ? "border-1 border-destructive"
+                    : ""
+                }
+              >
+                <CardContent className="pt-0 space-y-10">
                   {/* Question Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -713,16 +964,12 @@ export function UserDetailPage() {
                       onValueChange={(value) =>
                         handleAnswerChange(field.id, value)
                       }
-                      className={`space-y-3 ${
-                        invalidFields.has(field.id)
-                          ? "border border-destructive rounded-md p-3"
-                          : ""
-                      }`}
+                      className={`flex flex-wrap gap-6 w-full justify-around`}
                     >
                       {field.options.map((option) => (
                         <div
                           key={option.id}
-                          className="flex items-center space-x-3"
+                          className="flex items-center space-x-3 min-w-[48px]"
                         >
                           <RadioGroupItem
                             value={String(option.id)}
@@ -741,13 +988,7 @@ export function UserDetailPage() {
 
                   {/* Text/email */}
                   {field.type !== "question" && (
-                    <div className="space-y-4 pt-2">
-                      <Label
-                        htmlFor={`field-${field.id}`}
-                        className="text-base font-medium"
-                      >
-                        {field.type === "email" ? "Email" : field.label}
-                      </Label>
+                    <div className="space-y-2 pt-2">
                       {field.type === "text" ? (
                         <Textarea
                           id={`field-${field.id}`}
@@ -756,21 +997,13 @@ export function UserDetailPage() {
                           onChange={(e) =>
                             handleAnswerChange(field.id, e.target.value)
                           }
-                          className={`min-h-[100px] ${
-                            invalidFields.has(field.id)
-                              ? "border-destructive"
-                              : ""
-                          }`}
+                          className="min-h-[100px]"
                         />
                       ) : (
                         <input
                           id={`field-${field.id}`}
                           type="email"
-                          className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
-                            invalidFields.has(field.id)
-                              ? "border-destructive"
-                              : ""
-                          }`}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                           value={String(answers[field.id] ?? "")}
                           onChange={(e) =>
                             handleAnswerChange(field.id, e.target.value)
@@ -785,12 +1018,12 @@ export function UserDetailPage() {
 
           {/* Submit Button */}
           {form && (
-            <div className="flex justify-center pt-8">
+            <div className="flex justify-end pt-1">
               <Button
                 onClick={() => setShowSubmitDialog(true)}
-                size="lg"
-                className="min-w-[200px] h-12 text-lg"
-                disabled={isSubmitting}
+                size="sm"
+                className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
+                disabled={isSubmitting || user.interviewedByMe}
               >
                 {isSubmitting ? "Submitting..." : "Submit Interview"}
               </Button>
