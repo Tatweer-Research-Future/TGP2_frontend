@@ -33,175 +33,280 @@ import {
   IconGenderMale,
   IconSchool,
   IconBriefcase,
-  IconCertificate,
   IconDownload,
   IconUser,
   IconClipboardList,
 } from "@tabler/icons-react";
+import { useEffect } from "react";
+import {
+  getUserDetailById,
+  type BackendUserDetail,
+  getForms,
+  getFormById,
+  type BackendFormField,
+  submitForm,
+  type SubmitFormPayload,
+} from "@/lib/api";
+import { toast } from "sonner";
 
-// Dummy user data
-const dummyUser = {
-  id: "1",
-  fullName: "Ahmed Hassan Mohammed",
-  gender: "Male",
-  birthdate: "1995-03-15",
-  city: "Cairo",
-  phoneNo: "+20 123 456 7890",
-  email: "ahmed.hassan@example.com",
-  qualification: "Bachelor",
-  fieldOfStudy: "Computer Science",
-  institutionName: "Cairo University",
-  gpa: "3.7/4.0",
-  arabicProficiency: "Fluent",
-  englishProficiency: "Advanced",
-  technicalSkills: [
-    { skill: "JavaScript", proficiency: "Expert", medium: "React, Node.js" },
-    { skill: "Python", proficiency: "Advanced", medium: "Django, FastAPI" },
-    { skill: "SQL", proficiency: "Intermediate", medium: "MySQL, PostgreSQL" },
-    {
-      skill: "Cloud Computing",
-      proficiency: "Intermediate",
-      medium: "AWS, Docker",
-    },
-  ],
-  workExperience: [
-    {
-      project: "E-commerce Platform",
-      company: "TechCorp Ltd",
-      duration: "6 months",
-    },
-    {
-      project: "Mobile Banking App",
-      company: "FinTech Solutions",
-      duration: "4 months",
-    },
-    {
-      project: "Healthcare Management System",
-      company: "MediTech",
-      duration: "3 months",
-    },
-  ],
-  coursesTaken: [
-    {
-      name: "Advanced React Development",
-      entity: "Coursera",
-      date: "2024-01-15",
-    },
-    {
-      name: "Machine Learning Fundamentals",
-      entity: "edX",
-      date: "2023-11-20",
-    },
-    { name: "Cloud Architecture", entity: "Udemy", date: "2023-09-10" },
-    {
-      name: "Database Design",
-      entity: "LinkedIn Learning",
-      date: "2023-07-05",
-    },
-  ],
-  fieldsChosen: [
-    "Software Development",
-    "Data & Analytics",
-    "Machine Learning & AI",
-  ],
-  resumeUrl: "/resume/ahmed-hassan-cv.pdf",
+type UserDetail = {
+  id: string;
+  fullName: string;
+  email: string;
+  city?: string;
+  phoneNo?: string;
+  gender?: string;
+  birthdate?: string;
+  qualification?: string;
+  fieldOfStudy?: string;
+  institutionName?: string;
+  gpa?: string;
+  arabicProficiency?: string;
+  englishProficiency?: string;
+  technicalSkills: Array<{
+    skill: string;
+    proficiency: string;
+    medium: string;
+  }>;
+  workExperience: Array<{
+    project?: string;
+    company?: string;
+    duration?: string;
+  }>;
+  coursesTaken: Array<{ name?: string; entity?: string; date?: string }>;
+  fieldsChosen: string[];
+  resumeUrl?: string;
+  socials: { github?: string | null; linkedin?: string | null };
 };
 
-// Interview questions data
-const interviewQuestions = [
-  {
-    id: 1,
-    question: "Technical Knowledge & Problem Solving",
-    points: 15,
-    required: true,
-    hasComment: true,
-    options: [
-      { value: "excellent", label: "Excellent (A)" },
-      { value: "good", label: "Good (B)" },
-      { value: "average", label: "Average (C)" },
-      { value: "poor", label: "Poor (D)" },
-    ],
-  },
-  {
-    id: 2,
-    question: "Communication Skills",
-    points: 10,
-    required: true,
-    hasComment: false,
-    options: [
-      { value: "very_good", label: "Very Good" },
-      { value: "good", label: "Good" },
-      { value: "needs_improvement", label: "Needs Improvement" },
-      { value: "poor", label: "Poor" },
-    ],
-  },
-  {
-    id: 3,
-    question: "Team Collaboration & Cultural Fit",
-    points: 8,
-    required: false,
-    hasComment: true,
-    options: [
-      { value: "excellent", label: "Excellent" },
-      { value: "good", label: "Good" },
-      { value: "average", label: "Average" },
-      { value: "below_average", label: "Below Average" },
-    ],
-  },
-  {
-    id: 4,
-    question: "Leadership Potential",
-    points: 5,
-    required: false,
-    hasComment: true,
-    options: [
-      { value: "high", label: "High Potential" },
-      { value: "medium", label: "Medium Potential" },
-      { value: "low", label: "Low Potential" },
-      { value: "none", label: "No Leadership Qualities" },
-    ],
-  },
-  {
-    id: 5,
-    question: "Overall Recommendation",
-    points: 12,
-    required: true,
-    hasComment: true,
-    options: [
-      { value: "strongly_recommend", label: "Strongly Recommend" },
-      { value: "recommend", label: "Recommend" },
-      { value: "consider", label: "Consider with Reservations" },
-      { value: "not_recommend", label: "Do Not Recommend" },
-    ],
-  },
-];
+function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
+  const add = data.additional_fields ?? {};
+  const info = add.additional_information ?? {};
+
+  const fullName = add.full_name_en || add.full_name || data.name || "";
+
+  return {
+    id: String(data.id),
+    fullName,
+    email: data.email,
+    city: info.city ?? undefined,
+    phoneNo: add.phone ?? undefined,
+    gender: info.gender ?? undefined,
+    birthdate: info.birthdate ?? undefined,
+    qualification: info.qualification ?? undefined,
+    fieldOfStudy: info.fieldOfStudy ?? undefined,
+    institutionName: (info as any).institutionName ?? undefined,
+    gpa: info.gpa ?? undefined,
+    arabicProficiency: (info as any).arabicProficiency ?? undefined,
+    englishProficiency: info.englishProficiency ?? undefined,
+    technicalSkills: [],
+    workExperience: (info.workExperience ?? []) as UserDetail["workExperience"],
+    coursesTaken: (info.coursesTaken ?? []) as UserDetail["coursesTaken"],
+    fieldsChosen: (info.fieldsChosen ?? []) as string[],
+    resumeUrl: info.resumeUrl ?? undefined,
+    socials: {
+      github: add.github ?? null,
+      linkedin: add.linkedin ?? null,
+    },
+  };
+}
+
+// Dynamic interview form types
+type InterviewField = {
+  id: number;
+  label: string;
+  type: "email" | "question" | "text";
+  required: boolean;
+  order: number;
+  weight: number; // numeric weight
+  // For question
+  options?: Array<{ id: number; label: string; score: number; order: number }>;
+};
+
+type InterviewForm = {
+  id: number;
+  title: string;
+  fields: InterviewField[];
+  totalPoints: number; // Sum of max option score * weight for question fields
+};
+
+function transformBackendForm(
+  fields: BackendFormField[],
+  formId: number,
+  title: string
+): InterviewForm {
+  const transformed: InterviewField[] = fields
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((f) => ({
+      id: f.id,
+      label: f.label,
+      type: f.type,
+      required: f.required,
+      order: f.order,
+      weight: Number(f.weight ?? "1"),
+      options: f.scale
+        ? f.scale.options
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .map((o) => ({
+              id: o.id,
+              label: o.label,
+              score: Number(o.score),
+              order: o.order,
+            }))
+        : undefined,
+    }));
+
+  const totalPoints = transformed.reduce((sum, field) => {
+    if (
+      field.type === "question" &&
+      field.options &&
+      field.options.length > 0
+    ) {
+      const maxScore = Math.max(...field.options.map((o) => o.score));
+      return sum + maxScore * (field.weight || 1);
+    }
+    return sum;
+  }, 0);
+
+  return { id: formId, title, fields: transformed, totalPoints };
+}
 
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [interviewAnswers, setInterviewAnswers] = useState<
-    Record<number, string>
-  >({});
-  const [interviewComments, setInterviewComments] = useState<
-    Record<number, string>
-  >({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserDetail | null>(null);
+
+  // Interview form state
+  const [form, setForm] = useState<InterviewForm | null>(null);
+  const [answers, setAnswers] = useState<Record<number, string | number>>({});
+  const [invalidFields, setInvalidFields] = useState<Set<number>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
-  const handleAnswerChange = (questionId: number, value: string) => {
-    setInterviewAnswers((prev) => ({ ...prev, [questionId]: value }));
-  };
+  useEffect(() => {
+    let isCancelled = false;
+    async function load() {
+      if (!id) return;
+      setIsLoading(true);
+      try {
+        // Load user
+        const userResp = await getUserDetailById(id);
+        if (isCancelled) return;
+        setUser(transformBackendUserDetail(userResp));
 
-  const handleCommentChange = (questionId: number, value: string) => {
-    setInterviewComments((prev) => ({ ...prev, [questionId]: value }));
-  };
+        // Load forms list and pick first/only interview
+        const formsList = await getForms();
+        if (isCancelled) return;
+        const first = formsList.results?.[0];
+        if (first) {
+          const fields = await getFormById(first.id);
+          if (isCancelled) return;
+          const transformedForm = transformBackendForm(
+            fields,
+            first.id,
+            first.title
+          );
+          setForm(transformedForm);
+        } else {
+          setForm(null);
+        }
+      } catch (err) {
+        console.error("Failed to load user or interview form", err);
+        toast.error("Failed to load user or interview form");
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      isCancelled = true;
+    };
+  }, [id]);
 
-  const handleSubmitInterview = () => {
-    // TODO: Handle interview submission
-    console.log("Interview submitted:", {
-      interviewAnswers,
-      interviewComments,
+  const handleAnswerChange = (fieldId: number, value: string | number) => {
+    setAnswers((prev) => ({ ...prev, [fieldId]: value }));
+    // Clear invalid marker on change
+    setInvalidFields((prev) => {
+      if (!prev.has(fieldId)) return prev;
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
     });
-    setShowSubmitDialog(false);
   };
+
+  const handleSubmitInterview = async () => {
+    if (!form || !user) return;
+    // Validate required fields
+    const missing = new Set<number>();
+    for (const field of form.fields) {
+      if (!field.required) continue;
+      const v = answers[field.id];
+      if (field.type === "question") {
+        if (v === undefined || v === null || v === "") missing.add(field.id);
+      } else if (field.type === "text" || field.type === "email") {
+        const text = (v ?? "").toString().trim();
+        if (!text) missing.add(field.id);
+      }
+    }
+
+    if (missing.size > 0) {
+      setInvalidFields(missing);
+      setShowSubmitDialog(false);
+      toast.error("Please complete the required fields.");
+      return;
+    }
+
+    const payload: SubmitFormPayload = {
+      form_id: form.id,
+      targeted_user_id: Number(user.id),
+      form_fields: form.fields.map((f) => {
+        const value = answers[f.id];
+        if (f.type === "question") {
+          return {
+            form_field_id: f.id,
+            selected_option_id: value ? Number(value) : null,
+            text_field_entry: "",
+          };
+        }
+        return {
+          form_field_id: f.id,
+          selected_option_id: null,
+          text_field_entry: (value ?? "").toString(),
+        };
+      }),
+    };
+
+    try {
+      setIsSubmitting(true);
+      await submitForm(payload);
+      setShowSubmitDialog(false);
+      toast.success("Interview submitted successfully");
+    } catch (err) {
+      console.error("Failed to submit interview form", err);
+      toast.error("Failed to submit interview form");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="text-center text-muted-foreground">Loading user...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="text-center text-muted-foreground">User not found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
@@ -214,59 +319,68 @@ export function UserDetailPage() {
 
         {/* Information Tab */}
         <TabsContent value="information" className="space-y-6">
-          {/* Header Section */}
+          {/* Header Section - Reverted layout */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-start gap-6">
                 <ConsistentAvatar
                   user={{
-                    name: dummyUser.fullName,
-                    email: dummyUser.email,
+                    name: user.fullName,
+                    email: user.email,
                   }}
                   className="size-24 text-2xl"
                 />
                 <div className="flex-1 space-y-4">
                   <div>
                     <h1 className="text-3xl font-bold text-foreground">
-                      {dummyUser.fullName}
+                      {user.fullName}
                     </h1>
                     <p className="text-lg text-muted-foreground">
-                      {dummyUser.qualification} in {dummyUser.fieldOfStudy}
+                      {user.qualification || ""}
+                      {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <IconMail className="size-4 text-muted-foreground" />
-                      <span>{dummyUser.email}</span>
+                      <span>{user.email}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconPhone className="size-4 text-muted-foreground" />
-                      <span>{dummyUser.phoneNo}</span>
+                      <span>{user.phoneNo || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconMapPin className="size-4 text-muted-foreground" />
-                      <span>{dummyUser.city}</span>
+                      <span>{user.city || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconCalendar className="size-4 text-muted-foreground" />
                       <span>
-                        {new Date(dummyUser.birthdate).toLocaleDateString()}
+                        {user.birthdate
+                          ? new Date(user.birthdate).toLocaleDateString()
+                          : "-"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconGenderMale className="size-4 text-muted-foreground" />
-                      <span>{dummyUser.gender}</span>
+                      <span>{user.gender || "-"}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <IconDownload className="size-4 text-muted-foreground" />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-auto py-1 px-2"
-                      >
-                        Download Resume
-                      </Button>
+                      {user.resumeUrl ? (
+                        <Button
+                          onClick={() => window.open(user.resumeUrl!, "_blank")}
+                          size="sm"
+                          className="h-auto py-1 px-2 bg-[#1EDE9E] text-white hover:bg-[#19c98c]"
+                        >
+                          <IconDownload className="size-4" />
+                          Download Resume
+                        </Button>
+                      ) : (
+                        <Button size="sm" className="h-auto py-1 px-2" disabled>
+                          No Resume
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -283,31 +397,36 @@ export function UserDetailPage() {
                   Personal Information
                 </CardTitle>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium text-muted-foreground">
                       Date of Birth:
                     </span>
-                    <p>{new Date(dummyUser.birthdate).toLocaleDateString()}</p>
+                    <p>
+                      {user.birthdate
+                        ? new Date(user.birthdate).toLocaleDateString()
+                        : "-"}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">
                       Gender:
                     </span>
-                    <p>{dummyUser.gender}</p>
+                    <p>{user.gender || "-"}</p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">
                       City:
                     </span>
-                    <p>{dummyUser.city}</p>
+                    <p>{user.city || "-"}</p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">
                       Qualification:
                     </span>
-                    <p>{dummyUser.qualification}</p>
+                    <p>{user.qualification || "-"}</p>
                   </div>
                 </div>
                 <Separator />
@@ -317,10 +436,7 @@ export function UserDetailPage() {
                   </span>
                   <div className="flex gap-2 mt-1">
                     <Badge variant="secondary">
-                      Arabic: {dummyUser.arabicProficiency}
-                    </Badge>
-                    <Badge variant="secondary">
-                      English: {dummyUser.englishProficiency}
+                      English: {user.englishProficiency || "-"}
                     </Badge>
                   </div>
                 </div>
@@ -341,19 +457,19 @@ export function UserDetailPage() {
                     <span className="font-medium text-muted-foreground">
                       Field of Study:
                     </span>
-                    <p>{dummyUser.fieldOfStudy}</p>
+                    <p>{user.fieldOfStudy || "-"}</p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">
                       Institution:
                     </span>
-                    <p>{dummyUser.institutionName}</p>
+                    <p>{user.institutionName || "-"}</p>
                   </div>
                   <div>
                     <span className="font-medium text-muted-foreground">
                       GPA:
                     </span>
-                    <p>{dummyUser.gpa}</p>
+                    <p>{user.gpa || "-"}</p>
                   </div>
                 </div>
                 <Separator />
@@ -362,7 +478,7 @@ export function UserDetailPage() {
                     Selected Fields:
                   </span>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {dummyUser.fieldsChosen.map((field, index) => (
+                    {user.fieldsChosen.map((field, index) => (
                       <Badge key={index} variant="default">
                         {field}
                       </Badge>
@@ -399,7 +515,7 @@ export function UserDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dummyUser.technicalSkills.map((skill, index) => (
+                      {user.technicalSkills.map((skill, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {skill.skill}
@@ -434,7 +550,7 @@ export function UserDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dummyUser.workExperience.map((exp, index) => (
+                      {user.workExperience.map((exp, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {exp.project}
@@ -457,14 +573,16 @@ export function UserDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dummyUser.coursesTaken.map((course, index) => (
+                      {user.coursesTaken.map((course, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {course.name}
                           </TableCell>
                           <TableCell>{course.entity}</TableCell>
                           <TableCell>
-                            {new Date(course.date).toLocaleDateString()}
+                            {course.date
+                              ? new Date(course.date).toLocaleDateString()
+                              : "-"}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -485,8 +603,8 @@ export function UserDetailPage() {
                 <div className="relative">
                   <ConsistentAvatar
                     user={{
-                      name: dummyUser.fullName,
-                      email: dummyUser.email,
+                      name: user.fullName,
+                      email: user.email,
                     }}
                     className="size-20 text-xl"
                   />
@@ -498,7 +616,7 @@ export function UserDetailPage() {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
                     <h1 className="text-3xl font-bold text-foreground">
-                      {dummyUser.fullName}
+                      {user.fullName}
                     </h1>
                     <Badge variant="secondary" className="text-sm">
                       Interview in Progress
@@ -509,12 +627,13 @@ export function UserDetailPage() {
                     <div className="flex items-center gap-2">
                       <IconSchool className="size-4" />
                       <span>
-                        {dummyUser.qualification} in {dummyUser.fieldOfStudy}
+                        {user.qualification || ""}
+                        {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <IconMail className="size-4" />
-                      <span>{dummyUser.email}</span>
+                      <span>{user.email}</span>
                     </div>
                   </div>
 
@@ -523,20 +642,18 @@ export function UserDetailPage() {
                       Fields of Interest:
                     </span>
                     <div className="flex flex-wrap gap-1">
-                      {dummyUser.fieldsChosen
-                        .slice(0, 2)
-                        .map((field, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {field}
-                          </Badge>
-                        ))}
-                      {dummyUser.fieldsChosen.length > 2 && (
+                      {user.fieldsChosen.slice(0, 2).map((field, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {field}
+                        </Badge>
+                      ))}
+                      {user.fieldsChosen.length > 2 && (
                         <Badge variant="outline" className="text-xs">
-                          +{dummyUser.fieldsChosen.length - 2} more
+                          +{user.fieldsChosen.length - 2} more
                         </Badge>
                       )}
                     </div>
@@ -548,7 +665,7 @@ export function UserDetailPage() {
                     Total Points
                   </div>
                   <div className="text-2xl font-bold text-primary">
-                    {interviewQuestions.reduce((sum, q) => sum + q.points, 0)}
+                    {form?.totalPoints ?? 0}
                   </div>
                   <div className="text-xs text-muted-foreground">Available</div>
                 </div>
@@ -556,87 +673,129 @@ export function UserDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Individual Question Cards */}
-          {interviewQuestions.map((question) => (
-            <Card key={question.id}>
-              <CardContent className="pt-6 space-y-6">
-                {/* Question Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold flex items-center gap-2">
-                      {question.question}
-                      {question.required && (
-                        <span className="text-red-500 text-lg">*</span>
-                      )}
-                    </h3>
-                  </div>
-                  <Badge variant="outline" className="ml-4 text-sm">
-                    {question.points}{" "}
-                    {question.points === 1 ? "point" : "points"}
-                  </Badge>
-                </div>
-
-                {/* Radio Options - Single Column */}
-                <RadioGroup
-                  value={interviewAnswers[question.id] || ""}
-                  onValueChange={(value) =>
-                    handleAnswerChange(question.id, value)
-                  }
-                  className="space-y-3"
-                >
-                  {question.options.map((option) => (
-                    <div
-                      key={option.value}
-                      className="flex items-center space-x-3"
-                    >
-                      <RadioGroupItem
-                        value={option.value}
-                        id={`q${question.id}-${option.value}`}
-                      />
-                      <Label
-                        htmlFor={`q${question.id}-${option.value}`}
-                        className="text-base font-normal cursor-pointer"
-                      >
-                        {option.label}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-
-                {/* Optional Comment - Improved Spacing */}
-                {question.hasComment && (
-                  <div className="space-y-4 pt-4 border-t border-border">
-                    <Label
-                      htmlFor={`comment-${question.id}`}
-                      className="text-base font-medium"
-                    >
-                      Additional Comments (Optional)
-                    </Label>
-                    <Textarea
-                      id={`comment-${question.id}`}
-                      placeholder="Add any additional notes or observations..."
-                      value={interviewComments[question.id] || ""}
-                      onChange={(e) =>
-                        handleCommentChange(question.id, e.target.value)
-                      }
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                )}
+          {/* Dynamic Question Cards */}
+          {!form && (
+            <Card>
+              <CardContent className="py-6 text-center text-muted-foreground">
+                No interview form available
               </CardContent>
             </Card>
-          ))}
+          )}
 
-          {/* Submit Button - Outside Card at Bottom */}
-          <div className="flex justify-center pt-8">
-            <Button
-              onClick={() => setShowSubmitDialog(true)}
-              size="lg"
-              className="min-w-[200px] h-12 text-lg"
-            >
-              Submit Interview
-            </Button>
-          </div>
+          {form &&
+            form.fields.map((field) => (
+              <Card key={field.id}>
+                <CardContent className="pt-6 space-y-6">
+                  {/* Question Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold flex items-center gap-2">
+                        {field.label}
+                        {field.required && (
+                          <span className="text-red-500 text-lg">*</span>
+                        )}
+                      </h3>
+                    </div>
+                    <Badge variant="outline" className="ml-4 text-sm">
+                      {field.type === "question" && field.options?.length
+                        ? `${
+                            Math.max(...field.options.map((o) => o.score)) *
+                            (field.weight || 1)
+                          } points`
+                        : "Optional"}
+                    </Badge>
+                  </div>
+
+                  {/* Likert/Boolean question */}
+                  {field.type === "question" && field.options && (
+                    <RadioGroup
+                      value={String(answers[field.id] ?? "")}
+                      onValueChange={(value) =>
+                        handleAnswerChange(field.id, value)
+                      }
+                      className={`space-y-3 ${
+                        invalidFields.has(field.id)
+                          ? "border border-destructive rounded-md p-3"
+                          : ""
+                      }`}
+                    >
+                      {field.options.map((option) => (
+                        <div
+                          key={option.id}
+                          className="flex items-center space-x-3"
+                        >
+                          <RadioGroupItem
+                            value={String(option.id)}
+                            id={`f${field.id}-o${option.id}`}
+                          />
+                          <Label
+                            htmlFor={`f${field.id}-o${option.id}`}
+                            className="text-base font-normal cursor-pointer"
+                          >
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+
+                  {/* Text/email */}
+                  {field.type !== "question" && (
+                    <div className="space-y-4 pt-2">
+                      <Label
+                        htmlFor={`field-${field.id}`}
+                        className="text-base font-medium"
+                      >
+                        {field.type === "email" ? "Email" : field.label}
+                      </Label>
+                      {field.type === "text" ? (
+                        <Textarea
+                          id={`field-${field.id}`}
+                          placeholder="Type here..."
+                          value={String(answers[field.id] ?? "")}
+                          onChange={(e) =>
+                            handleAnswerChange(field.id, e.target.value)
+                          }
+                          className={`min-h-[100px] ${
+                            invalidFields.has(field.id)
+                              ? "border-destructive"
+                              : ""
+                          }`}
+                        />
+                      ) : (
+                        <input
+                          id={`field-${field.id}`}
+                          type="email"
+                          className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+                            invalidFields.has(field.id)
+                              ? "border-destructive"
+                              : ""
+                          }`}
+                          value={String(answers[field.id] ?? "")}
+                          onChange={(e) =>
+                            handleAnswerChange(field.id, e.target.value)
+                          }
+                        />
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+          {/* Submit Button */}
+          {form && (
+            <div className="flex justify-center pt-8">
+              <Button
+                onClick={() => setShowSubmitDialog(true)}
+                size="lg"
+                className="min-w-[200px] h-12 text-lg"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Interview"}
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

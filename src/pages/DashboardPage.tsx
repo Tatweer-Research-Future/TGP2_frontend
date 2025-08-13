@@ -1,15 +1,63 @@
+import { useState, useEffect } from "react";
 import { SectionCards } from "@/components/section-cards";
 import { CandidateCard } from "@/components/candidate-card";
-import { candidates } from "@/lib/candidates";
-
+import { getCandidates } from "@/lib/api";
+import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
+import { toast } from "sonner";
 
 export function DashboardPage() {
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch candidates from backend
+  const fetchCandidates = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getCandidates(5); // group_id=5 for candidates
+      const transformedCandidates = response.results.map(
+        transformBackendCandidate
+      );
+      setCandidates(transformedCandidates);
+    } catch (err) {
+      console.error("Failed to fetch candidates:", err);
+      toast.error("Failed to load candidates");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
+
   const total = candidates.length;
-  const interviewed = candidates.filter((c) => c.status === "interviewed").length;
-  const notInterviewed = candidates.filter((c) => c.status === "not_interviewed").length;
+  const interviewed = candidates.filter(
+    (c) => c.status === "interviewed"
+  ).length;
+  const notInterviewed = candidates.filter(
+    (c) => c.status === "not_interviewed"
+  ).length;
+
+  if (isLoading) {
+    return (
+      <>
+        <SectionCards total={0} interviewed={0} notInterviewed={0} />
+        <div className="px-4 lg:px-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-muted-foreground">Loading candidates...</div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <SectionCards total={total} interviewed={interviewed} notInterviewed={notInterviewed} />
+      <SectionCards
+        total={total}
+        interviewed={interviewed}
+        notInterviewed={notInterviewed}
+      />
       {/** Chart temporarily removed from dashboard */}
       <div className="px-4 lg:px-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
