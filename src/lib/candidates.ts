@@ -10,6 +10,27 @@ export type Candidate = {
   points?: number;
 };
 
+// Transform backend candidate data to frontend format
+export function transformBackendCandidate(backendCandidate: {
+  id: number;
+  email: string;
+  name: string;
+  phone: string | null;
+  interviewed_by_me: boolean;
+}): Candidate {
+  return {
+    id: backendCandidate.id.toString(),
+    fullName: backendCandidate.name,
+    email: backendCandidate.email,
+    status: backendCandidate.interviewed_by_me
+      ? "interviewed"
+      : "not_interviewed",
+    appliedDate: new Date().toISOString().split("T")[0], // Use current date as fallback since backend doesn't provide this
+    fieldsChosen: [], // Backend doesn't provide this data
+    points: 0, // Backend doesn't provide this data
+  };
+}
+
 export const candidates: Candidate[] = [
   {
     id: "1",
@@ -120,5 +141,3 @@ export const candidates: Candidate[] = [
     points: 0,
   },
 ];
-
-

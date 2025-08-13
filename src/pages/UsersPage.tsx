@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,12 @@ import {
   IconClock,
   IconMinus,
   IconCopy,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
-import { candidates as allCandidates } from "@/lib/candidates";
+import { getCandidates, type BackendCandidate } from "@/lib/api";
+import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
 const statusMeta = {
@@ -63,10 +65,36 @@ export function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch candidates from backend
+  const fetchCandidates = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getCandidates(5); // group_id=5 for candidates
+      const transformedCandidates = response.results.map(
+        transformBackendCandidate
+      );
+      setCandidates(transformedCandidates);
+    } catch (err) {
+      console.error("Failed to fetch candidates:", err);
+      setError("Failed to load candidates. Please try again.");
+      toast.error("Failed to load candidates");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
 
   // Filter and search logic
   const filteredCandidates = useMemo(() => {
-    return allCandidates.filter((candidate) => {
+    return candidates.filter((candidate) => {
       const matchesSearch =
         candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -76,7 +104,7 @@ export function UsersPage() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [searchTerm, statusFilter]);
+  }, [candidates, searchTerm, statusFilter]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredCandidates.length / ITEMS_PER_PAGE);
@@ -107,7 +135,9 @@ export function UsersPage() {
     const text = emails.join(", ");
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`);
+      toast.success(
+        `Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`
+      );
     } catch (err) {
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
@@ -116,7 +146,9 @@ export function UsersPage() {
       textArea.select();
       try {
         document.execCommand("copy");
-        toast.success(`Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`);
+        toast.success(
+          `Copied ${emails.length} email${emails.length > 1 ? "s" : ""}`
+        );
       } catch (_) {
         toast.error("Failed to copy emails");
       } finally {
@@ -135,7 +167,9 @@ export function UsersPage() {
     const text = names.join(", ");
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(`Copied ${names.length} name${names.length > 1 ? "s" : ""}`);
+      toast.success(
+        `Copied ${names.length} name${names.length > 1 ? "s" : ""}`
+      );
     } catch (err) {
       const textArea = document.createElement("textarea");
       textArea.value = text;
@@ -143,7 +177,9 @@ export function UsersPage() {
       textArea.select();
       try {
         document.execCommand("copy");
-        toast.success(`Copied ${names.length} name${names.length > 1 ? "s" : ""}`);
+        toast.success(
+          `Copied ${names.length} name${names.length > 1 ? "s" : ""}`
+        );
       } catch (_) {
         toast.error("Failed to copy names");
       } finally {
@@ -152,15 +188,71 @@ export function UsersPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <p className="text-muted-foreground">
+              Manage and review candidate applications
+            </p>
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">
+                  Loading candidates...
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-6 py-8 space-y-6">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <p className="text-muted-foreground">
+              Manage and review candidate applications
+            </p>
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-8 gap-4">
+                <div className="text-muted-foreground">{error}</div>
+                <Button onClick={fetchCandidates} variant="outline">
+                  <IconRefresh className="size-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
-          <p className="text-muted-foreground">
-            Manage and review candidate applications
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <p className="text-muted-foreground">
+              Manage and review candidate applications
+            </p>
+          </div>
+          <Button onClick={fetchCandidates} variant="outline" size="sm">
+            <IconRefresh className="size-4 mr-2" />
+            Refresh
+          </Button>
         </div>
 
         {/* Search and Filter Bar */}
@@ -199,10 +291,6 @@ export function UsersPage() {
                     <SelectItem value="not_interviewed">
                       <IconMinus className="text-gray-500" />
                       Not Interviewed
-                    </SelectItem>
-                    <SelectItem value="in_progress">
-                      <IconClock className="text-amber-600" />
-                      In Progress
                     </SelectItem>
                     <SelectItem value="interviewed">
                       <IconCheck className="text-emerald-600" />
@@ -299,7 +387,9 @@ export function UsersPage() {
                       <TableCell>{candidate.email}</TableCell>
                       <TableCell>
                         <Badge className={meta.className}>
-                          <span className={`inline-block size-2 rounded-full ${meta.dotClass}`} />
+                          <span
+                            className={`inline-block size-2 rounded-full ${meta.dotClass}`}
+                          />
                           {meta.label}
                         </Badge>
                       </TableCell>

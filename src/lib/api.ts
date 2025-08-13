@@ -145,3 +145,160 @@ function getCookieValue(name: string): string | null {
   if (parts.length === 2) return parts.pop()!.split(";").shift() || null;
   return null;
 }
+
+// Candidate API types and functions
+export type BackendCandidate = {
+  id: number;
+  email: string;
+  name: string;
+  phone: string | null;
+  interviewed_by_me: boolean;
+};
+
+export type CandidatesResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: BackendCandidate[];
+};
+
+export async function getCandidates(
+  groupId: number = 5
+): Promise<CandidatesResponse> {
+  return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`);
+}
+
+export async function getCandidateById(id: string): Promise<BackendCandidate> {
+  return apiFetch<BackendCandidate>(`/users/${id}/`);
+}
+
+// Add: Detailed user API response and fetcher
+export type BackendUserDetail = {
+  id: number;
+  email: string;
+  name: string;
+  interviewed_by_me: boolean;
+  additional_fields?: {
+    cert?: string;
+    lang?: string;
+    phone?: string | null;
+    github?: string | null;
+    phone2?: string | null;
+    linkedin?: string | null;
+    full_name?: string | null;
+    other_city?: string | null;
+    reached_by?: string | null;
+    nationality?: string | null;
+    other_files?: string | null;
+    full_name_en?: string | null;
+    aditional_info?: string | null;
+    graduation_year?: string | null;
+    city_job_commitment?: string | null;
+    full_time_commitment?: string | null;
+    other_specialization?: string | null;
+    statement_of_purpose?: string | null;
+    additional_information?: {
+      gpa?: string | null;
+      city?: string | null;
+      gender?: string | null;
+      birthdate?: string | null;
+      resumeUrl?: string | null;
+      coursesTaken?: Array<{
+        date: string | null;
+        name: string | null;
+        entity: string | null;
+      }> | null;
+      fieldOfStudy?: string | null;
+      fieldsChosen?: string[] | null;
+      qualification?: string | null;
+      workExperience?: Array<{
+        project?: string | null;
+        company?: string | null;
+        duration?: string | null;
+      }> | null;
+      englishProficiency?: string | null;
+    } | null;
+  } | null;
+};
+
+export async function getUserDetailById(
+  id: string
+): Promise<BackendUserDetail> {
+  return apiFetch<BackendUserDetail>(`/users/${id}/`);
+}
+
+// Forms API
+export type BackendFormsList = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: Array<{
+    id: number;
+    title: string;
+    expairy_date: string;
+  }>;
+};
+
+export type BackendFormOption = {
+  id: number;
+  label: string;
+  score: string; // numeric as string
+  order: number;
+};
+
+export type BackendFormScale = {
+  id: number;
+  name: string;
+  options: BackendFormOption[];
+};
+
+export type BackendFormField = {
+  id: number;
+  label: string;
+  type: "email" | "question" | "text";
+  required: boolean;
+  order: number;
+  scale: BackendFormScale | null;
+  weight: string; // numeric as string
+};
+
+export async function getForms(): Promise<BackendFormsList> {
+  return apiFetch<BackendFormsList>(`/forms/`);
+}
+
+export async function getFormById(
+  id: number | string
+): Promise<BackendFormField[]> {
+  return apiFetch<BackendFormField[]>(`/forms/${id}`);
+}
+
+// Submit completed form
+export type SubmitFormPayload = {
+  form_id: number;
+  targeted_user_id: number;
+  form_fields: Array<{
+    form_field_id: number;
+    selected_option_id: number | null;
+    text_field_entry: string;
+  }>;
+};
+
+export type SubmitFormResponse = {
+  detail?: string;
+  success?: boolean;
+  [key: string]: unknown;
+};
+
+export async function submitForm(
+  payload: SubmitFormPayload
+): Promise<SubmitFormResponse> {
+  return apiFetch<SubmitFormResponse>(`/forms/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
+}
