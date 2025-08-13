@@ -27,14 +27,14 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconCheck,
-  IconClock,
   IconMinus,
   IconCopy,
   IconRefresh,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { Loader } from "@/components/ui/loader";
 
-import { getCandidates, type BackendCandidate } from "@/lib/api";
+import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
@@ -200,10 +200,8 @@ export function UsersPage() {
           </div>
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">
-                  Loading candidates...
-                </div>
+              <div className="flex items-center justify-center min-h-[50vh]">
+                <Loader />
               </div>
             </CardContent>
           </Card>
