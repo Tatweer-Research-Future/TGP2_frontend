@@ -88,7 +88,7 @@ export function LoginForm({
           </form>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="/src/assets/avatars/Dark Nature.svg"
+              src="/assets/avatars/Dark Nature.svg"
               alt="REMS Login Background"
               className="absolute inset-0 h-full w-full object-cover"
             />
