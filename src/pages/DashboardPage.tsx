@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { SectionCards } from "@/components/section-cards";
-import { CandidateCard } from "@/components/candidate-card";
+import { CandidateStatusChart } from "@/components/candidate-status-chart";
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
+import { Button } from "@/components/ui/button";
+import { IconArrowRight } from "@tabler/icons-react";
 
 export function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -41,32 +42,35 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <>
-        <SectionCards total={0} interviewed={0} notInterviewed={0} />
-        <div className="px-4 lg:px-6">
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader />
-          </div>
+      <div className="px-4 lg:px-6">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader />
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <SectionCards
-        total={total}
-        interviewed={interviewed}
-        notInterviewed={notInterviewed}
-      />
-      {/** Chart temporarily removed from dashboard */}
-      <div className="px-4 lg:px-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {candidates.map((c) => (
-            <CandidateCard key={c.id} candidate={c} />
-          ))}
+    <div className="px-4 lg:px-6">
+      <div className="flex flex-col items-center gap-8">
+        <div className="w-full max-w-2xl">
+          <CandidateStatusChart
+            interviewed={interviewed}
+            notInterviewed={notInterviewed}
+            total={total}
+          />
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="px-6 py-2 text-base font-medium transition-all duration-300 hover:scale-105"
+          onClick={() => (window.location.href = "/candidates")}
+        >
+          Go to Candidates
+          <IconArrowRight className="ml-2 size-4 transition-transform duration-300 group-hover:translate-x-1" />
+        </Button>
       </div>
-    </>
+    </div>
   );
 }
