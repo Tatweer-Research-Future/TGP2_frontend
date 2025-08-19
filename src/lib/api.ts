@@ -270,6 +270,7 @@ export type BackendFormField = {
   order: number;
   scale: BackendFormScale | null;
   weight: string; // numeric as string
+  suggested_questions?: string;
 };
 
 export async function getForms(): Promise<BackendFormsList> {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import {
   Card,
   CardContent,
@@ -39,7 +40,6 @@ import {
   IconCalendar,
   IconSchool,
   IconBriefcase,
-  IconDownload,
   IconClipboardList,
   IconLanguage,
   IconTags,
@@ -213,6 +213,7 @@ type InterviewField = {
   weight: number; // numeric weight
   // For question
   options?: Array<{ id: number; label: string; score: number; order: number }>;
+  suggested_questions?: string;
 };
 
 type InterviewForm = {
@@ -248,6 +249,7 @@ function transformBackendForm(
               order: o.order,
             }))
         : undefined,
+      suggested_questions: f.suggested_questions,
     }));
 
   const totalPoints = transformed.reduce((sum, field) => {
@@ -475,8 +477,8 @@ export function UserDetailPage() {
                           size="sm"
                           className="h-auto py-1 px-2 bg-[#1EDE9E] text-white hover:bg-[#19c98c]"
                         >
-                          <IconDownload className="size-4" />
-                          Download Resume
+                          <IconExternalLink className="size-4" />
+                          Open Resume
                         </Button>
                       ) : (
                         <Button size="sm" className="h-auto py-1 px-2" disabled>
@@ -949,6 +951,40 @@ export function UserDetailPage() {
                           <span className="text-red-500 text-lg">*</span>
                         )}
                       </h3>
+                      {field.suggested_questions && (
+                        <div className="mt-3">
+                          {/* <p className="text-sm text-muted-foreground font-medium mb-2">
+                            Suggested Questions:
+                          </p> */}
+                          <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none">
+                            <ReactMarkdown
+                              components={{
+                                p: ({ children }) => (
+                                  <p className="mb-1 last:mb-0">{children}</p>
+                                ),
+                                ul: ({ children }) => (
+                                  <ul className="list-disc list-inside space-y-1 mb-2">
+                                    {children}
+                                  </ul>
+                                ),
+                                li: ({ children }) => (
+                                  <li className="text-sm">{children}</li>
+                                ),
+                                strong: ({ children }) => (
+                                  <strong className="font-semibold">
+                                    {children}
+                                  </strong>
+                                ),
+                                em: ({ children }) => (
+                                  <em className="italic">{children}</em>
+                                ),
+                              }}
+                            >
+                              {field.suggested_questions}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <Badge variant="outline" className="ml-4 text-sm">
                       {field.type === "question" && field.options?.length
