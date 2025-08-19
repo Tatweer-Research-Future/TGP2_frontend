@@ -48,9 +48,8 @@ export function getConsistentAvatar(identifier: string): string {
   const avatarIndex = hash % avatarImages.length;
 
   // Return the path to the avatar
-  return `/src/assets/avatars/${avatarImages[avatarIndex]}`;
-  // Note: In production you'd want to use a more robust way to reference assets
-  // but this works for development with Vite
+  return `/assets/avatars/${avatarImages[avatarIndex]}`;
+  // Note: This path works for both development and production
 }
 
 /**
