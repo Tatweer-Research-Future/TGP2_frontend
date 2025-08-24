@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { CandidateStatusChart } from "@/components/candidate-status-chart";
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { IconArrowRight } from "@tabler/icons-react";
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,7 +67,7 @@ export function DashboardPage() {
           variant="outline"
           size="sm"
           className="px-6 py-2 text-base font-medium transition-all duration-300 hover:scale-105"
-          onClick={() => (window.location.href = "/candidates")}
+          onClick={() => navigate("/candidates")}
         >
           Go to Candidates
           <IconArrowRight className="ml-2 size-4 transition-transform duration-300 group-hover:translate-x-1" />
