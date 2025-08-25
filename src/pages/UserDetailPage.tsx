@@ -99,11 +99,19 @@ type UserDetail = {
   interviewedByMe: boolean;
 };
 
+function normalizeScore(raw: unknown): string | undefined {
+  if (raw == null) return undefined;
+  const text = String(raw).trim();
+  if (!text) return undefined;
+  // Extract first number in the string
+  const match = text.match(/\d+(?:\.\d+)?/);
+  if (!match) return undefined;
+  return match[0];
+}
+
 function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   const add = data.additional_fields ?? {};
   const info = add.additional_information ?? {};
-
-  
 
   const fullName = add.full_name_en || add.full_name || data.name || "";
 
@@ -120,6 +128,9 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     otherFiles.push(otherFilesRaw.trim());
   }
 
+  const iqScore = normalizeScore((data as any).iq_exam_score);
+  const englishScore = (data as any).english_exam_score ?? undefined;
+
   return {
     id: String(data.id),
     fullName,
@@ -135,8 +146,8 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     arabicProficiency: (info as any).arabicProficiency ?? undefined,
     englishProficiency: info.englishProficiency ?? undefined,
     graduationYear: (add as any).graduation_year ?? undefined,
-    iqExamScore: (add as any).iq_exam_score ?? undefined,
-    englishExamScore: (add as any).english_exam_score ?? undefined,
+    iqExamScore: iqScore,
+    englishExamScore: englishScore,
     technicalSkills: Array.isArray((info as any).technicalSkills)
       ? ((info as any).technicalSkills as any[]).map((t) => ({
           skill: (t?.skill ?? "") as string,
@@ -625,10 +636,6 @@ export function UserDetailPage() {
                       : ""}
                   </div>
                 </div>
-                {/* Debug info - remove this later */}
-                <div className="text-xs text-red-500 mt-2">
-                  Debug: IQ Score = "{user.iqExamScore}"
-                </div>
               </CardContent>
 
               <CardFooter className="pt-0">
@@ -640,10 +647,6 @@ export function UserDetailPage() {
                     <span className="text-sm font-medium">
                       {user.englishExamScore || "—"}
                     </span>
-                  </div>
-                  {/* Debug info - remove this later */}
-                  <div className="text-xs text-red-500 mt-1">
-                    Debug: English Score = "{user.englishExamScore}"
                   </div>
                 </div>
               </CardFooter>
