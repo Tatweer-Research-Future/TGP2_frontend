@@ -41,7 +41,6 @@ import {
   IconSchool,
   IconBriefcase,
   IconClipboardList,
-  IconLanguage,
   IconTags,
   IconFile,
   IconFileText,
@@ -50,6 +49,7 @@ import {
   IconFileZip,
   IconFileCode,
   IconExternalLink,
+  IconTarget,
 } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
@@ -79,6 +79,8 @@ type UserDetail = {
   arabicProficiency?: string;
   englishProficiency?: string;
   graduationYear?: string;
+  iqExamScore?: string;
+  englishExamScore?: string;
   technicalSkills: Array<{
     skill: string;
     proficiency: string;
@@ -100,6 +102,8 @@ type UserDetail = {
 function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   const add = data.additional_fields ?? {};
   const info = add.additional_information ?? {};
+
+  
 
   const fullName = add.full_name_en || add.full_name || data.name || "";
 
@@ -131,6 +135,8 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     arabicProficiency: (info as any).arabicProficiency ?? undefined,
     englishProficiency: info.englishProficiency ?? undefined,
     graduationYear: (add as any).graduation_year ?? undefined,
+    iqExamScore: (add as any).iq_exam_score ?? undefined,
+    englishExamScore: (add as any).english_exam_score ?? undefined,
     technicalSkills: Array.isArray((info as any).technicalSkills)
       ? ((info as any).technicalSkills as any[]).map((t) => ({
           skill: (t?.skill ?? "") as string,
@@ -290,7 +296,8 @@ export function UserDetailPage() {
         // Load user
         const userResp = await getUserDetailById(id);
         if (isCancelled) return;
-        setUser(transformBackendUserDetail(userResp));
+        const transformedUser = transformBackendUserDetail(userResp);
+        setUser(transformedUser);
 
         // Load forms list and pick first/only interview
         const formsList = await getForms();
@@ -564,56 +571,82 @@ export function UserDetailPage() {
               </CardContent>
 
               <CardFooter className="pt-0">
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    Graduation date
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      Graduation date
+                    </div>
+                    <Badge
+                      variant={
+                        getGraduationInfo(user.graduationYear).isFuture
+                          ? "default"
+                          : "secondary"
+                      }
+                    >
+                      <IconCalendar className="mr-1.5 size-3.5" />
+                      {getGraduationInfo(user.graduationYear).text}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={
-                      getGraduationInfo(user.graduationYear).isFuture
-                        ? "default"
-                        : "secondary"
-                    }
-                  >
-                    <IconCalendar className="mr-1.5 size-3.5" />
-                    {getGraduationInfo(user.graduationYear).text}
-                  </Badge>
+                  <div>
+                    <div className="text-xs text-muted-foreground">
+                      University
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <FaUniversity className="size-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {user.institutionName || "—"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
 
-            {/* Card 2: Language Proficiency */}
-            <Card className="flex flex-col">
-              <CardHeader>
+            {/* Card 2: Test Scores */}
+            <Card className="flex flex-col gap-2">
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
-                  <IconLanguage className="size-5" />
-                  <span>Language Proficiency</span>
+                  <IconTarget className="size-5" />
+                  <span>Test Scores</span>
                 </CardTitle>
-                {/* A description can be added here if needed in the future */}
-                {/* <CardDescription>Self-reported levels</CardDescription> */}
               </CardHeader>
-              <CardContent className="flex-grow pt-2">
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold">English</div>
-                    <Badge
-                      variant="secondary"
-                      className="min-w-16 justify-center"
-                    >
-                      {user.englishProficiency || "—"}
-                    </Badge>
+
+              <CardContent className="pt-0 flex-1 flex items-center">
+                {/* IQ score metric vertically centered within card */}
+                <div className="flex items-baseline gap-1.5">
+                  <div className="text-5xl font-bold tracking-tighter">
+                    {user.iqExamScore && !isNaN(parseFloat(user.iqExamScore))
+                      ? parseFloat(user.iqExamScore).toFixed(0)
+                      : "—"}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold">Arabic</div>
-                    <Badge
-                      variant="secondary"
-                      className="min-w-16 justify-center"
-                    >
-                      {user.arabicProficiency || "—"}
-                    </Badge>
+                  <div className="text-lg font-medium text-muted-foreground">
+                    {user.iqExamScore && !isNaN(parseFloat(user.iqExamScore))
+                      ? "/60"
+                      : ""}
                   </div>
                 </div>
+                {/* Debug info - remove this later */}
+                <div className="text-xs text-red-500 mt-2">
+                  Debug: IQ Score = "{user.iqExamScore}"
+                </div>
               </CardContent>
+
+              <CardFooter className="pt-0">
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    English score
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-medium">
+                      {user.englishExamScore || "—"}
+                    </span>
+                  </div>
+                  {/* Debug info - remove this later */}
+                  <div className="text-xs text-red-500 mt-1">
+                    Debug: English Score = "{user.englishExamScore}"
+                  </div>
+                </div>
+              </CardFooter>
             </Card>
 
             {/* Card 3: Selected Fields */}
