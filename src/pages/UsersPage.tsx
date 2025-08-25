@@ -74,7 +74,7 @@ export function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getCandidates(5); // group_id=5 for candidates
+      const response = await getCandidates(); // group_id=5 for candidates
       const transformedCandidates = response.results.map(
         transformBackendCandidate
       );

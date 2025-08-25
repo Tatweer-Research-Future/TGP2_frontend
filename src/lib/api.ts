@@ -165,7 +165,7 @@ export type CandidatesResponse = {
 };
 
 export async function getCandidates(
-  groupId: number = 5
+  groupId: number = 1
 ): Promise<CandidatesResponse> {
   return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`);
 }
@@ -195,6 +195,8 @@ export type BackendUserDetail = {
     full_name_en?: string | null;
     aditional_info?: string | null;
     graduation_year?: string | null;
+    iq_exam_score?: string | null;
+    english_exam_score?: string | null;
     city_job_commitment?: string | null;
     full_time_commitment?: string | null;
     other_specialization?: string | null;
