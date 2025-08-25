@@ -22,6 +22,7 @@ export type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<LoginResponse>;
   logout: () => Promise<void>;
 };
@@ -32,6 +33,7 @@ const USER_STORAGE_KEY = "auth_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -42,23 +44,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // ignore
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   const login = useCallback(async (credentials: LoginRequest) => {
-    const resp = await loginService(credentials);
-    const nextUser: AuthUser = resp.user;
-    setUser(nextUser);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
-    return resp;
+    setIsLoading(true);
+    try {
+      const resp = await loginService(credentials);
+      const nextUser: AuthUser = resp.user;
+      setUser(nextUser);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+      return resp;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const logout = useCallback(async () => {
+    setIsLoading(true);
     try {
       await logoutService();
     } finally {
       setUser(null);
       localStorage.removeItem(USER_STORAGE_KEY);
+      setIsLoading(false);
     }
   }, []);
 
@@ -66,10 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
+      isLoading,
       login,
       logout,
     }),
-    [user, login, logout]
+    [user, isLoading, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

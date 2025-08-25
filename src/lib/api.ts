@@ -112,6 +112,19 @@ export async function apiFetch<T>(
     } catch (_) {
       // ignore
     }
+
+    // Handle authentication errors
+    if (response.status === 401 || response.status === 403) {
+      // Clear invalid tokens and user data
+      setAccessToken(null);
+      localStorage.removeItem("auth_user");
+
+      // Redirect to login if not already there
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
     const error = new Error(
       typeof detail === "object" && detail !== null
         ? JSON.stringify(detail)
