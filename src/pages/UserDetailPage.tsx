@@ -50,6 +50,9 @@ import {
   IconFileCode,
   IconExternalLink,
   IconTarget,
+  IconMessageCircle,
+  IconMapPin,
+  IconBrain,
 } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
@@ -63,6 +66,8 @@ import {
   type SubmitFormPayload,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { useCandidates } from "@/context/CandidatesContext";
+import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 
 type UserDetail = {
   id: string;
@@ -220,6 +225,47 @@ function getFileIconComponent(url: string) {
   return IconFile;
 }
 
+// Get badge variant for English proficiency level
+function getEnglishProficiencyVariant(level?: string) {
+  if (!level) return "outline";
+  const normalizedLevel = level.toLowerCase();
+
+  if (
+    normalizedLevel.includes("advanced") ||
+    normalizedLevel.includes("c2") ||
+    normalizedLevel.includes("c1") ||
+    normalizedLevel.includes("b2")
+  ) {
+    return "default"; // Highest emphasis
+  }
+  if (
+    normalizedLevel.includes("upper-intermediate") ||
+    normalizedLevel.includes("b1")
+  ) {
+    return "secondary"; // High emphasis
+  }
+  if (
+    normalizedLevel.includes("intermediate") ||
+    normalizedLevel.includes("a2")
+  ) {
+    return "outline"; // Medium emphasis
+  }
+  if (
+    normalizedLevel.includes("pre-intermediate") ||
+    normalizedLevel.includes("a1")
+  ) {
+    return "outline"; // Lower emphasis
+  }
+  if (
+    normalizedLevel.includes("elementary") ||
+    normalizedLevel.includes("pre-a")
+  ) {
+    return "outline"; // Lowest emphasis
+  }
+
+  return "outline"; // Default
+}
+
 // Dynamic interview form types
 type InterviewField = {
   id: number;
@@ -289,6 +335,7 @@ export function UserDetailPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<UserDetail | null>(null);
+  const { candidates, setCandidates } = useCandidates();
 
   // Interview form state
   const [form, setForm] = useState<InterviewForm | null>(null);
@@ -309,6 +356,23 @@ export function UserDetailPage() {
         if (isCancelled) return;
         const transformedUser = transformBackendUserDetail(userResp);
         setUser(transformedUser);
+
+        // Add candidate to context if not already present
+        const candidateExists = candidates.find((c) => c.id === id);
+        if (!candidateExists) {
+          const newCandidate: Candidate = {
+            id: transformedUser.id,
+            fullName: transformedUser.fullName,
+            email: transformedUser.email,
+            status: transformedUser.interviewedByMe
+              ? "interviewed"
+              : "not_interviewed",
+            appliedDate: new Date().toISOString().split("T")[0],
+            fieldsChosen: transformedUser.fieldsChosen,
+            points: 0,
+          };
+          setCandidates([...candidates, newCandidate]);
+        }
 
         // Load forms list and pick first/only interview
         const formsList = await getForms();
@@ -337,7 +401,7 @@ export function UserDetailPage() {
     return () => {
       isCancelled = true;
     };
-  }, [id]);
+  }, [id, candidates, setCandidates]);
 
   const handleAnswerChange = (fieldId: number, value: string | number) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
@@ -513,8 +577,8 @@ export function UserDetailPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FaUniversity className="size-4 text-muted-foreground" />
-                      <span>{user.institutionName || "-"}</span>
+                      <IconMapPin className="size-4 text-muted-foreground" />
+                      <span>{user.city || "-"}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       {user.socials.github && (
@@ -614,42 +678,63 @@ export function UserDetailPage() {
             </Card>
 
             {/* Card 2: Test Scores */}
-            <Card className="flex flex-col gap-2">
+            <Card className="gap-2">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <IconTarget className="size-5" />
                   <span>Test Scores</span>
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="pt-0 flex-1 flex items-center">
-                {/* IQ score metric vertically centered within card */}
-                <div className="flex items-baseline gap-1.5">
-                  <div className="text-5xl font-bold tracking-tighter">
-                    {user.iqExamScore && !isNaN(parseFloat(user.iqExamScore))
-                      ? parseFloat(user.iqExamScore).toFixed(0)
-                      : "—"}
+              <CardContent className="pt-0">
+                <div className="flex flex-col divide-y divide-border">
+                  {/* IQ Score Section */}
+                  <div className="flex flex-col gap-2 pb-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>IQ Score</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <div className="text-5xl font-bold tracking-tighter">
+                        {user.iqExamScore &&
+                        !isNaN(parseInt(user.iqExamScore, 10))
+                          ? parseInt(user.iqExamScore, 10)
+                          : "—"}
+                      </div>
+                      <div className="text-lg font-medium text-muted-foreground">
+                        {user.iqExamScore &&
+                        !isNaN(parseInt(user.iqExamScore, 10))
+                          ? "/60"
+                          : ""}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-lg font-medium text-muted-foreground">
-                    {user.iqExamScore && !isNaN(parseFloat(user.iqExamScore))
-                      ? "/60"
-                      : ""}
+
+                  {/* English Proficiency Section */}
+                  <div className="flex flex-col gap-3 pt-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>English Proficiency</span>
+                    </div>
+                    <div>
+                      <Badge
+                        variant={
+                          user.englishExamScore === "Adv-B" ||
+                          user.englishExamScore === "Adv-C" ||
+                          user.englishExamScore === "Adv-A"
+                            ? "default"
+                            : user.englishExamScore === "Upper-A" ||
+                              user.englishExamScore === "Upper-B" ||
+                              user.englishExamScore === "Upper-C"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className="text-md font-medium"
+                      >
+                        {user.englishExamScore || "Not tested"}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </CardContent>
-
-              <CardFooter className="pt-0">
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    English score
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm font-medium">
-                      {user.englishExamScore || "—"}
-                    </span>
-                  </div>
-                </div>
-              </CardFooter>
             </Card>
 
             {/* Card 3: Selected Fields */}

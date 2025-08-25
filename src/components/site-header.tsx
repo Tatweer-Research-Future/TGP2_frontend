@@ -1,33 +1,41 @@
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { Link, useLocation } from "react-router-dom"
-import { Fragment, useMemo } from "react"
-import { candidates } from "@/lib/candidates"
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Link, useLocation } from "react-router-dom";
+import { Fragment, useMemo } from "react";
+import { useCandidates } from "@/context/CandidatesContext";
 
 export function SiteHeader() {
-  const location = useLocation()
+  const location = useLocation();
+  const { getCandidateById } = useCandidates();
 
   const crumbs = useMemo(() => {
-    const path = location.pathname
-    const items: { label: string; to?: string }[] = []
+    const path = location.pathname;
+    const items: { label: string; to?: string }[] = [];
     if (path === "/" || path === "/dashboard") {
-      items.push({ label: "Dashboard" })
+      items.push({ label: "Dashboard" });
     } else if (path === "/candidates") {
-      items.push({ label: "Candidates" })
+      items.push({ label: "Candidates" });
     } else if (path.startsWith("/candidates/")) {
-      items.push({ label: "Candidates", to: "/candidates" })
-      const id = path.match(/^\/candidates\/([^/]+)/)?.[1]
+      items.push({ label: "Candidates", to: "/candidates" });
+      const id = path.match(/^\/candidates\/([^/]+)/)?.[1];
       if (id) {
-        const candidate = candidates.find((c) => c.id === id)
-        items.push({ label: candidate?.fullName ?? `Candidate #${id}` })
+        const candidate = getCandidateById(id);
+        items.push({ label: candidate?.fullName ?? `Candidate #${id}` });
       }
     } else if (path.startsWith("/forms")) {
-      items.push({ label: "Forms" })
+      items.push({ label: "Forms" });
     } else {
-      items.push({ label: "Dashboard" })
+      items.push({ label: "Dashboard" });
     }
-    return items
-  }, [location.pathname])
+    return items;
+  }, [location.pathname, getCandidateById]);
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -54,5 +62,5 @@ export function SiteHeader() {
         <div className="ml-auto" />
       </div>
     </header>
-  )
+  );
 }

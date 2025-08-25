@@ -36,6 +36,7 @@ import { Loader } from "@/components/ui/loader";
 
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
+import { useCandidates } from "@/context/CandidatesContext";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
 const statusMeta = {
@@ -68,6 +69,7 @@ export function UsersPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setCandidates: setCandidatesContext } = useCandidates();
 
   // Fetch candidates from backend
   const fetchCandidates = async () => {
@@ -79,6 +81,7 @@ export function UsersPage() {
         transformBackendCandidate
       );
       setCandidates(transformedCandidates);
+      setCandidatesContext(transformedCandidates); // Share with context
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
       setError("Failed to load candidates. Please try again.");
@@ -337,14 +340,13 @@ export function UsersPage() {
                   </div>
                 </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Applied Date</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedCandidates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={4} className="text-center py-8">
                     <div className="text-muted-foreground">
                       No candidates found matching your criteria.
                     </div>
@@ -377,9 +379,6 @@ export function UsersPage() {
                           />
                           {meta.label}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(candidate.appliedDate).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" asChild>
@@ -455,12 +454,14 @@ export function UsersPage() {
               </div>
             </div>
           )}
-          <div className="my-4 text-sm text-muted-foreground">
-            Showing {paginatedCandidates.length} of {filteredCandidates.length}{" "}
-            candidates
-          </div>
         </CardContent>
       </Card>
+
+      {/* Pagination info moved outside the card */}
+      <div className="text-sm text-muted-foreground">
+        Showing {paginatedCandidates.length} of {filteredCandidates.length}{" "}
+        candidates
+      </div>
     </div>
   );
 }

@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { IconArrowRight } from "@tabler/icons-react";
+import { useCandidates } from "@/context/CandidatesContext";
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { setCandidates: setCandidatesContext } = useCandidates();
 
   // Fetch candidates from backend
   const fetchCandidates = async () => {
@@ -22,6 +24,7 @@ export function DashboardPage() {
         transformBackendCandidate
       );
       setCandidates(transformedCandidates);
+      setCandidatesContext(transformedCandidates); // Share with context
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
       toast.error("Failed to load candidates");
