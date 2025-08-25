@@ -50,9 +50,7 @@ import {
   IconFileCode,
   IconExternalLink,
   IconTarget,
-  IconMessageCircle,
   IconMapPin,
-  IconBrain,
 } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
@@ -67,7 +65,7 @@ import {
 } from "@/lib/api";
 import { toast } from "sonner";
 import { useCandidates } from "@/context/CandidatesContext";
-import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
+import { type Candidate } from "@/lib/candidates";
 
 type UserDetail = {
   id: string;
@@ -226,45 +224,6 @@ function getFileIconComponent(url: string) {
 }
 
 // Get badge variant for English proficiency level
-function getEnglishProficiencyVariant(level?: string) {
-  if (!level) return "outline";
-  const normalizedLevel = level.toLowerCase();
-
-  if (
-    normalizedLevel.includes("advanced") ||
-    normalizedLevel.includes("c2") ||
-    normalizedLevel.includes("c1") ||
-    normalizedLevel.includes("b2")
-  ) {
-    return "default"; // Highest emphasis
-  }
-  if (
-    normalizedLevel.includes("upper-intermediate") ||
-    normalizedLevel.includes("b1")
-  ) {
-    return "secondary"; // High emphasis
-  }
-  if (
-    normalizedLevel.includes("intermediate") ||
-    normalizedLevel.includes("a2")
-  ) {
-    return "outline"; // Medium emphasis
-  }
-  if (
-    normalizedLevel.includes("pre-intermediate") ||
-    normalizedLevel.includes("a1")
-  ) {
-    return "outline"; // Lower emphasis
-  }
-  if (
-    normalizedLevel.includes("elementary") ||
-    normalizedLevel.includes("pre-a")
-  ) {
-    return "outline"; // Lowest emphasis
-  }
-
-  return "outline"; // Default
-}
 
 // Dynamic interview form types
 type InterviewField = {
