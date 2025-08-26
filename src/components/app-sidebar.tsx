@@ -1,10 +1,5 @@
 import * as React from "react";
-import {
-  IconDashboard,
-  IconFileDescription,
-  IconInnerShadowTop,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconInnerShadowTop, IconUsers } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
