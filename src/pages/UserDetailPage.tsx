@@ -387,6 +387,45 @@ export function UserDetailPage() {
     return selectedOption.label.trim().toLowerCase() === "no";
   })();
 
+  // Identify a Notes field (case-insensitive, matches "note" in label)
+  const isNotesField = (field: InterviewField): boolean => {
+    const label = (field.label || "").toLowerCase();
+    return label.includes("note");
+  };
+
+  // Helper to compute a default "0-score" value for blocked fields
+  const getBlockedDefaultValue = (field: InterviewField): string | number | undefined => {
+    if (isNotesField(field)) return undefined; // keep notes empty when blocked
+    if (field.type === "question" && field.options && field.options.length > 0) {
+      const zeroScore = field.options.find((o) => o.score === 0);
+      const chosen = zeroScore
+        ? zeroScore
+        : field.options.reduce((min, o) => (o.score < min.score ? o : min), field.options[0]);
+      return String(chosen.id);
+    }
+    if (field.type === "text" || field.type === "email") {
+      return "0";
+    }
+    return undefined;
+  };
+
+  // When availability blocks, prefill subsequent answers with zero/lowest options
+  useEffect(() => {
+    if (!form) return;
+    if (!isAvailabilityBlocking) return;
+    setAnswers((prev) => {
+      const next = { ...prev } as Record<number, string | number>;
+      form.fields.slice(1).forEach((field) => {
+        if (isNotesField(field)) return; // keep notes empty
+        const def = getBlockedDefaultValue(field);
+        if (def !== undefined) {
+          next[field.id] = def;
+        }
+      });
+      return next;
+    });
+  }, [isAvailabilityBlocking, form]);
+
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
     // Prevent submission if already interviewed
@@ -419,19 +458,27 @@ export function UserDetailPage() {
     const payload: SubmitFormPayload = {
       form_id: form.id,
       targeted_user_id: Number(user.id),
-      form_fields: form.fields.map((f) => {
-        const value = answers[f.id];
+      form_fields: form.fields.map((f, index) => {
+        const isBlocked = isAvailabilityBlocking && index > 0 && !isNotesField(f);
+        const value = isBlocked
+          ? getBlockedDefaultValue(f)
+          : answers[f.id];
         if (f.type === "question") {
           return {
             form_field_id: f.id,
-            selected_option_id: value ? Number(value) : null,
+            selected_option_id:
+              value !== undefined && value !== null && value !== ""
+                ? Number(value)
+                : null,
             text_field_entry: "",
           };
         }
         return {
           form_field_id: f.id,
           selected_option_id: null,
-          text_field_entry: (value ?? "").toString(),
+          text_field_entry: (
+            value !== undefined && value !== null ? value : ""
+          ).toString(),
         };
       }),
     };
@@ -1028,7 +1075,7 @@ export function UserDetailPage() {
 
           {form &&
             form.fields.map((field, index) => {
-              const isBlocked = isAvailabilityBlocking && index > 0;
+              const isBlocked = isAvailabilityBlocking && index > 0 && !isNotesField(field);
               const cardBlockedClasses = isBlocked ? "opacity-50" : "";
               const interactionBlockClasses = isBlocked
                 ? "pointer-events-none select-none"
@@ -1038,8 +1085,8 @@ export function UserDetailPage() {
                   key={field.id}
                   aria-disabled={isBlocked}
                   className={`${invalidFields.has(field.id)
-                      ? "border-1 border-destructive"
-                      : ""
+                    ? "border-1 border-destructive"
+                    : ""
                     } ${cardBlockedClasses}`}
                 >
                   <CardContent className="pt-0 space-y-10">
