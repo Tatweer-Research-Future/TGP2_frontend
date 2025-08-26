@@ -1,5 +1,10 @@
 import * as React from "react";
-import { IconDashboard, IconFileDescription, IconInnerShadowTop, IconUsers } from "@tabler/icons-react";
+import {
+  IconDashboard,
+  IconFileDescription,
+  IconInnerShadowTop,
+  IconUsers,
+} from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -17,21 +22,21 @@ import { useAuth } from "@/context/AuthContext";
 const data = {
   // Nav items only; user comes from auth
   navMain: [
-    {
-      title: "Dashboard",
-      url: "/overview",
-      icon: IconDashboard,
-    },
+    // {
+    //   title: "Dashboard",
+    //   url: "/overview",
+    //   icon: IconDashboard,
+    // },
     {
       title: "Candidates",
       url: "/candidates",
       icon: IconUsers,
     },
-    {
-      title: "Forms",
-      url: "/forms",
-      icon: IconFileDescription,
-    },
+    // {
+    //   title: "Forms",
+    //   url: "/forms",
+    //   icon: IconFileDescription,
+    // },
     // Summary merged into Dashboard
   ],
 };

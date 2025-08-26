@@ -1043,12 +1043,25 @@ export function UserDetailPage() {
                                   <p className="mb-1 last:mb-0">{children}</p>
                                 ),
                                 ul: ({ children }) => (
-                                  <ul className="list-disc list-inside space-y-1 mb-2">
+                                  <ul
+                                    className="list-disc space-y-1 mb-2"
+                                    style={{
+                                      listStylePosition: "inside",
+                                      direction: "rtl",
+                                    }}
+                                  >
                                     {children}
                                   </ul>
                                 ),
+                                h2: ({ children }) => (
+                                  <h2 className="text-lg font-semibold mb-2 text-left">
+                                    {children}
+                                  </h2>
+                                ),
                                 li: ({ children }) => (
-                                  <li className="text-sm">{children}</li>
+                                  <li className="text-sm text-right">
+                                    {children}
+                                  </li>
                                 ),
                                 strong: ({ children }) => (
                                   <strong className="font-semibold">
