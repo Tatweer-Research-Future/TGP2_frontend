@@ -561,7 +561,7 @@ export function UserDetailPage() {
                 <div className="flex-1 space-y-4">
                   <div className="space-y-3">
                     <div>
-                      <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center justify-between flex-wrap">
                         <h1 className="text-3xl font-bold text-foreground">
                           {user.fullName}
                         </h1>
@@ -1020,7 +1020,7 @@ export function UserDetailPage() {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4 flex-wrap">
+                      <div className="flex items-center justify-between flex-wrap">
                         <h1 className="text-3xl font-bold text-foreground">
                           {user.fullName}
                         </h1>
