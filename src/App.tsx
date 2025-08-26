@@ -28,7 +28,7 @@ export default function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Routes>
-                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/" element={<UsersPage />} />
                       <Route path="/overview" element={<DashboardPage />} />
                       <Route path="/candidates" element={<UsersPage />} />
                       <Route
