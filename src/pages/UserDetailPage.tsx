@@ -153,10 +153,10 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     englishExamScore: englishScore,
     technicalSkills: Array.isArray((info as any).technicalSkills)
       ? ((info as any).technicalSkills as any[]).map((t) => ({
-          skill: (t?.skill ?? "") as string,
-          medium: (t?.medium ?? "") as string,
-          proficiency: (t?.proficiency ?? "") as string,
-        }))
+        skill: (t?.skill ?? "") as string,
+        medium: (t?.medium ?? "") as string,
+        proficiency: (t?.proficiency ?? "") as string,
+      }))
       : [],
     workExperience: (info.workExperience ?? []) as UserDetail["workExperience"],
     coursesTaken: (info.coursesTaken ?? []) as UserDetail["coursesTaken"],
@@ -262,14 +262,14 @@ function transformBackendForm(
       weight: Number(f.weight ?? "1"),
       options: f.scale
         ? f.scale.options
-            .slice()
-            .sort((a, b) => a.order - b.order)
-            .map((o) => ({
-              id: o.id,
-              label: o.label,
-              score: Number(o.score),
-              order: o.order,
-            }))
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((o) => ({
+            id: o.id,
+            label: o.label,
+            score: Number(o.score),
+            order: o.order,
+          }))
         : undefined,
       suggested_questions: f.suggested_questions,
     }));
@@ -373,6 +373,20 @@ export function UserDetailPage() {
     });
   };
 
+  // Determine if the first question (Availability Objective) blocks the rest
+  const isAvailabilityBlocking = (() => {
+    if (!form || form.fields.length === 0) return false;
+    const firstField = form.fields[0];
+    if (firstField.type !== "question" || !firstField.options) return false;
+    const selectedValue = answers[firstField.id];
+    if (selectedValue == null || selectedValue === "") return false;
+    const selectedOption = firstField.options.find(
+      (opt) => String(opt.id) === String(selectedValue)
+    );
+    if (!selectedOption) return false;
+    return selectedOption.label.trim().toLowerCase() === "no";
+  })();
+
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
     // Prevent submission if already interviewed
@@ -383,6 +397,8 @@ export function UserDetailPage() {
     // Validate required fields
     const missing = new Set<number>();
     for (const field of form.fields) {
+      // If availability is blocking, skip validation for questions after the first one
+      if (isAvailabilityBlocking && field.id !== form.fields[0]?.id) continue;
       if (!field.required) continue;
       const v = answers[field.id];
       if (field.type === "question") {
@@ -655,13 +671,13 @@ export function UserDetailPage() {
                     <div className="flex items-baseline gap-1.5">
                       <div className="text-5xl font-bold tracking-tighter">
                         {user.iqExamScore &&
-                        !isNaN(parseInt(user.iqExamScore, 10))
+                          !isNaN(parseInt(user.iqExamScore, 10))
                           ? parseInt(user.iqExamScore, 10)
                           : "—"}
                       </div>
                       <div className="text-lg font-medium text-muted-foreground">
                         {user.iqExamScore &&
-                        !isNaN(parseInt(user.iqExamScore, 10))
+                          !isNaN(parseInt(user.iqExamScore, 10))
                           ? "/60"
                           : ""}
                       </div>
@@ -677,14 +693,14 @@ export function UserDetailPage() {
                       <Badge
                         variant={
                           user.englishExamScore === "Adv-B" ||
-                          user.englishExamScore === "Adv-C" ||
-                          user.englishExamScore === "Adv-A"
+                            user.englishExamScore === "Adv-C" ||
+                            user.englishExamScore === "Adv-A"
                             ? "default"
                             : user.englishExamScore === "Upper-A" ||
                               user.englishExamScore === "Upper-B" ||
                               user.englishExamScore === "Upper-C"
-                            ? "secondary"
-                            : "outline"
+                              ? "secondary"
+                              : "outline"
                         }
                         className="text-md font-medium"
                       >
@@ -764,8 +780,8 @@ export function UserDetailPage() {
                                     skill.proficiency === "Expert"
                                       ? "default"
                                       : skill.proficiency === "Advanced"
-                                      ? "secondary"
-                                      : "outline"
+                                        ? "secondary"
+                                        : "outline"
                                   }
                                 >
                                   {skill.proficiency}
@@ -907,9 +923,8 @@ export function UserDetailPage() {
         {/* Interview Tab */}
         <TabsContent
           value="interview"
-          className={`space-y-8 relative ${
-            user.interviewedByMe ? "overflow-hidden max-h-screen" : ""
-          }`}
+          className={`space-y-8 relative ${user.interviewedByMe ? "overflow-hidden max-h-screen" : ""
+            }`}
         >
           {/* Overlay for already interviewed users - covers entire content */}
           {user.interviewedByMe && (
@@ -1012,141 +1027,152 @@ export function UserDetailPage() {
           )}
 
           {form &&
-            form.fields.map((field) => (
-              <Card
-                key={field.id}
-                className={
-                  invalidFields.has(field.id)
-                    ? "border-1 border-destructive"
-                    : ""
-                }
-              >
-                <CardContent className="pt-0 space-y-10">
-                  {/* Question Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold flex items-center gap-2">
-                        {field.label}
-                        {field.required && (
-                          <span className="text-red-500 text-lg">*</span>
-                        )}
-                      </h3>
-                      {field.suggested_questions && (
-                        <div className="mt-3">
-                          {/* <p className="text-sm text-muted-foreground font-medium mb-2">
+            form.fields.map((field, index) => {
+              const isBlocked = isAvailabilityBlocking && index > 0;
+              const cardBlockedClasses = isBlocked ? "opacity-50" : "";
+              const interactionBlockClasses = isBlocked
+                ? "pointer-events-none select-none"
+                : "";
+              return (
+                <Card
+                  key={field.id}
+                  aria-disabled={isBlocked}
+                  className={`${invalidFields.has(field.id)
+                      ? "border-1 border-destructive"
+                      : ""
+                    } ${cardBlockedClasses}`}
+                >
+                  <CardContent className="pt-0 space-y-10">
+                    {/* Question Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold flex items-center gap-2">
+                          {field.label}
+                          {field.required && (
+                            <span className="text-red-500 text-lg">*</span>
+                          )}
+                        </h3>
+                        {field.suggested_questions && (
+                          <div className="mt-3">
+                            {/* <p className="text-sm text-muted-foreground font-medium mb-2">
                             Suggested Questions:
                           </p> */}
-                          <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                p: ({ children }) => (
-                                  <p className="mb-1 last:mb-0">{children}</p>
-                                ),
-                                ul: ({ children }) => (
-                                  <ul
-                                    className="list-disc space-y-1 mb-2"
-                                    style={{
-                                      listStylePosition: "inside",
-                                      direction: "rtl",
-                                    }}
-                                  >
-                                    {children}
-                                  </ul>
-                                ),
-                                h2: ({ children }) => (
-                                  <h2 className="text-lg font-semibold mb-2 text-left">
-                                    {children}
-                                  </h2>
-                                ),
-                                li: ({ children }) => (
-                                  <li className="text-sm text-right">
-                                    {children}
-                                  </li>
-                                ),
-                                strong: ({ children }) => (
-                                  <strong className="font-semibold">
-                                    {children}
-                                  </strong>
-                                ),
-                                em: ({ children }) => (
-                                  <em className="italic">{children}</em>
-                                ),
-                              }}
-                            >
-                              {field.suggested_questions}
-                            </ReactMarkdown>
+                            <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none">
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ children }) => (
+                                    <p className="mb-1 last:mb-0">{children}</p>
+                                  ),
+                                  ul: ({ children }) => (
+                                    <ul
+                                      className="list-disc space-y-1 mb-2"
+                                      style={{
+                                        listStylePosition: "inside",
+                                        direction: "rtl",
+                                      }}
+                                    >
+                                      {children}
+                                    </ul>
+                                  ),
+                                  h2: ({ children }) => (
+                                    <h2 className="text-lg font-semibold mb-2 text-left">
+                                      {children}
+                                    </h2>
+                                  ),
+                                  li: ({ children }) => (
+                                    <li className="text-sm text-right">
+                                      {children}
+                                    </li>
+                                  ),
+                                  strong: ({ children }) => (
+                                    <strong className="font-semibold">
+                                      {children}
+                                    </strong>
+                                  ),
+                                  em: ({ children }) => (
+                                    <em className="italic">{children}</em>
+                                  ),
+                                }}
+                              >
+                                {field.suggested_questions}
+                              </ReactMarkdown>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="ml-4 text-sm">
-                      {field.type === "question" && field.options?.length
-                        ? `${
-                            Math.max(...field.options.map((o) => o.score)) *
-                            (field.weight || 1)
+                        )}
+                      </div>
+                      <Badge variant="outline" className="ml-4 text-sm">
+                        {field.type === "question" && field.options?.length
+                          ? `${Math.max(...field.options.map((o) => o.score)) *
+                          (field.weight || 1)
                           } points`
-                        : "Optional"}
-                    </Badge>
-                  </div>
-
-                  {/* Likert/Boolean question */}
-                  {field.type === "question" && field.options && (
-                    <RadioGroup
-                      value={String(answers[field.id] ?? "")}
-                      onValueChange={(value) =>
-                        handleAnswerChange(field.id, value)
-                      }
-                      className={`flex flex-wrap gap-6 w-full justify-around`}
-                    >
-                      {field.options.map((option) => (
-                        <div
-                          key={option.id}
-                          className="flex items-center space-x-3 min-w-[48px]"
-                        >
-                          <RadioGroupItem
-                            value={String(option.id)}
-                            id={`f${field.id}-o${option.id}`}
-                          />
-                          <Label
-                            htmlFor={`f${field.id}-o${option.id}`}
-                            className="text-base font-normal cursor-pointer"
-                          >
-                            {option.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-
-                  {/* Text/email */}
-                  {field.type !== "question" && (
-                    <div className="space-y-2 pt-2">
-                      {field.type === "text" ? (
-                        <Textarea
-                          id={`field-${field.id}`}
-                          placeholder="Type here..."
-                          value={String(answers[field.id] ?? "")}
-                          onChange={(e) =>
-                            handleAnswerChange(field.id, e.target.value)
-                          }
-                          className="min-h-[100px]"
-                        />
-                      ) : (
-                        <input
-                          id={`field-${field.id}`}
-                          type="email"
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                          value={String(answers[field.id] ?? "")}
-                          onChange={(e) =>
-                            handleAnswerChange(field.id, e.target.value)
-                          }
-                        />
-                      )}
+                          : "Optional"}
+                      </Badge>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+
+                    {/* Likert/Boolean question */}
+                    {field.type === "question" && field.options && (
+                      <RadioGroup
+                        value={String(answers[field.id] ?? "")}
+                        onValueChange={(value) =>
+                          handleAnswerChange(field.id, value)
+                        }
+                        className={`flex flex-wrap gap-6 w-full justify-around ${interactionBlockClasses}`}
+                      >
+                        {field.options.map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex items-center space-x-3 min-w-[48px]"
+                          >
+                            <RadioGroupItem
+                              value={String(option.id)}
+                              id={`f${field.id}-o${option.id}`}
+                              disabled={isBlocked}
+                            />
+                            <Label
+                              htmlFor={`f${field.id}-o${option.id}`}
+                              className="text-base font-normal cursor-pointer"
+                            >
+                              {option.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+
+                    {/* Text/email */}
+                    {field.type !== "question" && (
+                      <div className="space-y-2 pt-2">
+                        {field.type === "text" ? (
+                          <Textarea
+                            id={`field-${field.id}`}
+                            placeholder="Type here..."
+                            value={String(answers[field.id] ?? "")}
+                            onChange={(e) =>
+                              handleAnswerChange(field.id, e.target.value)
+                            }
+                            className={`min-h-[100px] ${interactionBlockClasses}`}
+                            disabled={isBlocked}
+                            readOnly={isBlocked}
+                          />
+                        ) : (
+                          <input
+                            id={`field-${field.id}`}
+                            type="email"
+                            className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${interactionBlockClasses}`}
+                            value={String(answers[field.id] ?? "")}
+                            onChange={(e) =>
+                              handleAnswerChange(field.id, e.target.value)
+                            }
+                            disabled={isBlocked}
+                            readOnly={isBlocked}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
           {/* Submit Button */}
           {form && (
@@ -1155,7 +1181,13 @@ export function UserDetailPage() {
                 onClick={() => setShowSubmitDialog(true)}
                 size="sm"
                 className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
-                disabled={isSubmitting || user.interviewedByMe}
+                disabled={
+                  isSubmitting ||
+                  user.interviewedByMe ||
+                  // If availability is blocking and the first question hasn't been answered,
+                  // or answered No without any other required input needed.
+                  false
+                }
               >
                 {isSubmitting ? "Submitting..." : "Submit Interview"}
               </Button>
