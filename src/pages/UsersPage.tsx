@@ -100,7 +100,8 @@ export function UsersPage() {
     return candidates.filter((candidate) => {
       const matchesSearch =
         candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
+        candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (candidate.fullNameArabic && candidate.fullNameArabic.includes(searchTerm));
 
       const matchesStatus =
         statusFilter === "all" || candidate.status === statusFilter;
@@ -162,7 +163,11 @@ export function UsersPage() {
 
   // Copy all visible names (current page) to clipboard
   const handleCopyVisibleNames = async () => {
-    const names = paginatedCandidates.map((c) => c.fullName);
+    const names = paginatedCandidates.map((c) => {
+      const englishName = c.fullName;
+      const arabicName = c.fullNameArabic;
+      return arabicName ? `${englishName} (${arabicName})` : englishName;
+    });
     if (names.length === 0) {
       toast.info("No names to copy");
       return;
@@ -255,7 +260,7 @@ export function UsersPage() {
             <div className="relative flex-1">
               <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or email..."
+                placeholder="Search by name, Arabic name, or email..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
@@ -309,7 +314,7 @@ export function UsersPage() {
               <TableRow>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <span>Candidate</span>
+                    <span>Name</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -321,6 +326,11 @@ export function UsersPage() {
                       <IconCopy className="size-4" />
                       <span className="sr-only">Copy all visible names</span>
                     </Button>
+                  </div>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  <div className="flex items-center gap-2">
+                    <span></span>
                   </div>
                 </TableHead>
                 <TableHead>
@@ -346,7 +356,7 @@ export function UsersPage() {
             <TableBody>
               {paginatedCandidates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <div className="text-muted-foreground">
                       No candidates found matching your criteria.
                     </div>
@@ -366,12 +376,26 @@ export function UsersPage() {
                             }}
                             className="size-8"
                           />
-                          <span className="font-medium">
-                            {candidate.fullName}
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {candidate.fullName}
+                            </span>
+                            <span className="text-sm text-muted-foreground md:hidden">
+                              {candidate.email}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="font-medium text-right" dir="rtl">
+                          <span className="text-base">
+                            {candidate.fullNameArabic || "-"}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{candidate.email}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {candidate.email}
+                      </TableCell>
                       <TableCell>
                         <Badge className={meta.className}>
                           <span

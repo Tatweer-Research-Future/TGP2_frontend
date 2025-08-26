@@ -70,6 +70,7 @@ import { type Candidate } from "@/lib/candidates";
 type UserDetail = {
   id: string;
   fullName: string;
+  fullNameArabic?: string;
   email: string;
   city?: string;
   phoneNo?: string;
@@ -116,7 +117,8 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   const add = data.additional_fields ?? {};
   const info = add.additional_information ?? {};
 
-  const fullName = add.full_name_en || add.full_name || data.name || "";
+  const fullName = add.full_name_en || data.name || "";
+  const fullNameArabic = add.full_name || undefined;
 
   // Normalize other files: include cert (single) and other_files (array or string)
   const otherFilesRaw = add.other_files;
@@ -137,6 +139,7 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   return {
     id: String(data.id),
     fullName,
+    fullNameArabic,
     email: data.email,
     city: info.city ?? undefined,
     phoneNo: add.phone ?? undefined,
@@ -322,6 +325,7 @@ export function UserDetailPage() {
           const newCandidate: Candidate = {
             id: transformedUser.id,
             fullName: transformedUser.fullName,
+            fullNameArabic: transformedUser.fullNameArabic,
             email: transformedUser.email,
             status: transformedUser.interviewedByMe
               ? "interviewed"
@@ -555,10 +559,17 @@ export function UserDetailPage() {
                   className="size-24 text-2xl"
                 />
                 <div className="flex-1 space-y-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-foreground">
-                      {user.fullName}
-                    </h1>
+                  <div className="space-y-2">
+                    <div>
+                      <h1 className="text-3xl font-bold text-foreground">
+                        {user.fullName}
+                      </h1>
+                      {user.fullNameArabic && (
+                        <h2 className="text-2xl font-semibold text-muted-foreground mt-1" dir="rtl">
+                          {user.fullNameArabic}
+                        </h2>
+                      )}
+                    </div>
                     <p className="text-lg text-muted-foreground">
                       {user.qualification || ""}
                       {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
@@ -1005,10 +1016,17 @@ export function UserDetailPage() {
                 </div>
 
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold text-foreground">
-                      {user.fullName}
-                    </h1>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <h1 className="text-3xl font-bold text-foreground">
+                        {user.fullName}
+                      </h1>
+                      {user.fullNameArabic && (
+                        <h2 className="text-xl font-semibold text-muted-foreground mt-1" dir="rtl">
+                          {user.fullNameArabic}
+                        </h2>
+                      )}
+                    </div>
                     <Badge variant="secondary" className="text-sm">
                       Interview in Progress
                     </Badge>
