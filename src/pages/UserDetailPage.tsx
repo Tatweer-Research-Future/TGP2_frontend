@@ -559,16 +559,18 @@ export function UserDetailPage() {
                   className="size-24 text-2xl"
                 />
                 <div className="flex-1 space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div>
-                      <h1 className="text-3xl font-bold text-foreground">
-                        {user.fullName}
-                      </h1>
-                      {user.fullNameArabic && (
-                        <h2 className="text-2xl font-semibold text-muted-foreground mt-1" dir="rtl">
-                          {user.fullNameArabic}
-                        </h2>
-                      )}
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <h1 className="text-3xl font-bold text-foreground">
+                          {user.fullName}
+                        </h1>
+                        {user.fullNameArabic && (
+                          <h2 className="text-2xl font-semibold text-muted-foreground" dir="rtl">
+                            {user.fullNameArabic}
+                          </h2>
+                        )}
+                      </div>
                     </div>
                     <p className="text-lg text-muted-foreground">
                       {user.qualification || ""}
@@ -1018,14 +1020,16 @@ export function UserDetailPage() {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <h1 className="text-3xl font-bold text-foreground">
-                        {user.fullName}
-                      </h1>
-                      {user.fullNameArabic && (
-                        <h2 className="text-xl font-semibold text-muted-foreground mt-1" dir="rtl">
-                          {user.fullNameArabic}
-                        </h2>
-                      )}
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <h1 className="text-3xl font-bold text-foreground">
+                          {user.fullName}
+                        </h1>
+                        {user.fullNameArabic && (
+                          <h2 className="text-xl font-semibold text-muted-foreground" dir="rtl">
+                            {user.fullNameArabic}
+                          </h2>
+                        )}
+                      </div>
                     </div>
                     <Badge variant="secondary" className="text-sm">
                       Interview in Progress
