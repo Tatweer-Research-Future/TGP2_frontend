@@ -3,6 +3,7 @@ export type CandidateStatus = "not_interviewed" | "in_progress" | "interviewed";
 export type Candidate = {
   id: string;
   fullName: string;
+  fullNameArabic?: string;
   email: string;
   status: CandidateStatus;
   appliedDate: string;
@@ -17,10 +18,12 @@ export function transformBackendCandidate(backendCandidate: {
   name: string;
   phone: string | null;
   interviewed_by_me: boolean;
+  full_name?: string;
 }): Candidate {
   return {
     id: backendCandidate.id.toString(),
-    fullName: backendCandidate.name,
+    fullName: backendCandidate.name, // Use the English name as the primary full name
+    fullNameArabic: backendCandidate.full_name, // Use full_name as the Arabic name
     email: backendCandidate.email,
     status: backendCandidate.interviewed_by_me
       ? "interviewed"

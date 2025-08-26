@@ -166,6 +166,7 @@ export type BackendCandidate = {
   name: string;
   phone: string | null;
   interviewed_by_me: boolean;
+  full_name?: string;
 };
 
 export type CandidatesResponse = {
