@@ -180,21 +180,36 @@ function getGraduationInfo(graduationYear?: string): {
   isFuture: boolean;
 } {
   if (!graduationYear) return { text: "Unknown", isFuture: false };
-  // Expecting formats like "2025-02" or ISO date string
+  
+  // If it's just a year (4 digits), return it as is
+  if (/^\d{4}$/.test(graduationYear)) {
+    const year = parseInt(graduationYear);
+    const currentYear = new Date().getFullYear();
+    return { text: graduationYear, isFuture: year > currentYear };
+  }
+  
   let date: Date | null = null;
+  
+  // Handle different date formats
   if (/^\d{4}-\d{2}$/.test(graduationYear)) {
+    // Format: "2025-02"
     date = new Date(`${graduationYear}-01`);
   } else {
+    // Try parsing as any date format (MM/DD/YYYY, YYYY-MM-DD, etc.)
     const parsed = new Date(graduationYear);
     date = isNaN(parsed.getTime()) ? null : parsed;
   }
+  
   if (!date) return { text: graduationYear, isFuture: false };
+  
   const now = new Date();
   const isFuture = date.getTime() > now.getTime();
+  
   const formatter = new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
   });
+  
   return { text: formatter.format(date), isFuture };
 }
 
