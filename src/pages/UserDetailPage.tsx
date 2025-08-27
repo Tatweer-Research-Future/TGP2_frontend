@@ -180,16 +180,16 @@ function getGraduationInfo(graduationYear?: string): {
   isFuture: boolean;
 } {
   if (!graduationYear) return { text: "Unknown", isFuture: false };
-  
+
   // If it's just a year (4 digits), return it as is
   if (/^\d{4}$/.test(graduationYear)) {
     const year = parseInt(graduationYear);
     const currentYear = new Date().getFullYear();
     return { text: graduationYear, isFuture: year > currentYear };
   }
-  
+
   let date: Date | null = null;
-  
+
   // Handle different date formats
   if (/^\d{4}-\d{2}$/.test(graduationYear)) {
     // Format: "2025-02"
@@ -199,17 +199,17 @@ function getGraduationInfo(graduationYear?: string): {
     const parsed = new Date(graduationYear);
     date = isNaN(parsed.getTime()) ? null : parsed;
   }
-  
+
   if (!date) return { text: graduationYear, isFuture: false };
-  
+
   const now = new Date();
   const isFuture = date.getTime() > now.getTime();
-  
+
   const formatter = new Intl.DateTimeFormat(undefined, {
     year: "numeric",
     month: "short",
   });
-  
+
   return { text: formatter.format(date), isFuture };
 }
 
@@ -392,58 +392,7 @@ export function UserDetailPage() {
     });
   };
 
-  // Determine if the first question (Availability Objective) blocks the rest
-  const isAvailabilityBlocking = (() => {
-    if (!form || form.fields.length === 0) return false;
-    const firstField = form.fields[0];
-    if (firstField.type !== "question" || !firstField.options) return false;
-    const selectedValue = answers[firstField.id];
-    if (selectedValue == null || selectedValue === "") return false;
-    const selectedOption = firstField.options.find(
-      (opt) => String(opt.id) === String(selectedValue)
-    );
-    if (!selectedOption) return false;
-    return selectedOption.label.trim().toLowerCase() === "no";
-  })();
-
-  // Identify a Notes field (case-insensitive, matches "note" in label)
-  const isNotesField = (field: InterviewField): boolean => {
-    const label = (field.label || "").toLowerCase();
-    return label.includes("note");
-  };
-
-  // Helper to compute a default "0-score" value for blocked fields
-  const getBlockedDefaultValue = (field: InterviewField): string | number | undefined => {
-    if (isNotesField(field)) return undefined; // keep notes empty when blocked
-    if (field.type === "question" && field.options && field.options.length > 0) {
-      const zeroScore = field.options.find((o) => o.score === 0);
-      const chosen = zeroScore
-        ? zeroScore
-        : field.options.reduce((min, o) => (o.score < min.score ? o : min), field.options[0]);
-      return String(chosen.id);
-    }
-    if (field.type === "text" || field.type === "email") {
-      return "0";
-    }
-    return undefined;
-  };
-
-  // When availability blocks, prefill subsequent answers with zero/lowest options
-  useEffect(() => {
-    if (!form) return;
-    if (!isAvailabilityBlocking) return;
-    setAnswers((prev) => {
-      const next = { ...prev } as Record<number, string | number>;
-      form.fields.slice(1).forEach((field) => {
-        if (isNotesField(field)) return; // keep notes empty
-        const def = getBlockedDefaultValue(field);
-        if (def !== undefined) {
-          next[field.id] = def;
-        }
-      });
-      return next;
-    });
-  }, [isAvailabilityBlocking, form]);
+  // No blocking logic; all questions remain interactive
 
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
@@ -455,8 +404,6 @@ export function UserDetailPage() {
     // Validate required fields
     const missing = new Set<number>();
     for (const field of form.fields) {
-      // If availability is blocking, skip validation for questions after the first one
-      if (isAvailabilityBlocking && field.id !== form.fields[0]?.id) continue;
       if (!field.required) continue;
       const v = answers[field.id];
       if (field.type === "question") {
@@ -477,11 +424,8 @@ export function UserDetailPage() {
     const payload: SubmitFormPayload = {
       form_id: form.id,
       targeted_user_id: Number(user.id),
-      form_fields: form.fields.map((f, index) => {
-        const isBlocked = isAvailabilityBlocking && index > 0 && !isNotesField(f);
-        const value = isBlocked
-          ? getBlockedDefaultValue(f)
-          : answers[f.id];
+      form_fields: form.fields.map((f) => {
+        const value = answers[f.id];
         if (f.type === "question") {
           return {
             form_field_id: f.id,
@@ -1111,20 +1055,14 @@ export function UserDetailPage() {
           )}
 
           {form &&
-            form.fields.map((field, index) => {
-              const isBlocked = isAvailabilityBlocking && index > 0 && !isNotesField(field);
-              const cardBlockedClasses = isBlocked ? "opacity-50" : "";
-              const interactionBlockClasses = isBlocked
-                ? "pointer-events-none select-none"
-                : "";
+            form.fields.map((field) => {
               return (
                 <Card
                   key={field.id}
-                  aria-disabled={isBlocked}
                   className={`${invalidFields.has(field.id)
                     ? "border-1 border-destructive"
                     : ""
-                    } ${cardBlockedClasses}`}
+                    }`}
                 >
                   <CardContent className="pt-0 space-y-10">
                     {/* Question Header */}
@@ -1200,7 +1138,7 @@ export function UserDetailPage() {
                         onValueChange={(value) =>
                           handleAnswerChange(field.id, value)
                         }
-                        className={`flex flex-wrap gap-6 w-full justify-around ${interactionBlockClasses}`}
+                        className={`flex flex-wrap gap-6 w-full justify-around`}
                       >
                         {field.options.map((option) => (
                           <div
@@ -1210,7 +1148,6 @@ export function UserDetailPage() {
                             <RadioGroupItem
                               value={String(option.id)}
                               id={`f${field.id}-o${option.id}`}
-                              disabled={isBlocked}
                             />
                             <Label
                               htmlFor={`f${field.id}-o${option.id}`}
@@ -1234,21 +1171,17 @@ export function UserDetailPage() {
                             onChange={(e) =>
                               handleAnswerChange(field.id, e.target.value)
                             }
-                            className={`min-h-[100px] ${interactionBlockClasses}`}
-                            disabled={isBlocked}
-                            readOnly={isBlocked}
+                            className={`min-h-[100px]`}
                           />
                         ) : (
                           <input
                             id={`field-${field.id}`}
                             type="email"
-                            className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${interactionBlockClasses}`}
+                            className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50`}
                             value={String(answers[field.id] ?? "")}
                             onChange={(e) =>
                               handleAnswerChange(field.id, e.target.value)
                             }
-                            disabled={isBlocked}
-                            readOnly={isBlocked}
                           />
                         )}
                       </div>
