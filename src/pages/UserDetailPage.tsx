@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 import { Loader } from "@/components/ui/loader";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -101,6 +102,18 @@ type UserDetail = {
   socials: { github?: string | null; linkedin?: string | null };
   otherFiles: string[]; // normalized list of file URLs
   interviewedByMe: boolean;
+  formsEntries?: Array<{
+    form: { id: number; title: string };
+    entries: Array<{
+      id: number;
+      submitted_by?: { id: number; name: string } | null;
+      final_score?: number | null;
+      fields: Array<
+        | { label: string; option: string; score: number }
+        | { label: string; text: string }
+      >;
+    }>;
+  }>;
 };
 
 function normalizeScore(raw: unknown): string | undefined {
@@ -171,6 +184,7 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     },
     otherFiles,
     interviewedByMe: Boolean((data as any).interviewed_by_me),
+    formsEntries: (data as any).forms_entries ?? [],
   };
 }
 
@@ -495,13 +509,108 @@ export function UserDetailPage() {
     )
   );
 
+  // Dummy data for Breakdown tab (top summary and HR breakdown)
+  // Build breakdown data dynamically from user details (with robust fallbacks)
+  const iqScore = (user.iqExamScore && !isNaN(Number(user.iqExamScore)))
+    ? Number(user.iqExamScore)
+    : undefined;
+  const englishLevel = user.englishExamScore || user.englishProficiency || "-";
+
+  // formsEntries may contain HR and Technical interview entries
+  const hrForm = user.formsEntries?.find((f) =>
+    (f.form.title || "").toLowerCase().includes("hr")
+  );
+  const techForm = user.formsEntries?.find((f) =>
+    (f.form.title || "").toLowerCase().includes("technical")
+  );
+
+  const averageScores = (entries?: { final_score?: number | null }[]) => {
+    const numbers = (entries ?? [])
+      .map((e) => Number(e.final_score))
+      .filter((n) => !isNaN(n));
+    if (numbers.length === 0) return 0;
+    const total = numbers.reduce((s, n) => s + n, 0);
+    return total / numbers.length;
+  };
+
+  const breakdownSummary = {
+    iq: { scored: iqScore ?? 0, total: 60 },
+    englishLevel: englishLevel,
+    hr: { scored: averageScores(hrForm?.entries), total: 26 },
+    technical: { scored: averageScores(techForm?.entries), total: 50 },
+  } as const;
+
+  // Group HR breakdown by field label and show interviewer scores
+  type Rating = { interviewer: string; score: number; option?: string | null; isBoolean?: boolean };
+  type Section = { name: string; ratings: Rating[]; isBoolean?: boolean };
+
+  function buildHrSections(): Section[] {
+    if (!hrForm?.entries?.length) return [];
+    // Collect map: label -> list of {interviewer, score}
+    const map = new Map<string, Rating[]>();
+    for (const entry of hrForm.entries) {
+      const interviewer = entry.submitted_by?.name || "Unknown";
+      for (const f of entry.fields as any[]) {
+        if (typeof f?.score !== "number") continue;
+        const fullLabel = String(f.label || "");
+        const label = fullLabel.replace(/\s*\/.*/, "").trim();
+        const isAvailability = fullLabel.toLowerCase().includes("availability objective");
+        const list = map.get(label) ?? [];
+        list.push({ interviewer, score: Number(f.score), option: (f as any).option ?? null, isBoolean: isAvailability });
+        map.set(label, list);
+      }
+    }
+    // Turn into ordered sections
+    return Array.from(map.entries()).map(([name, ratings]) => ({ name, ratings, isBoolean: ratings.some(r => r.isBoolean) }));
+  }
+
+  const hrBreakdown = {
+    title: hrForm?.form.title || "HR Interview",
+    total: 26,
+    sections: buildHrSections(),
+  } as const;
+
+  const hrInterviewerTotals = (hrForm?.entries ?? []).map((e) => ({
+    interviewer: e.submitted_by?.name || "Unknown",
+    score: Number(e.final_score) || 0,
+  }));
+
+  // Technical breakdown (similar to HR)
+  function buildTechSections(): Section[] {
+    if (!techForm?.entries?.length) return [];
+    const map = new Map<string, Rating[]>();
+    for (const entry of techForm.entries) {
+      const interviewer = entry.submitted_by?.name || "Unknown";
+      for (const f of entry.fields as any[]) {
+        if (typeof f?.score !== "number") continue; // skip text notes
+        const label = String(f.label || "").trim();
+        const list = map.get(label) ?? [];
+        list.push({ interviewer, score: Number(f.score) });
+        map.set(label, list);
+      }
+    }
+    return Array.from(map.entries()).map(([name, ratings]) => ({ name, ratings }));
+  }
+
+  const techBreakdown = {
+    title: techForm?.form.title || "Technical Interview",
+    total: 50,
+    sections: buildTechSections(),
+  } as const;
+
+  const techInterviewerTotals = (techForm?.entries ?? []).map((e) => ({
+    interviewer: e.submitted_by?.name || "Unknown",
+    score: Number(e.final_score) || 0,
+  }));
+
   return (
     <div className="container mx-auto px-6 py-2 space-y-6">
       {/* Main Tabs */}
       <Tabs defaultValue="information" className="w-full gap-4">
-        <TabsList className="grid w-full grid-cols-2 mb-2">
+        <TabsList className="grid w-full grid-cols-3 mb-2">
           <TabsTrigger value="information">Information</TabsTrigger>
           <TabsTrigger value="interview">Interview</TabsTrigger>
+          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
         </TabsList>
 
         {/* Information Tab */}
@@ -1210,6 +1319,209 @@ export function UserDetailPage() {
               </Button>
             </div>
           )}
+        </TabsContent>
+
+        {/* Breakdown Tab */}
+        <TabsContent value="breakdown" className="space-y-6">
+          {/* Top summary cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* IQ Score */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <IconTarget className="size-5" />
+                  <span>IQ Score</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-baseline gap-2">
+                  <div className="text-3xl font-bold">
+                    {breakdownSummary.iq.scored}
+                  </div>
+                  <div className="text-muted-foreground">/{breakdownSummary.iq.total}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* English Level */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <IconFileText className="size-5" />
+                  <span>English Level</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Badge variant="secondary" className="text-base">
+                  {breakdownSummary.englishLevel}
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* HR Average */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <IconClipboardList className="size-5" />
+                  <span>Average HR Score</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-baseline gap-2">
+                  <div className="text-3xl font-bold">
+                    {breakdownSummary.hr.scored}
+                  </div>
+                  <div className="text-muted-foreground">/{breakdownSummary.hr.total}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Technical Average */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <IconFileCode className="size-5" />
+                  <span>Average Technical Score</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-baseline gap-2">
+                  <div className="text-3xl font-bold">
+                    {breakdownSummary.technical.scored}
+                  </div>
+                  <div className="text-muted-foreground">/{breakdownSummary.technical.total}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detailed HR Breakdown */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <span>Score Breakdown - {hrBreakdown.title}</span>
+                <span className="text-sm text-muted-foreground">total {hrBreakdown.total}</span>
+              </CardTitle>
+              <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-6">
+              {/* Totals per interviewer */}
+              {hrInterviewerTotals.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {hrInterviewerTotals.map((it, idx) => (
+                    <div key={idx} className="flex items-center justify-between rounded border p-2">
+                      <div className="text-sm text-muted-foreground">{it.interviewer}</div>
+                      <div className="font-semibold">{it.score}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {hrBreakdown.sections.map((section, sectionIndex) => (
+                <div key={sectionIndex} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="size-1.5 rounded-full bg-foreground/70" />
+                    <div className="font-medium">{section.name}</div>
+                  </div>
+                  <div className="space-y-3">
+                    {section.ratings.map((r, rIndex) => {
+                      const pct = Math.max(0, Math.min(100, (r.score / 5) * 100));
+                      const isBoolean = Boolean(section.isBoolean);
+                      const isYes = isBoolean && ((r.option ?? "").toString().toLowerCase() === "yes" || Number(r.score) >= 1);
+                      return (
+                        <div key={rIndex} className="grid grid-cols-12 items-center gap-3">
+                          <div className="col-span-3 sm:col-span-2 text-sm text-muted-foreground">
+                            {r.interviewer}
+                          </div>
+                          {!isBoolean && (
+                            <div className="col-span-7 sm:col-span-8">
+                              <div className="h-2 w-full rounded bg-muted">
+                                <div
+                                  className="h-2 rounded bg-primary"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          <div className={`${isBoolean ? "col-span-9 sm:col-span-10" : "col-span-2 sm:col-span-2"} text-right font-medium`}>
+                            {isBoolean ? (
+                              <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${isYes ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}>
+                                {isYes ? "Yes" : "No"}
+                              </span>
+                            ) : (
+                              r.score
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {sectionIndex < hrBreakdown.sections.length - 1 && (
+                    <Separator className="my-2" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Technical Breakdown */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <span>Score Breakdown - {techBreakdown.title}</span>
+                <span className="text-sm text-muted-foreground">total {techBreakdown.total}</span>
+              </CardTitle>
+              <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-6">
+              {/* Totals per interviewer */}
+              {techInterviewerTotals.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {techInterviewerTotals.map((it, idx) => (
+                    <div key={idx} className="flex items-center justify-between rounded border p-2">
+                      <div className="text-sm text-muted-foreground">{it.interviewer}</div>
+                      <div className="font-semibold">{it.score}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {techBreakdown.sections.map((section, sectionIndex) => (
+                <div key={sectionIndex} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="size-1.5 rounded-full bg-foreground/70" />
+                    <div className="font-medium">{section.name}</div>
+                  </div>
+                  <div className="space-y-3">
+                    {section.ratings.map((r, rIndex) => {
+                      const pct = Math.max(0, Math.min(100, (r.score / 5) * 100));
+                      return (
+                        <div key={rIndex} className="grid grid-cols-12 items-center gap-3">
+                          <div className="col-span-3 sm:col-span-2 text-sm text-muted-foreground">
+                            {r.interviewer}
+                          </div>
+                          <div className="col-span-7 sm:col-span-8">
+                            <div className="h-2 w-full rounded bg-muted">
+                              <div
+                                className="h-2 rounded bg-primary"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-span-2 sm:col-span-2 text-right font-medium">
+                            {r.score}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {sectionIndex < techBreakdown.sections.length - 1 && (
+                    <Separator className="my-2" />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
