@@ -66,6 +66,8 @@ import {
   type BackendFormField,
   submitForm,
   type SubmitFormPayload,
+  patchUserAiAnalysis,
+  getUserAiAnalysis,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { useCandidates } from "@/context/CandidatesContext";
@@ -338,7 +340,7 @@ export function UserDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const [geminiResponse, setGeminiResponse] = useState<string | null>(null);
-  
+  const [storedAnalysis, setStoredAnalysis] = useState<string | null>(null);
 
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   // Collapse state for Breakdown sections
@@ -467,6 +469,15 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
         system: instruction,
       });
       setGeminiResponse(text || "No response");
+
+      // Save to backend (non-blocking toast on failure)
+      try {
+        await patchUserAiAnalysis(user.id, text || "");
+        setStoredAnalysis(text || "");
+      } catch (saveErr: any) {
+        console.warn("Failed to save AI analysis:", saveErr);
+        toast.error("Failed to save AI analysis");
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Gemini request failed");
@@ -486,6 +497,18 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
         if (isCancelled) return;
         const transformedUser = transformBackendUserDetail(userResp);
         setUser(transformedUser);
+
+        // Load existing AI analysis for this user
+        try {
+          const ai = await getUserAiAnalysis(String(userResp.id));
+          if (ai?.ai_analysis) {
+            setStoredAnalysis(ai.ai_analysis);
+            // Immediately populate the banner on load
+            setGeminiResponse((prev) => prev ?? (ai.ai_analysis || null));
+          }
+        } catch (_) {
+          // ignore if not found
+        }
 
         // Add candidate to context if not already present
         const candidateExists = candidates.find((c) => c.id === id);
@@ -533,6 +556,14 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
       isCancelled = true;
     };
   }, [id, candidates, setCandidates]);
+
+  // Auto-display stored AI analysis when available
+  useEffect(() => {
+    const text = (storedAnalysis || "").trim();
+    if (text && !geminiResponse) {
+      setGeminiResponse(text);
+    }
+  }, [storedAnalysis]);
 
   const handleAnswerChange = (fieldId: number, value: string | number) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
