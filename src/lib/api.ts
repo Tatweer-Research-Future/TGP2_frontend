@@ -194,6 +194,18 @@ export type BackendUserDetail = {
   email: string;
   name: string;
   interviewed_by_me: boolean;
+  forms_entries?: Array<{
+    form: { id: number; title: string };
+    entries: Array<{
+      id: number;
+      submitted_by: { id: number; name: string };
+      final_score: number;
+      fields: Array<
+        | { label: string; option: string; score: number }
+        | { label: string; text: string }
+      >;
+    }>;
+  }>;
   additional_fields?: {
     cert?: string;
     lang?: string;
