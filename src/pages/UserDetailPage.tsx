@@ -338,6 +338,7 @@ export function UserDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const [geminiResponse, setGeminiResponse] = useState<string | null>(null);
+  
 
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   // Collapse state for Breakdown sections
@@ -349,6 +350,7 @@ export function UserDetailPage() {
     try {
       setIsGeminiLoading(true);
       setGeminiResponse(null);
+      
 
       const instruction = `You are an expert AI assistant tasked with evaluating candidates for the "Tatweer Graduate Program 2025" (TGP2025). Your purpose is to analyze a candidate's profile, provided in JSON format, and provide a concise, data-driven evaluation.
 
@@ -357,21 +359,44 @@ export function UserDetailPage() {
 *   **Target Audience:** Recent graduates in tech fields (Data, Software, Networks, AI, Cybersecurity).
 *   **Evaluation Data:** IQ test, technical interview scores/notes, HR interview scores/notes, English test results, and candidate-provided information (equivalent to a CV).
 
-**Your Task:**
-Your primary goal is to provide a holistic and concise evaluation of each candidate based on all the data presented. You will synthesize this information to generate an overall score out of 100 that reflects their suitability and potential for the program.
-
 **Tone and Style:**
 *   **Be direct and concise.**
-*   **Avoid filler words, generic statements, and speculative language.**
-*   **Focus on evidence-based analysis.** Base every conclusion directly on the data provided in the JSON (scores, notes, skills listed, etc.).
+*   **Avoid filler words and speculative language.**
+*   **Focus on evidence-based analysis.** Base every conclusion directly on the data provided in the JSON.
 *   Use bullet points for clarity.
 
 **Evaluation Criteria:**
-Synthesize information from these key areas to inform the overall score:
+Synthesize information from these key areas to inform the overall score. **All scores must be interpreted relative to the performance of the entire candidate pool.**
+
 1.  **Candidate Background (CV Information):** Analyze the candidate's profile as you would a CV. Pay close attention to \`workExperience\`, \`coursesTaken\`, \`technicalSkills\`, \`gpa\`, \`fieldOfStudy\`, \`statement_of_purpose\`, and \`github\` link (if present).
-2.  **Technical Performance:** Analyze technical interview scores and notes for technical aptitude and problem-solving skills.
-3.  **HR/Soft Skills Performance:** Analyze HR interview scores and notes for motivation, professionalism, and communication skills.
-4.  **Test Scores:** Factor in IQ and English test scores as indicators of cognitive ability and communication proficiency.
+
+2.  **Interview Performance Context:**
+    *   **Technical Interview (Max Raw Score: 50):**
+        *   First, normalize the candidate's average raw score to a percentage: \`(average_raw_score / 50) * 100\`.
+        *   Then, use the distribution chart to assess this percentage. Most candidates score between 20-50%.
+        *   **Excellent:** 60%+
+        *   **Strong:** 40% - 59%
+        *   **Average / Developing:** 20% - 39%
+        *   **Weak:** 0% - 19%
+    *   **HR Interview (Max Raw Score: 26):**
+        *   First, normalize the candidate's average raw score to a percentage: \`(average_raw_score / 26) * 100\`.
+        *   Then, use the distribution chart to assess this percentage. Note that the vast majority of candidates score high (80%+), so a high score is the expectation.
+        *   **Excellent:** 90%+ (Exceeds expectations)
+        *   **Expected:** 70% - 89% (Meets program expectations)
+        *   **Concerning:** 50% - 69% (Below average, a potential red flag)
+        *   **Weak:** 0% - 49% (Significant concern)
+
+3.  **Test Scores Context:**
+    *   **IQ Score (Custom Test, 0-60):**
+        *   **Top Tier:** 30+
+        *   **Above Average:** 24-29
+        *   **Average:** 12-23
+        *   **Below Average:** 0-11
+    *   **English Score (Placement Test Levels):**
+        *   **Advanced (Adv-A, B, C):** Top tier; a significant strength.
+        *   **High Proficiency (Upper-A, B):** Above average.
+        *   **Average (Pre-A, Inter-A, B):** The common range.
+        *   **Basic (Elem-A, B, C, Pre-B, C):** Below average; an area for development.
 
 **Output Format:**
 You must provide your evaluation in the following strict, concise format:
@@ -386,24 +411,25 @@ A brief, 1-2 sentence summary explaining the core reason for your score, synthes
 **Evidence Summary:**
 
 **Strengths:**
-*   [Bulleted list of 2-4 key strengths. Each point must be a direct observation from the data. Example: "High average Technical Interview score (15/20)"]
-*   [Example: "Advanced English proficiency (Adv-C)"]
-*   [Example: "Relevant project work in Machine Learning listed on GitHub."]
+*   [Bulleted list of 2-4 key strengths. Each point must be a direct observation. Example: "Strong Technical Interview performance (25/50 | 50%), placing in the 'Strong' tier."]
+*   [Example: "IQ score of 32, placing them in the top tier of candidates."]
+*   [Example: "English score of Adv-B, indicating Advanced proficiency."]
 
 **Weaknesses:**
-*   [Bulleted list of 2-4 key weaknesses or areas for development. Each point must be a direct observation. Example: "Low scores in 'Cloud & Infrastructure' (Avg: 0.5)"]
-*   [Example: "HR interviewer noted a 'lack of strong personality'"]
-*   [Example: "No practical work experience listed."]
+*   [Bulleted list of 2-4 key weaknesses. Each point must be a direct observation. Example: "Concerning HR Interview performance (15/26 | 58%), which is below the expected range for candidates."]
+*   [Example: "Weak Technical Interview performance (8/50 | 16%)."]
+*   [Example: "IQ score of 10, placing them in the below-average tier."]
+
 
 **Key Data Points:**
-*   **Avg. Technical Score:** [Calculate and state the average score]
-*   **Avg. HR Score:** [Calculate and state the average score]
-*   **IQ Score:** [State the score]
-*   **English Score:** [State the score]
+*   **Technical Interview:** [Avg Raw Score]/50 | [Normalized %] ([Performance Tier])
+*   **HR Interview:** [Avg Raw Score]/26 | [Normalized %] ([Performance Tier])
+*   **IQ Score:** [Score] ([Performance Tier])
+*   **English Score:** [Score] ([Proficiency Tier])
 
-**Final Recommendation & Short Summary (at the very end):**
-*   **Recommendation:** Fit / Not a Fit
-*   **Summary:** One short sentence (<= 20 words) capturing the core rationale.`;
+**CV Usage Requirement:** If CV text is provided between the markers [CV_TEXT_START] and [CV_TEXT_END], you MUST incorporate it in your analysis and include at least one bullet in Strengths/Weaknesses derived from the CV (e.g., projects, tools, internships). If the CV could not be accessed, explicitly add a final bullet under Key Data Points: CV: not accessible.
+
+Optionally add a short section named **CV Insights** (1–3 bullets) only if the CV text is provided and yields useful, concrete signals.`;
 
       // Build a compact candidate JSON from our current page state
       const candidatePayload = {
@@ -429,27 +455,16 @@ A brief, 1-2 sentence summary explaining the core reason for your score, synthes
         },
       };
 
+      // Optionally extract resume text via URL Context in a first pass
       const userPrompt = `Candidate JSON (strict JSON):\n${JSON.stringify(
         candidatePayload,
         null,
         2
       )}`;
 
-      // If a resume PDF is available, include it as a file_reference or URL hint.
-      // For the REST API, models can accept inline_data for small files.
-      // Since the resume can be large and remote, we pass its URL explicitly
-      // and let the model know it may fetch/consider it if supported.
-      const additionalParts: any[] = [];
-      if (user.resumeUrl) {
-        additionalParts.push({
-          text: `Resume URL (PDF): ${user.resumeUrl}. If your model can read files from URLs, incorporate key details from this CV. If not, ignore.`,
-        });
-      }
-
       const text = await generateWithGemini({
         user: userPrompt,
         system: instruction,
-        additionalParts,
       });
       setGeminiResponse(text || "No response");
     } catch (err: any) {
