@@ -335,6 +335,9 @@ export function UserDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  // Collapse state for Breakdown sections
+  const [hrDetailsOpen, setHrDetailsOpen] = useState(true);
+  const [techDetailsOpen, setTechDetailsOpen] = useState(true);
 
   useEffect(() => {
     let isCancelled = false;
@@ -570,10 +573,17 @@ export function UserDetailPage() {
     sections: buildHrSections(),
   } as const;
 
-  const hrInterviewerTotals = (hrForm?.entries ?? []).map((e) => ({
-    interviewer: e.submitted_by?.name || "Unknown",
-    score: Number(e.final_score) || 0,
-  }));
+  const hrInterviewerTotals = (hrForm?.entries ?? []).map((e) => {
+    const noteField = (e.fields as any[]).find(
+      (f: any) => typeof f?.label === "string" && f.label.toLowerCase().includes("notes")
+    );
+    const note = typeof (noteField as any)?.text === "string" ? (noteField as any).text.trim() : "";
+    return {
+      interviewer: e.submitted_by?.name || "Unknown",
+      score: Number(e.final_score) || 0,
+      note,
+    } as { interviewer: string; score: number; note?: string };
+  });
 
   // Technical breakdown (similar to HR)
   function buildTechSections(): Section[] {
@@ -598,10 +608,17 @@ export function UserDetailPage() {
     sections: buildTechSections(),
   } as const;
 
-  const techInterviewerTotals = (techForm?.entries ?? []).map((e) => ({
-    interviewer: e.submitted_by?.name || "Unknown",
-    score: Number(e.final_score) || 0,
-  }));
+  const techInterviewerTotals = (techForm?.entries ?? []).map((e) => {
+    const noteField = (e.fields as any[]).find(
+      (f: any) => typeof f?.label === "string" && f.label.toLowerCase().includes("notes")
+    );
+    const note = typeof (noteField as any)?.text === "string" ? (noteField as any).text.trim() : "";
+    return {
+      interviewer: e.submitted_by?.name || "Unknown",
+      score: Number(e.final_score) || 0,
+      note,
+    } as { interviewer: string; score: number; note?: string };
+  });
 
   return (
     <div className="container mx-auto px-6 py-2 space-y-6">
@@ -1398,10 +1415,26 @@ export function UserDetailPage() {
           {/* Detailed HR Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-xl">
-                <span>Score Breakdown - {hrBreakdown.title}</span>
-                <span className="text-sm text-muted-foreground">total {hrBreakdown.total}</span>
-              </CardTitle>
+               <CardTitle className="flex items-center justify-between text-xl">
+                 <span>Score Breakdown - {hrBreakdown.title}</span>
+                 <div className="flex items-center gap-3">
+                   <button
+                     className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                     onClick={() => setHrDetailsOpen((v) => !v)}
+                   >
+                     <span>{hrDetailsOpen ? "Hide details" : "Show details"}</span>
+                     <svg
+                       xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 24 24"
+                       fill="currentColor"
+                       className={`size-4 transition-transform ${hrDetailsOpen ? "rotate-180" : "rotate-0"}`}
+                     >
+                       <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                     </svg>
+                   </button>
+                   <span className="text-base text-muted-foreground">total {hrBreakdown.total}</span>
+                 </div>
+               </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-6">
@@ -1409,15 +1442,31 @@ export function UserDetailPage() {
               {hrInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {hrInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded border p-3">
-                      <div className="text-base font-medium text-foreground">{it.interviewer}</div>
-                      <div className="text-lg font-bold">{it.score}</div>
+                    <div key={idx} className="rounded border p-4">
+                      <div className="flex items-center gap-3">
+                        <ConsistentAvatar
+                          user={{ name: it.interviewer, email: it.interviewer }}
+                          className="size-10"
+                        />
+                        <div className="text-base font-medium text-foreground">{it.interviewer}</div>
+                      </div>
+                      <div className="mt-3 flex items-baseline gap-2">
+                        <div className="text-3xl font-bold tracking-tight">{it.score}</div>
+                        <div className="text-muted-foreground">/{hrBreakdown.total}</div>
+                      </div>
+                      {it.note && (
+                        <div className="mt-3 text-sm">
+                          <div className="rounded-2xl border bg-muted/70 px-3 py-2 text-foreground">
+                            {it.note}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              {hrBreakdown.sections.map((section, sectionIndex) => (
+              {hrDetailsOpen && hrBreakdown.sections.map((section, sectionIndex) => (
                 <div key={sectionIndex} className="space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-foreground/70" />
@@ -1467,10 +1516,26 @@ export function UserDetailPage() {
           {/* Technical Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-xl">
-                <span>Score Breakdown - {techBreakdown.title}</span>
-                <span className="text-sm text-muted-foreground">total {techBreakdown.total}</span>
-              </CardTitle>
+               <CardTitle className="flex items-center justify-between text-xl">
+                 <span>Score Breakdown - {techBreakdown.title}</span>
+                 <div className="flex items-center gap-3">
+                   <button
+                     className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                     onClick={() => setTechDetailsOpen((v) => !v)}
+                   >
+                     <span>{techDetailsOpen ? "Hide details" : "Show details"}</span>
+                     <svg
+                       xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 24 24"
+                       fill="currentColor"
+                       className={`size-4 transition-transform ${techDetailsOpen ? "rotate-180" : "rotate-0"}`}
+                     >
+                       <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                     </svg>
+                   </button>
+                   <span className="text-base text-muted-foreground">total {techBreakdown.total}</span>
+                 </div>
+               </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-6">
@@ -1478,15 +1543,31 @@ export function UserDetailPage() {
               {techInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {techInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded border p-3">
-                      <div className="text-base font-medium text-foreground">{it.interviewer}</div>
-                      <div className="text-lg font-bold">{it.score}</div>
+                    <div key={idx} className="rounded border p-4">
+                      <div className="flex items-center gap-3">
+                        <ConsistentAvatar
+                          user={{ name: it.interviewer, email: it.interviewer }}
+                          className="size-10"
+                        />
+                        <div className="text-base font-medium text-foreground">{it.interviewer}</div>
+                      </div>
+                      <div className="mt-3 flex items-baseline gap-2">
+                        <div className="text-3xl font-bold tracking-tight">{it.score}</div>
+                        <div className="text-muted-foreground">/{techBreakdown.total}</div>
+                      </div>
+                      {it.note && (
+                        <div className="mt-3 text-sm">
+                          <div className="rounded-2xl border bg-muted/70 px-3 py-2 text-foreground">
+                            {it.note}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              {techBreakdown.sections.map((section, sectionIndex) => (
+              {techDetailsOpen && techBreakdown.sections.map((section, sectionIndex) => (
                 <div key={sectionIndex} className="space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="size-1.5 rounded-full bg-foreground/70" />
