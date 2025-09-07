@@ -9,6 +9,7 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
+import { AIAnalysisBanner } from "@/components/ai-analysis-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -52,6 +53,7 @@ import {
   IconExternalLink,
   IconTarget,
   IconMapPin,
+  IconSparkles,
 } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
@@ -517,7 +519,7 @@ export function UserDetailPage() {
   const iqScore = (user.iqExamScore && !isNaN(Number(user.iqExamScore)))
     ? Number(user.iqExamScore)
     : undefined;
-  const englishLevel = user.englishExamScore || user.englishProficiency || "-";
+  const english_exam_score = user.englishExamScore || "Not tested";
 
   // formsEntries may contain HR and Technical interview entries
   const hrForm = user.formsEntries?.find((f) =>
@@ -538,7 +540,7 @@ export function UserDetailPage() {
 
   const breakdownSummary = {
     iq: { scored: iqScore ?? 0, total: 60 },
-    englishLevel: englishLevel,
+    english_exam_score: english_exam_score,
     hr: { scored: Number(averageScores(hrForm?.entries).toFixed(2)), total: 26 },
     technical: { scored: Number(averageScores(techForm?.entries).toFixed(2)), total: 50 },
   } as const;
@@ -622,6 +624,11 @@ export function UserDetailPage() {
 
   return (
     <div className="container mx-auto px-6 py-2 space-y-6">
+      {/* AI Analysis Banner (global across tabs) */}
+      <AIAnalysisBanner onAnalyze={() => {}}
+        analyzeText="Analyze"
+      />
+
       {/* Main Tabs */}
       <Tabs defaultValue="information" className="w-full gap-4">
         <TabsList className="grid w-full grid-cols-3 mb-2">
@@ -1370,7 +1377,7 @@ export function UserDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <Badge variant="secondary" className="text-base">
-                  {breakdownSummary.englishLevel}
+                  {breakdownSummary.english_exam_score}
                 </Badge>
               </CardContent>
             </Card>
@@ -1432,7 +1439,6 @@ export function UserDetailPage() {
                        <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
                      </svg>
                    </button>
-                   <span className="text-base text-muted-foreground">total {hrBreakdown.total}</span>
                  </div>
                </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
@@ -1442,7 +1448,8 @@ export function UserDetailPage() {
               {hrInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {hrInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="rounded border p-4">
+                    <div key={idx} className="relative rounded border p-4 overflow-hidden">
+                      <div className="pointer-events-none absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.22),transparent_45%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.18),transparent_45%)] blur-2xl" />
                       <div className="flex items-center gap-3">
                         <ConsistentAvatar
                           user={{ name: it.interviewer, email: it.interviewer }}
@@ -1533,7 +1540,6 @@ export function UserDetailPage() {
                        <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
                      </svg>
                    </button>
-                   <span className="text-base text-muted-foreground">total {techBreakdown.total}</span>
                  </div>
                </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
@@ -1543,7 +1549,8 @@ export function UserDetailPage() {
               {techInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {techInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="rounded border p-4">
+                    <div key={idx} className="relative rounded border p-4 overflow-hidden">
+                      <div className="pointer-events-none absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.22),transparent_45%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.18),transparent_45%)] blur-2xl" />
                       <div className="flex items-center gap-3">
                         <ConsistentAvatar
                           user={{ name: it.interviewer, email: it.interviewer }}
