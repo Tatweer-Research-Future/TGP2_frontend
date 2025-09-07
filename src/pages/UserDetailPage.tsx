@@ -536,8 +536,8 @@ export function UserDetailPage() {
   const breakdownSummary = {
     iq: { scored: iqScore ?? 0, total: 60 },
     englishLevel: englishLevel,
-    hr: { scored: averageScores(hrForm?.entries), total: 26 },
-    technical: { scored: averageScores(techForm?.entries), total: 50 },
+    hr: { scored: Number(averageScores(hrForm?.entries).toFixed(2)), total: 26 },
+    technical: { scored: Number(averageScores(techForm?.entries).toFixed(2)), total: 50 },
   } as const;
 
   // Group HR breakdown by field label and show interviewer scores
@@ -1398,7 +1398,7 @@ export function UserDetailPage() {
           {/* Detailed HR Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-xl">
                 <span>Score Breakdown - {hrBreakdown.title}</span>
                 <span className="text-sm text-muted-foreground">total {hrBreakdown.total}</span>
               </CardTitle>
@@ -1409,9 +1409,9 @@ export function UserDetailPage() {
               {hrInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {hrInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded border p-2">
-                      <div className="text-sm text-muted-foreground">{it.interviewer}</div>
-                      <div className="font-semibold">{it.score}</div>
+                    <div key={idx} className="flex items-center justify-between rounded border p-3">
+                      <div className="text-base font-medium text-foreground">{it.interviewer}</div>
+                      <div className="text-lg font-bold">{it.score}</div>
                     </div>
                   ))}
                 </div>
@@ -1467,7 +1467,7 @@ export function UserDetailPage() {
           {/* Technical Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex items-center justify-between text-xl">
                 <span>Score Breakdown - {techBreakdown.title}</span>
                 <span className="text-sm text-muted-foreground">total {techBreakdown.total}</span>
               </CardTitle>
@@ -1478,9 +1478,9 @@ export function UserDetailPage() {
               {techInterviewerTotals.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {techInterviewerTotals.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded border p-2">
-                      <div className="text-sm text-muted-foreground">{it.interviewer}</div>
-                      <div className="font-semibold">{it.score}</div>
+                    <div key={idx} className="flex items-center justify-between rounded border p-3">
+                      <div className="text-base font-medium text-foreground">{it.interviewer}</div>
+                      <div className="text-lg font-bold">{it.score}</div>
                     </div>
                   ))}
                 </div>
