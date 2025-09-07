@@ -337,3 +337,27 @@ export async function submitForm(
     requireCsrf: true,
   });
 }
+
+// --- AI analysis storage ---
+export type AiAnalysisResponse = {
+  ai_analysis: string | null;
+};
+
+export async function getUserAiAnalysis(
+  userId: string | number
+): Promise<AiAnalysisResponse> {
+  return apiFetch<AiAnalysisResponse>(`/users/${userId}/ai-analysis/`, {
+    method: "GET",
+  });
+}
+
+export async function patchUserAiAnalysis(
+  userId: string | number,
+  aiText: string
+): Promise<AiAnalysisResponse> {
+  return apiFetch<AiAnalysisResponse>(`/users/${userId}/ai-analysis/`, {
+    method: "PATCH",
+    body: { ai_analysis: aiText },
+    requireCsrf: true,
+  });
+}
