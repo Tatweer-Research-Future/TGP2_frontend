@@ -57,6 +57,7 @@ import {
 } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
+import { generateWithGemini } from "@/services/gemini";
 import {
   getUserDetailById,
   type BackendUserDetail,
@@ -335,11 +336,129 @@ export function UserDetailPage() {
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
   const [invalidFields, setInvalidFields] = useState<Set<number>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+  const [geminiResponse, setGeminiResponse] = useState<string | null>(null);
 
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   // Collapse state for Breakdown sections
   const [hrDetailsOpen, setHrDetailsOpen] = useState(true);
   const [techDetailsOpen, setTechDetailsOpen] = useState(true);
+
+  const handleAnalyzeClick = async () => {
+    if (!user) return;
+    try {
+      setIsGeminiLoading(true);
+      setGeminiResponse(null);
+
+      const instruction = `You are an expert AI assistant tasked with evaluating candidates for the "Tatweer Graduate Program 2025" (TGP2025). Your purpose is to analyze a candidate's profile, provided in JSON format, and provide a concise, data-driven evaluation.
+
+**Program Context: TGP2025**
+*   **Program Name:** Tatweer Graduate Program 2025
+*   **Target Audience:** Recent graduates in tech fields (Data, Software, Networks, AI, Cybersecurity).
+*   **Evaluation Data:** IQ test, technical interview scores/notes, HR interview scores/notes, English test results, and candidate-provided information (equivalent to a CV).
+
+**Your Task:**
+Your primary goal is to provide a holistic and concise evaluation of each candidate based on all the data presented. You will synthesize this information to generate an overall score out of 100 that reflects their suitability and potential for the program.
+
+**Tone and Style:**
+*   **Be direct and concise.**
+*   **Avoid filler words, generic statements, and speculative language.**
+*   **Focus on evidence-based analysis.** Base every conclusion directly on the data provided in the JSON (scores, notes, skills listed, etc.).
+*   Use bullet points for clarity.
+
+**Evaluation Criteria:**
+Synthesize information from these key areas to inform the overall score:
+1.  **Candidate Background (CV Information):** Analyze the candidate's profile as you would a CV. Pay close attention to \`workExperience\`, \`coursesTaken\`, \`technicalSkills\`, \`gpa\`, \`fieldOfStudy\`, \`statement_of_purpose\`, and \`github\` link (if present).
+2.  **Technical Performance:** Analyze technical interview scores and notes for technical aptitude and problem-solving skills.
+3.  **HR/Soft Skills Performance:** Analyze HR interview scores and notes for motivation, professionalism, and communication skills.
+4.  **Test Scores:** Factor in IQ and English test scores as indicators of cognitive ability and communication proficiency.
+
+**Output Format:**
+You must provide your evaluation in the following strict, concise format:
+
+**Candidate Evaluation: [Candidate's Name]**
+
+**Overall Score:** [Score out of 100]
+
+**Justification:**
+A brief, 1-2 sentence summary explaining the core reason for your score, synthesizing the candidate's profile and performance.
+
+**Evidence Summary:**
+
+**Strengths:**
+*   [Bulleted list of 2-4 key strengths. Each point must be a direct observation from the data. Example: "High average Technical Interview score (15/20)"]
+*   [Example: "Advanced English proficiency (Adv-C)"]
+*   [Example: "Relevant project work in Machine Learning listed on GitHub."]
+
+**Weaknesses:**
+*   [Bulleted list of 2-4 key weaknesses or areas for development. Each point must be a direct observation. Example: "Low scores in 'Cloud & Infrastructure' (Avg: 0.5)"]
+*   [Example: "HR interviewer noted a 'lack of strong personality'"]
+*   [Example: "No practical work experience listed."]
+
+**Key Data Points:**
+*   **Avg. Technical Score:** [Calculate and state the average score]
+*   **Avg. HR Score:** [Calculate and state the average score]
+*   **IQ Score:** [State the score]
+*   **English Score:** [State the score]
+
+**Final Recommendation & Short Summary (at the very end):**
+*   **Recommendation:** Fit / Not a Fit
+*   **Summary:** One short sentence (<= 20 words) capturing the core rationale.`;
+
+      // Build a compact candidate JSON from our current page state
+      const candidatePayload = {
+        id: user.id,
+        name: user.fullName,
+        birthdate: user.birthdate ?? null,
+        qualification: user.qualification ?? null,
+        fieldOfStudy: user.fieldOfStudy ?? null,
+        gpa: user.gpa ?? null,
+        technicalSkills: user.technicalSkills ?? [],
+        coursesTaken: user.coursesTaken ?? [],
+        workExperience: user.workExperience ?? [],
+        fieldsChosen: user.fieldsChosen ?? [],
+        iq_exam_score: user.iqExamScore ?? null,
+        english_exam_score: user.englishExamScore ?? null,
+        forms_entries: user.formsEntries ?? [],
+        // Provide small helpful aggregates already computed on the page
+        aggregates: {
+          average_hr_final_score: Number(averageScores(hrForm?.entries).toFixed(2)),
+          average_technical_final_score: Number(
+            averageScores(techForm?.entries).toFixed(2)
+          ),
+        },
+      };
+
+      const userPrompt = `Candidate JSON (strict JSON):\n${JSON.stringify(
+        candidatePayload,
+        null,
+        2
+      )}`;
+
+      // If a resume PDF is available, include it as a file_reference or URL hint.
+      // For the REST API, models can accept inline_data for small files.
+      // Since the resume can be large and remote, we pass its URL explicitly
+      // and let the model know it may fetch/consider it if supported.
+      const additionalParts: any[] = [];
+      if (user.resumeUrl) {
+        additionalParts.push({
+          text: `Resume URL (PDF): ${user.resumeUrl}. If your model can read files from URLs, incorporate key details from this CV. If not, ignore.`,
+        });
+      }
+
+      const text = await generateWithGemini({
+        user: userPrompt,
+        system: instruction,
+        additionalParts,
+      });
+      setGeminiResponse(text || "No response");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Gemini request failed");
+    } finally {
+      setIsGeminiLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -625,8 +744,11 @@ export function UserDetailPage() {
   return (
     <div className="container mx-auto px-6 py-2 space-y-6">
       {/* AI Analysis Banner (global across tabs) */}
-      <AIAnalysisBanner onAnalyze={() => {}}
+      <AIAnalysisBanner
+        onAnalyze={handleAnalyzeClick}
         analyzeText="Analyze"
+        isLoading={isGeminiLoading}
+        response={geminiResponse}
       />
 
       {/* Main Tabs */}
