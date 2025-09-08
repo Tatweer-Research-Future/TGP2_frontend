@@ -1,14 +1,11 @@
 // Simple Gemini client using fetch to avoid extra dependencies
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL =
-  (import.meta.env.VITE_GEMINI_MODEL as string | undefined) ||
-  "gemini-1.5-flash-latest";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export async function generateWithGemini(params: {
   user: string;
   system?: string;
-  model?: string;
   urls?: string[]; // enable URL Context tool and include these URLs in the request
   additionalParts?: any[]; // optional extra parts like inline_data
 }): Promise<string> {
@@ -19,7 +16,7 @@ export async function generateWithGemini(params: {
     );
   }
   // Prefer 2.5 when using URL Context; otherwise use default or provided
-  let model = params.model || (params.urls && params.urls.length > 0 ? "gemini-2.5-flash" : DEFAULT_MODEL);
+  const model = "gemini-2.5-flash";
   const endpoint = `${API_BASE}/${model}:generateContent?key=${apiKey}`;
 
   const tools: any[] = [];
@@ -27,7 +24,7 @@ export async function generateWithGemini(params: {
     tools.push({ url_context: {} });
   }
 
-  let res = await fetch(endpoint, {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,53 +42,6 @@ export async function generateWithGemini(params: {
         : {}),
     }),
   });
-
-  if (res.status === 404 && (params.urls?.length ?? 0) > 0 && model !== "gemini-2.5-flash") {
-    // Retry with a URL-context-capable model
-    model = "gemini-2.5-flash";
-    res = await fetch(
-      `${API_BASE}/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: params.user }, ...(params.additionalParts ?? [])],
-            },
-          ],
-          ...(tools.length > 0 ? { tools } : {}),
-          ...(params.system
-            ? { system_instruction: { parts: [{ text: params.system }] } }
-            : {}),
-        }),
-      }
-    );
-  }
-
-  if (res.status === 404 && model !== "gemini-1.5-flash-latest") {
-    // Retry with a safe default if the chosen model isn't available for this API version
-    res = await fetch(
-      `${API_BASE}/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: params.user }, ...(params.additionalParts ?? [])],
-            },
-          ],
-          ...(tools.length > 0 ? { tools } : {}),
-          ...(params.system
-            ? { system_instruction: { parts: [{ text: params.system }] } }
-            : {}),
-        }),
-      }
-    );
-  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -114,7 +64,6 @@ export async function generateWithGemini(params: {
 export async function generateWithGeminiRaw(params: {
   user: string;
   system?: string;
-  model?: string;
   urls?: string[];
   additionalParts?: any[];
 }): Promise<any> {
@@ -125,7 +74,7 @@ export async function generateWithGeminiRaw(params: {
     );
   }
 
-  let model = params.model || (params.urls && params.urls.length > 0 ? "gemini-2.5-flash" : DEFAULT_MODEL);
+  const model = "gemini-2.5-flash";
   const endpoint = `${API_BASE}/${model}:generateContent?key=${apiKey}`;
 
   const tools: any[] = [];
@@ -133,7 +82,7 @@ export async function generateWithGeminiRaw(params: {
     tools.push({ url_context: {} });
   }
 
-  let res = await fetch(endpoint, {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -144,21 +93,6 @@ export async function generateWithGeminiRaw(params: {
       ...(params.system ? { system_instruction: { parts: [{ text: params.system }] } } : {}),
     }),
   });
-
-  if (res.status === 404 && (params.urls?.length ?? 0) > 0 && model !== "gemini-2.5-flash") {
-    model = "gemini-2.5-flash";
-    res = await fetch(`${API_BASE}/${model}:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { role: "user", parts: [{ text: params.user }, ...(params.additionalParts ?? [])] },
-        ],
-        ...(tools.length > 0 ? { tools } : {}),
-        ...(params.system ? { system_instruction: { parts: [{ text: params.system }] } } : {}),
-      }),
-    });
-  }
 
   if (!res.ok) {
     const text = await res.text();

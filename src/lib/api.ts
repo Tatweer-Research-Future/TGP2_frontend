@@ -194,6 +194,7 @@ export type BackendUserDetail = {
   email: string;
   name: string;
   interviewed_by_me: boolean;
+  ai_analysis?: string | null;
   forms_entries?: Array<{
     form: { id: number; title: string };
     entries: Array<{
@@ -346,9 +347,8 @@ export type AiAnalysisResponse = {
 export async function getUserAiAnalysis(
   userId: string | number
 ): Promise<AiAnalysisResponse> {
-  return apiFetch<AiAnalysisResponse>(`/users/${userId}/ai-analysis/`, {
-    method: "GET",
-  });
+  const user = await getUserDetailById(String(userId));
+  return { ai_analysis: user.ai_analysis ?? null } as AiAnalysisResponse;
 }
 
 export async function patchUserAiAnalysis(
