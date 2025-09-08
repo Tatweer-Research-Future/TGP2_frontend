@@ -353,13 +353,12 @@ export function UserDetailPage() {
       setIsGeminiLoading(true);
       setGeminiResponse(null);
       
-
-      const instruction = `You are an expert AI assistant tasked with evaluating candidates for the "Tatweer Graduate Program 2025" (TGP2025). Your purpose is to analyze a candidate's profile, provided in JSON format, and provide a concise, data-driven evaluation.
+      const instruction = `You are an expert AI assistant tasked with evaluating candidates for the "Tatweer Graduate Program 2025" (TGP2025). Your purpose is to analyze a candidate's profile, provided in JSON format, and provide a concise, data-driven evaluation that strongly incorporates CV evidence and calibrates interview scores for interviewer bias.
 
 **Program Context: TGP2025**
 *   **Program Name:** Tatweer Graduate Program 2025
 *   **Target Audience:** Recent graduates in tech fields (Data, Software, Networks, AI, Cybersecurity).
-*   **Evaluation Data:** IQ test, technical interview scores/notes, HR interview scores/notes, English test results, and candidate-provided information (equivalent to a CV).
+*   **Evaluation Data:** IQ test, technical interview scores/notes, HR interview scores/notes, English test results, and candidate-provided information (equivalent to a CV). Interview scores can vary by interviewer (harsh vs. lenient). Treat interviews as one signal among several. Give the CV substantial weight.
 
 **Tone and Style:**
 *   **Be direct and concise.**
@@ -368,11 +367,11 @@ export function UserDetailPage() {
 *   Use bullet points for clarity.
 
 **Evaluation Criteria:**
-Synthesize information from these key areas to inform the overall score. **All scores must be interpreted relative to the performance of the entire candidate pool.**
+Synthesize information from these key areas to inform the overall score. **All scores must be interpreted relative to the performance of the entire candidate pool.** Do not rely solely on interview scores; anchor your judgment in concrete CV evidence (projects, internships, skills) and triangulate with interview notes and English proficiency.
 
-1.  **Candidate Background (CV Information):** Analyze the candidate's profile as you would a CV. Pay close attention to \`workExperience\`, \`coursesTaken\`, \`technicalSkills\`, \`gpa\`, \`fieldOfStudy\`, \`statement_of_purpose\`, and \`github\` link (if present).
+1.  **Candidate Background (CV Information):** Analyze the candidate's profile as you would a CV. Pay close attention to \`workExperience\`, \`coursesTaken\`, \`technicalSkills\`, \`gpa\`, \`fieldOfStudy\`, \`statement_of_purpose\`, and \`github\` link (if present). When available, prefer concrete CV signals (sustained projects, internships, contributions, tools used) over subjective interview impressions.
 
-2.  **Interview Performance Context:**
+2.  **Interview Performance Context (Calibrated for interviewer bias):**
     *   **Technical Interview (Max Raw Score: 50):**
         *   First, normalize the candidate's average raw score to a percentage: \`(average_raw_score / 50) * 100\`.
         *   Then, use the distribution chart to assess this percentage. Most candidates score between 20-50%.
@@ -388,8 +387,49 @@ Synthesize information from these key areas to inform the overall score. **All s
         *   **Concerning:** 50% - 69% (Below average, a potential red flag)
         *   **Weak:** 0% - 49% (Significant concern)
 
-3.  **Test Scores Context:**
-    *   **IQ Score (Custom Test, 0-60):**
+    Calibration rules (apply to both Technical and HR):
+    *   If multiple interviewers scored the candidate, use the median of interviewer totals as the primary signal. Identify and downweight outliers (>20 percentage points from the median) to 50% impact.
+    *   If only one interviewer scored the candidate, treat interview confidence as medium and cap the interview's contribution when computing the overall score (see Scoring Approach).
+    *   When interview scores conflict with strong CV evidence (e.g., sustained relevant projects/internships, strong GitHub), favor CV evidence and explicitly note the discrepancy.
+
+3.  **Program-wide Interviewer Baselines and Bias Calibration:**
+    You are provided with average normalized scoring tendencies for interviewers (0 to 1 scale). Use these baselines to re-center interviewer scores onto a common scale before using them in the evaluation. The baselines may also be provided in the candidate JSON under \`interviewer_bias\`.
+
+    Known baselines (approximate, normalized 0–1):
+    {
+      "raouf": 0.79,
+      "anas": 0.78,
+      "Yousuf Aldharrat": 0.77,
+      "Mohammed alrafadi": 0.73,
+      "Ahmed Elomami": 0.72,
+      "Mohanned Najam": 0.71,
+      "Nouran Elarabi": 0.67,
+      "Ahmed B.": 0.65,
+      "Ehab Alraid": 0.63,
+      "Hanan Mohammed": 0.55,
+      "Aml": 0.49,
+      "Istabrak": 0.53,
+      "Amine": 0.40,
+      "Hana": 0.36,
+      "Salma": 0.32,
+      "Mohammed A": 0.15
+    }
+    Global average across interviewers: 0.61 (approx.).
+
+    Bias-adjustment algorithm (no external tools needed):
+    *   For each interviewer i with baseline \(\mu_i\) and the global average \(\mu_{all}=0.61\), convert the candidate's normalized score s (in [0,1]) to an adjusted score:
+        \( s' = \operatorname{clip}_{[0,1]}( s + \lambda (\mu_{all} - \mu_i) ) \)
+        where \n
+        - \(\lambda\) depends on how much evidence you have:
+          - 0.7 if there is only a single interviewer,
+          - 0.5 if there are two interviewers,
+          - 0.3 if there are three or more interviewers.
+        - Cap the absolute adjustment at 0.10 (±10 percentage points).
+    *   If multiple interviewers scored the candidate, compute \(s'\) for each, then use the weighted median where weights are \(w_i = 1 - \min(0.4, |\mu_i - \mu_{all}|)\). This downweights very lenient/harsh interviewers.
+    *   If a baseline for an interviewer is not provided, assume \(\mu_i = \mu_{all}\) (no adjustment).
+
+4.  **Test Scores Context:**
+    *   **IQ Score (Custom Test, 0-60 (the IQ score is not important and must not affect the overall score or selection eligibility. Report it only as a data point)):**
         *   **Top Tier:** 30+
         *   **Above Average:** 24-29
         *   **Average:** 12-23
@@ -399,6 +439,16 @@ Synthesize information from these key areas to inform the overall score. **All s
         *   **High Proficiency (Upper-A, B):** Above average.
         *   **Average (Pre-A, Inter-A, B):** The common range.
         *   **Basic (Elem-A, B, C, Pre-B, C):** Below average; an area for development.
+
+5.  **Scoring Approach (flexible, bias-aware):**
+    Compute the overall score using a balanced blend of signals with these defaults (adjust by ±10 total points if justified by evidence and calibration):
+    *   CV Evidence: 40%–60% (default 50%)
+    *   Technical Interview (after calibration): 20%–35% (default 30%)
+    *   HR Interview (after calibration): 5%–15% (default 10%)
+    *   English Proficiency: 5%–15% (default 10%)
+    Notes:
+    *   If only one technical interviewer exists, cap Technical Interview contribution at 20% and shift the difference to CV.
+    *   Do not use IQ to increase or decrease the overall score; mention it only in Key Data Points.
 
 **Output Format:**
 You must provide your evaluation in the following strict, concise format:
@@ -414,13 +464,13 @@ A brief, 1-2 sentence summary explaining the core reason for your score, synthes
 
 **Strengths:**
 *   [Bulleted list of 2-4 key strengths. Each point must be a direct observation. Example: "Strong Technical Interview performance (25/50 | 50%), placing in the 'Strong' tier."]
-*   [Example: "IQ score of 32, placing them in the top tier of candidates."]
+*   [Example: "Notable CV projects/internship using React + Node, aligned with program focus."]
 *   [Example: "English score of Adv-B, indicating Advanced proficiency."]
 
 **Weaknesses:**
 *   [Bulleted list of 2-4 key weaknesses. Each point must be a direct observation. Example: "Concerning HR Interview performance (15/26 | 58%), which is below the expected range for candidates."]
 *   [Example: "Weak Technical Interview performance (8/50 | 16%)."]
-*   [Example: "IQ score of 10, placing them in the below-average tier."]
+*   [Example: "Limited relevant project experience on CV."]
 
 
 **Key Data Points:**
@@ -429,11 +479,30 @@ A brief, 1-2 sentence summary explaining the core reason for your score, synthes
 *   **IQ Score:** [Score] ([Performance Tier])
 *   **English Score:** [Score] ([Proficiency Tier])
 
-**CV Usage Requirement:** If CV text is provided between the markers [CV_TEXT_START] and [CV_TEXT_END], you MUST incorporate it in your analysis and include at least one bullet in Strengths/Weaknesses derived from the CV (e.g., projects, tools, internships). If the CV could not be accessed, explicitly add a final bullet under Key Data Points: CV: not accessible.
+**CV Usage Requirement:** If CV text is provided between the markers [CV_TEXT_START] and [CV_TEXT_END], you MUST incorporate it in your analysis and include at least one bullet (preferably 2+) in Strengths/Weaknesses derived from the CV (e.g., projects, tools, internships). If the CV could not be accessed, explicitly add a final bullet under Key Data Points: CV: not accessible. Even if CV text is unavailable, treat \`workExperience\`, \`coursesTaken\`, \`technicalSkills\`, \`fieldOfStudy\`, and any \`github\` link as CV evidence and reflect them in Strengths/Weaknesses.
 
-Optionally add a short section named **CV Insights** (1–3 bullets) only if the CV text is provided and yields useful, concrete signals.`;
+if you read the cv from the link provided with the data add a short section named **CV Insights** (1–3 bullets) only if the CV text is provided and yields useful, concrete signals.`;
 
       // Build a compact candidate JSON from our current page state
+      const interviewerBaselines = {
+        raouf: 0.79,
+        anas: 0.78,
+        "Yousuf Aldharrat": 0.77,
+        "Mohammed alrafadi": 0.73,
+        "Ahmed Elomami": 0.72,
+        "Mohanned Najam": 0.71,
+        "Nouran Elarabi": 0.67,
+        "Ahmed B.": 0.65,
+        "Ehab Alraid": 0.63,
+        "Hanan Mohammed": 0.55,
+        Aml: 0.49,
+        Istabrak: 0.53,
+        Amine: 0.40,
+        Hana: 0.36,
+        Salma: 0.32,
+        "Mohammed A": 0.15,
+      } as const;
+
       const candidatePayload = {
         id: user.id,
         name: user.fullName,
@@ -455,6 +524,10 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
             averageScores(techForm?.entries).toFixed(2)
           ),
         },
+        interviewer_bias: {
+          baselines: interviewerBaselines,
+          global_average: 0.61,
+        },
       };
 
       // Optionally extract resume text via URL Context in a first pass
@@ -467,6 +540,7 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
       const text = await generateWithGemini({
         user: userPrompt,
         system: instruction,
+        urls: user.resumeUrl ? [user.resumeUrl] : undefined,
       });
       setGeminiResponse(text || "No response");
 
@@ -577,7 +651,6 @@ Optionally add a short section named **CV Insights** (1–3 bullets) only if the
   };
 
   // No blocking logic; all questions remain interactive
-
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
     // Prevent submission if already interviewed
