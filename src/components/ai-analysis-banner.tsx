@@ -13,6 +13,7 @@ type AIAnalysisBannerProps = {
   isLoading?: boolean;
   response?: string | null;
   className?: string;
+  defaultCollapsed?: boolean;
 };
 
 export function AIAnalysisBanner({
@@ -24,8 +25,14 @@ export function AIAnalysisBanner({
   isLoading = false,
   response = null,
   className,
+  defaultCollapsed = false,
 }: AIAnalysisBannerProps) {
   const [typedText, setTypedText] = useState("");
+  const [isResponseExpanded, setIsResponseExpanded] = useState<boolean>(false);
+  const handleAnalyzeClick = () => {
+    setIsResponseExpanded(true);
+    onAnalyze?.();
+  };
 
   useEffect(() => {
     if (!response) {
@@ -43,6 +50,19 @@ export function AIAnalysisBanner({
     }, intervalMs);
     return () => clearInterval(timer);
   }, [response]);
+
+  // When a stored response is present, default to collapsed preview unless explicitly expanded
+  useEffect(() => {
+    if (response && response.length > 0) {
+      setIsResponseExpanded((prev) => prev || !defaultCollapsed);
+    }
+  }, [response, defaultCollapsed]);
+
+  function getPreview(text: string, maxChars: number = 100): string {
+    const normalized = text.replace(/\s+/g, " ").trim();
+    if (normalized.length <= maxChars) return normalized;
+    return normalized.slice(0, maxChars) + "...";
+  }
   return (
     <Card className={`relative overflow-hidden border-0 ${className ?? ""}`}>
       {/* Glow background */}
@@ -59,7 +79,7 @@ export function AIAnalysisBanner({
         />
       </div>
       <CardContent className="relative z-10 py-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground">
               <IconSparkles className="size-4" />
@@ -67,7 +87,14 @@ export function AIAnalysisBanner({
             </div>
             <div className="mt-3 text-xl font-semibold">{title}</div>
             <div className="text-sm text-muted-foreground">{description}</div>
-            {response && (
+            {!response && (
+              <div className="mt-3">
+                <Button onClick={handleAnalyzeClick} size="sm" disabled={isLoading}>
+                  {analyzeText}
+                </Button>
+              </div>
+            )}
+            {(typedText || response) && (
               <div className="mt-3">
                 <Card className="border bg-background/70">
                   <CardContent className="pt-4 pb-4">
@@ -99,23 +126,31 @@ export function AIAnalysisBanner({
                             em: ({ children }) => <em className="italic">{children}</em>,
                           }}
                         >
-                          {typedText}
+                          {isResponseExpanded ? typedText : getPreview(typedText, 100)}
                         </ReactMarkdown>
-                        {typedText.length < (response?.length ?? 0) && (
+                        {isResponseExpanded && typedText.length < (response?.length ?? 0) && (
                           <span className="ml-0.5 inline-block w-2 h-4 align-[-1px] bg-primary/80 animate-caret" />
                         )}
                       </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <Button variant="outline" size="sm" onClick={() => setIsResponseExpanded((v) => !v)}>
+                        {isResponseExpanded ? "Hide" : "Show more"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             )}
-            <div className="mt-4">
-              <Button onClick={onAnalyze} size="sm" disabled={isLoading}>
-                {analyzeText}
-              </Button>
-            </div>
+            {response && (
+              <div className="mt-4">
+                <Button onClick={handleAnalyzeClick} size="sm" disabled={isLoading}>
+                  {analyzeText}
+                </Button>
+              </div>
+            )}
           </div>
+          {/* No outer collapse button anymore */}
         </div>
         {/* Local animation styles */}
         <style>{`

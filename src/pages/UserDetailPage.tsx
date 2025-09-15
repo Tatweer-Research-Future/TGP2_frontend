@@ -344,8 +344,16 @@ export function UserDetailPage() {
 
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   // Collapse state for Breakdown sections
-  const [hrDetailsOpen, setHrDetailsOpen] = useState(true);
-  const [techDetailsOpen, setTechDetailsOpen] = useState(true);
+  const [hrDetailsOpen, setHrDetailsOpen] = useState(false);
+  const [techDetailsOpen, setTechDetailsOpen] = useState(false);
+
+  // Forms selection state
+  const [availableForms, setAvailableForms] = useState<
+    Array<{ id: number; title: string; expairy_date: string }>
+  >([]);
+  const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
+  const [formsCache, setFormsCache] = useState<Record<number, InterviewForm>>({});
+  const [isFormLoading, setIsFormLoading] = useState(false);
 
   const handleAnalyzeClick = async () => {
     if (!user) return;
@@ -602,22 +610,12 @@ if you read the cv from the link provided with the data add a short section name
           setCandidates([...candidates, newCandidate]);
         }
 
-        // Load forms list and pick first/only interview
+        // Load forms list; selection happens when user clicks a card
         const formsList = await getForms();
         if (isCancelled) return;
-        const first = formsList.results?.[0];
-        if (first) {
-          const fields = await getFormById(first.id);
-          if (isCancelled) return;
-          const transformedForm = transformBackendForm(
-            fields,
-            first.id,
-            first.title
-          );
-          setForm(transformedForm);
-        } else {
-          setForm(null);
-        }
+        setAvailableForms(formsList.results ?? []);
+        setSelectedFormId(null);
+        setForm(null);
       } catch (err) {
         console.error("Failed to load user or interview form", err);
         toast.error("Failed to load user or interview form");
@@ -630,6 +628,29 @@ if you read the cv from the link provided with the data add a short section name
       isCancelled = true;
     };
   }, [id, candidates, setCandidates]);
+
+  async function handleSelectForm(formMeta: { id: number; title: string }) {
+    setSelectedFormId(formMeta.id);
+    // Reset answers/validation when switching forms
+    setAnswers({});
+    setInvalidFields(new Set());
+    if (formsCache[formMeta.id]) {
+      setForm(formsCache[formMeta.id]);
+      return;
+    }
+    try {
+      setIsFormLoading(true);
+      const fields = await getFormById(formMeta.id);
+      const transformed = transformBackendForm(fields, formMeta.id, formMeta.title);
+      setFormsCache((prev) => ({ ...prev, [formMeta.id]: transformed }));
+      setForm(transformed);
+    } catch (e) {
+      console.error("Failed to load selected form", e);
+      toast.error("Failed to load selected form");
+    } finally {
+      setIsFormLoading(false);
+    }
+  }
 
   // Auto-display stored AI analysis when available
   useEffect(() => {
@@ -868,6 +889,7 @@ if you read the cv from the link provided with the data add a short section name
         analyzeText="Analyze"
         isLoading={isGeminiLoading}
         response={geminiResponse}
+        defaultCollapsed={true}
       />
 
       {/* Main Tabs */}
@@ -1419,13 +1441,58 @@ if you read the cv from the link provided with the data add a short section name
             </CardContent>
           </Card>
 
+          {/* Forms chooser */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">Choose a form</CardTitle>
+              <CardDescription>Select a form to start the interview</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {availableForms.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No forms available</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableForms.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => handleSelectForm({ id: f.id, title: f.title })}
+                      className={`text-left rounded-md border p-4 transition-colors hover:bg-muted ${
+                        selectedFormId === f.id ? "border-primary" : "border-border"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-base font-medium">{f.title}</div>
+                          {f.expairy_date && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Expires {new Date(f.expairy_date).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                        {selectedFormId === f.id && (
+                          <Badge variant="secondary" className="text-xs">Selected</Badge>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Dynamic Question Cards */}
-          {!form && (
+          {!form && !isFormLoading && (
             <Card>
               <CardContent className="py-6 text-center text-muted-foreground">
-                No interview form available
+                Select a form to begin the interview
               </CardContent>
             </Card>
+          )}
+
+          {isFormLoading && (
+            <div className="flex items-center justify-center py-10">
+              <Loader />
+            </div>
           )}
 
           {form &&
