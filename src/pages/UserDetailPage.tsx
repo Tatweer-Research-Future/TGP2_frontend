@@ -107,6 +107,7 @@ type UserDetail = {
   socials: { github?: string | null; linkedin?: string | null };
   otherFiles: string[]; // normalized list of file URLs
   interviewedByMe: boolean;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>;
   formsEntries?: Array<{
     form: { id: number; title: string };
     entries: Array<{
@@ -154,6 +155,8 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
   const iqScore = normalizeScore((data as any).iq_exam_score);
   const englishScore = (data as any).english_exam_score ?? undefined;
 
+  const forms = (data as any).forms ?? [];
+  const hasInterviewedMe = Array.isArray(forms) && forms.some((f: any) => Boolean(f?.forms_by_me));
   return {
     id: String(data.id),
     fullName,
@@ -188,7 +191,8 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
       linkedin: add.linkedin ?? null,
     },
     otherFiles,
-    interviewedByMe: Boolean((data as any).interviewed_by_me),
+    interviewedByMe: hasInterviewedMe,
+    forms: (data as any).forms ?? [],
     formsEntries: (data as any).forms_entries ?? [],
   };
 }
@@ -1341,19 +1345,7 @@ if you read the cv from the link provided with the data add a short section name
           className={`space-y-8 relative ${user.interviewedByMe ? "overflow-hidden max-h-screen" : ""
             }`}
         >
-          {/* Overlay for already interviewed users - covers entire content */}
-          {user.interviewedByMe && (
-            <div className="absolute inset-0 h-full z-20 flex items-start justify-center backdrop-blur-sm bg-white/70 dark:bg-black/50">
-              <div className="text-center mt-20 text-foreground">
-                <h3 className="text-xl font-semibold mb-2">
-                  Already Interviewed
-                </h3>
-                <p className="text-muted-foreground">
-                  This candidate has already been interviewed by you.
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Removed global overlay; we will disable per-form instead */}
 
           {/* Interview Header - Professional Candidate Banner */}
           <Card>
@@ -1452,13 +1444,19 @@ if you read the cv from the link provided with the data add a short section name
                 <div className="text-sm text-muted-foreground">No forms available</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {availableForms.map((f) => (
+                  {availableForms.map((f) => {
+                    const alreadyByMe = (user.forms ?? []).some((uf) => uf.id === f.id && uf.forms_by_me);
+                    const isSelected = selectedFormId === f.id;
+                    return (
                     <button
                       key={f.id}
-                      onClick={() => handleSelectForm({ id: f.id, title: f.title })}
-                      className={`text-left rounded-md border p-4 transition-colors hover:bg-muted ${
-                        selectedFormId === f.id ? "border-primary" : "border-border"
-                      }`}
+                      onClick={() => !alreadyByMe && handleSelectForm({ id: f.id, title: f.title })}
+                      disabled={alreadyByMe}
+                      className={`text-left rounded-md border p-4 transition-colors ${
+                        alreadyByMe
+                          ? "opacity-60 cursor-not-allowed"
+                          : "hover:bg-muted"
+                      } ${isSelected ? "border-primary" : "border-border"}`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -1469,12 +1467,14 @@ if you read the cv from the link provided with the data add a short section name
                             </div>
                           )}
                         </div>
-                        {selectedFormId === f.id && (
+                        {alreadyByMe ? (
+                          <Badge variant="secondary" className="text-xs">Submitted</Badge>
+                        ) : isSelected ? (
                           <Badge variant="secondary" className="text-xs">Selected</Badge>
-                        )}
+                        ) : null}
                       </div>
                     </button>
-                  ))}
+                  );})}
                 </div>
               )}
             </CardContent>
@@ -1641,7 +1641,7 @@ if you read the cv from the link provided with the data add a short section name
                 className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
                 disabled={
                   isSubmitting ||
-                  user.interviewedByMe ||
+                  (user.forms ?? []).some((uf) => uf.id === (form?.id ?? 0) && uf.forms_by_me) ||
                   // If availability is blocking and the first question hasn't been answered,
                   // or answered No without any other required input needed.
                   false

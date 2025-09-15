@@ -165,8 +165,8 @@ export type BackendCandidate = {
   email: string;
   name: string;
   phone: string | null;
-  interviewed_by_me: boolean;
   full_name?: string;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
 };
 
 export type CandidatesResponse = {
@@ -193,8 +193,8 @@ export type BackendUserDetail = {
   id: number;
   email: string;
   name: string;
-  interviewed_by_me: boolean;
   ai_analysis?: string | null;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
   forms_entries?: Array<{
     form: { id: number; title: string };
     entries: Array<{

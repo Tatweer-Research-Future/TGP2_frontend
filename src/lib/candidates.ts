@@ -9,6 +9,9 @@ export type Candidate = {
   appliedDate: string;
   fieldsChosen?: string[];
   points?: number;
+  totalForms?: number;
+  submittedByMeForms?: number;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>;
 };
 
 // Transform backend candidate data to frontend format
@@ -17,20 +20,24 @@ export function transformBackendCandidate(backendCandidate: {
   email: string;
   name: string;
   phone: string | null;
-  interviewed_by_me: boolean;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>;
   full_name?: string;
 }): Candidate {
+  const totalForms = (backendCandidate.forms ?? []).length;
+  const submittedByMeForms = (backendCandidate.forms ?? []).filter((f) => f.forms_by_me).length;
+  const status: CandidateStatus = submittedByMeForms > 0 ? "interviewed" : "not_interviewed";
   return {
     id: backendCandidate.id.toString(),
     fullName: backendCandidate.name, // Use the English name as the primary full name
     fullNameArabic: backendCandidate.full_name, // Use full_name as the Arabic name
     email: backendCandidate.email,
-    status: backendCandidate.interviewed_by_me
-      ? "interviewed"
-      : "not_interviewed",
+    status,
     appliedDate: new Date().toISOString().split("T")[0], // Use current date as fallback since backend doesn't provide this
     fieldsChosen: [], // Backend doesn't provide this data
     points: 0, // Backend doesn't provide this data
+    totalForms,
+    submittedByMeForms,
+    forms: backendCandidate.forms ?? [],
   };
 }
 

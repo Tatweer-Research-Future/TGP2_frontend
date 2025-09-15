@@ -26,11 +26,10 @@ import {
   IconEye,
   IconChevronLeft,
   IconChevronRight,
-  IconCheck,
-  IconMinus,
   IconCopy,
   IconRefresh,
 } from "@tabler/icons-react";
+import { IconMinus, IconUser, IconCpu, IconPresentation } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 
@@ -289,7 +288,7 @@ export function UsersPage() {
                   Not Interviewed
                 </SelectItem>
                 <SelectItem value="interviewed">
-                  <IconCheck className="text-emerald-600" />
+                  <IconFilter className="opacity-70" />
                   Interviewed
                 </SelectItem>
               </SelectContent>
@@ -397,12 +396,53 @@ export function UsersPage() {
                         {candidate.email}
                       </TableCell>
                       <TableCell>
-                        <Badge className={meta.className}>
-                          <span
-                            className={`inline-block size-2 rounded-full ${meta.dotClass}`}
-                          />
-                          {meta.label}
-                        </Badge>
+                        {/* Compact icon indicators: HR, Tech, Presentation */}
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const forms = candidate.forms ?? [];
+                            const match = (fn: (t: string) => boolean) => {
+                              const entry = forms.find((f) => fn((f.title || "").toLowerCase()));
+                              return {
+                                exists: Boolean(entry),
+                                submitted: Boolean(entry?.forms_by_me),
+                              };
+                            };
+                            const hr = match((t) => t.includes("hr"));
+                            const tech = match((t) => t.includes("tech"));
+                            const pres = match((t) => t.includes("present"));
+                            const Item = ({
+                              title,
+                              submitted,
+                              exists,
+                              Icon,
+                            }: {
+                              title: string;
+                              submitted: boolean;
+                              exists: boolean;
+                              Icon: any;
+                            }) => (
+                              <div className="relative" title={title}>
+                                <Icon className={`size-5 text-white dark:text-white`} />
+                                <span
+                                  className={`absolute -right-1 -bottom-1 block size-2.5 rounded-full border border-background ${
+                                    exists
+                                      ? submitted
+                                        ? "bg-emerald-400 dark:bg-emerald-300"
+                                        : "bg-red-400 dark:bg-red-300"
+                                      : "bg-muted-foreground/40"
+                                  }`}
+                                />
+                              </div>
+                            );
+                            return (
+                              <>
+                                <Item title="HR" submitted={hr.submitted} exists={hr.exists} Icon={IconUser} />
+                                <Item title="Tech" submitted={tech.submitted} exists={tech.exists} Icon={IconCpu} />
+                                <Item title="Presentation" submitted={pres.submitted} exists={pres.exists} Icon={IconPresentation} />
+                              </>
+                            );
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" asChild>
