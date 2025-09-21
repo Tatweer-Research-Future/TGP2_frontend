@@ -436,9 +436,39 @@ export function UsersPage() {
                             );
                             return (
                               <>
-                                <Item title="HR" submitted={hr.submitted} exists={hr.exists} Icon={IconUser} />
-                                <Item title="Tech" submitted={tech.submitted} exists={tech.exists} Icon={IconCpu} />
-                                <Item title="Presentation" submitted={pres.submitted} exists={pres.exists} Icon={IconPresentation} />
+                                <Item
+                                  title="HR"
+                                  submitted={hr.submitted}
+                                  exists={hr.exists}
+                                  Icon={(props: any) => (
+                                    <IconUser
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
+                                <Item
+                                  title="Tech"
+                                  submitted={tech.submitted}
+                                  exists={tech.exists}
+                                  Icon={(props: any) => (
+                                    <IconCpu
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
+                                <Item
+                                  title="Presentation"
+                                  submitted={pres.submitted}
+                                  exists={pres.exists}
+                                  Icon={(props: any) => (
+                                    <IconPresentation
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
                               </>
                             );
                           })()}
