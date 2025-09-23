@@ -54,6 +54,7 @@ import {
   IconTarget,
   IconMapPin,
   IconSparkles,
+  IconPresentation,
 } from "@tabler/icons-react";
 import { IconPlayerPlay, IconPlayerPause, IconFlagCheck, IconClock, IconRefresh } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
@@ -92,6 +93,7 @@ type UserDetail = {
   graduationYear?: string;
   iqExamScore?: string;
   englishExamScore?: string;
+  presentationTopic?: string;
   technicalSkills: Array<{
     skill: string;
     proficiency: string;
@@ -176,6 +178,7 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     graduationYear: (add as any).graduation_year ?? undefined,
     iqExamScore: iqScore,
     englishExamScore: englishScore,
+    presentationTopic: (add as any).topic ?? undefined,
     technicalSkills: Array.isArray((info as any).technicalSkills)
       ? ((info as any).technicalSkills as any[]).map((t) => ({
         skill: (t?.skill ?? "") as string,
@@ -1572,6 +1575,14 @@ if you read the cv from the link provided with the data add a short section name
                       <IconMail className="size-4" />
                       <span>{user.email}</span>
                     </div>
+                  {user.presentationTopic && (
+                    <div className="flex items-center gap-2">
+                      <IconPresentation className="size-4" />
+                      <span className="truncate max-w-[32rem]" title={user.presentationTopic}>
+                        {user.presentationTopic}
+                      </span>
+                    </div>
+                  )}
                   </div>
 
                   <div className="flex items-center gap-2">
