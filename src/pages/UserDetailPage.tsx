@@ -55,6 +55,7 @@ import {
   IconMapPin,
   IconSparkles,
 } from "@tabler/icons-react";
+import { IconPlayerPlay, IconPlayerPause, IconFlagCheck, IconClock, IconRefresh } from "@tabler/icons-react";
 import { FaGithub, FaLinkedin, FaUniversity } from "react-icons/fa";
 import { useEffect } from "react";
 import { generateWithGemini } from "@/services/gemini";
@@ -350,6 +351,8 @@ export function UserDetailPage() {
   // Collapse state for Breakdown sections
   const [hrDetailsOpen, setHrDetailsOpen] = useState(false);
   const [techDetailsOpen, setTechDetailsOpen] = useState(false);
+  // Dynamic details state for other forms (e.g., Presentation)
+  const [detailsOpenByFormId, setDetailsOpenByFormId] = useState<Record<number, boolean>>({});
 
   // Forms selection state
   const [availableForms, setAvailableForms] = useState<
@@ -358,6 +361,80 @@ export function UserDetailPage() {
   const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
   const [formsCache, setFormsCache] = useState<Record<number, InterviewForm>>({});
   const [isFormLoading, setIsFormLoading] = useState(false);
+
+  // Presentation timer state
+  const [presentationTimerSeconds, setPresentationTimerSeconds] = useState(0);
+  const [isPresentationTimerRunning, setIsPresentationTimerRunning] = useState(false);
+  const [presentationTimeFieldId, setPresentationTimeFieldId] = useState<number | null>(null);
+  const [isPresentationFinished, setIsPresentationFinished] = useState(false);
+
+  // Tick timer when running
+  useEffect(() => {
+    if (!isPresentationTimerRunning) return;
+    const interval = setInterval(() => {
+      setPresentationTimerSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPresentationTimerRunning]);
+
+  // When form changes, detect Presentation form and the Time field
+  useEffect(() => {
+    const isPresentation = (form?.title || "").toLowerCase().includes("present");
+    if (!isPresentation || !form) {
+      setPresentationTimeFieldId(null);
+      setPresentationTimerSeconds(0);
+      setIsPresentationTimerRunning(false);
+      setIsPresentationFinished(false);
+      return;
+    }
+    const timeField = form.fields.find((f) => f.type !== "question" && (f.label || "").trim().toLowerCase() === "time");
+    setPresentationTimeFieldId(timeField ? timeField.id : null);
+    // Reset timer when switching to a Presentation form
+    setPresentationTimerSeconds(0);
+    setIsPresentationTimerRunning(false);
+    setIsPresentationFinished(false);
+  }, [form]);
+
+  function formatTimer(totalSeconds: number): string {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const hh = hours > 0 ? String(hours).padStart(2, "0") + ":" : "";
+    const mm = String(minutes).padStart(2, "0");
+    const ss = String(seconds).padStart(2, "0");
+    return `${hh}${mm}:${ss}`;
+  }
+
+  function handlePresentationStart() {
+    setIsPresentationTimerRunning(true);
+  }
+
+  function handlePresentationPause() {
+    setIsPresentationTimerRunning(false);
+  }
+
+  function handlePresentationFinish() {
+    setIsPresentationTimerRunning(false);
+    setIsPresentationFinished(true);
+    if (presentationTimeFieldId != null) {
+      const value = formatTimer(presentationTimerSeconds);
+      setAnswers((prev) => ({ ...prev, [presentationTimeFieldId]: value }));
+      toast.success(`Presentation time saved: ${value}`);
+    }
+  }
+
+  function handlePresentationReset() {
+    setIsPresentationTimerRunning(false);
+    setPresentationTimerSeconds(0);
+    setIsPresentationFinished(false);
+    if (presentationTimeFieldId != null) {
+      setAnswers((prev) => {
+        const next = { ...prev } as Record<number, string | number>;
+        delete (next as any)[presentationTimeFieldId];
+        return next;
+      });
+    }
+  }
 
   const handleAnalyzeClick = async () => {
     if (!user) return;
@@ -678,16 +755,29 @@ if you read the cv from the link provided with the data add a short section name
   // No blocking logic; all questions remain interactive
   const handleSubmitInterview = async () => {
     if (!form || !user) return;
-    // Prevent submission if already interviewed
-    if (user.interviewedByMe) {
-      toast.error("This candidate has already been interviewed.");
+    // Prevent submission only if this specific form was already submitted by me
+    const alreadySubmittedThisFormByMe = (user.forms ?? []).some(
+      (uf) => uf.id === form.id && uf.forms_by_me
+    );
+    if (alreadySubmittedThisFormByMe) {
+      toast.error("You have already submitted this form for this candidate.");
       return;
+    }
+
+    // Prepare final answers; if Presentation timer is running, auto-finish and include value
+    const isPresentationFormSelected = (form.title || "").toLowerCase().includes("present");
+    let finalAnswers: Record<number, string | number> = { ...answers };
+    if (isPresentationFormSelected && isPresentationTimerRunning && presentationTimeFieldId != null) {
+      const value = formatTimer(presentationTimerSeconds);
+      finalAnswers[presentationTimeFieldId] = value;
+      setIsPresentationTimerRunning(false);
+      setIsPresentationFinished(true);
     }
     // Validate required fields
     const missing = new Set<number>();
     for (const field of form.fields) {
       if (!field.required) continue;
-      const v = answers[field.id];
+      const v = finalAnswers[field.id];
       if (field.type === "question") {
         if (v === undefined || v === null || v === "") missing.add(field.id);
       } else if (field.type === "text" || field.type === "email") {
@@ -707,7 +797,7 @@ if you read the cv from the link provided with the data add a short section name
       form_id: form.id,
       targeted_user_id: Number(user.id),
       form_fields: form.fields.map((f) => {
-        const value = answers[f.id];
+        const value = finalAnswers[f.id];
         if (f.type === "question") {
           return {
             form_field_id: f.id,
@@ -885,8 +975,96 @@ if you read the cv from the link provided with the data add a short section name
     } as { interviewer: string; score: number; note?: string };
   });
 
+  // Generic builder for any other form (e.g., Presentation)
+  function buildGenericSections(entries?: { submitted_by?: { name?: string }; fields: any[] }[]): Section[] {
+    if (!entries || entries.length === 0) return [];
+    const map = new Map<string, Rating[]>();
+    for (const entry of entries) {
+      const interviewer = entry.submitted_by?.name || "Unknown";
+      for (const f of (entry.fields as any[]) || []) {
+        if (typeof f?.score !== "number") continue;
+        const label = String(f.label || "").trim();
+        const list = map.get(label) ?? [];
+        list.push({ interviewer, score: Number(f.score) });
+        map.set(label, list);
+      }
+    }
+    return Array.from(map.entries()).map(([name, ratings]) => ({ name, ratings }));
+  }
+
+  const otherForms = (user.formsEntries ?? []).filter((f) => {
+    const t = (f.form.title || "").toLowerCase();
+    return !(t.includes("hr") || t.includes("technical"));
+  });
+
   return (
     <div className="container mx-auto px-6 py-2 space-y-6">
+      {/* Presentation Timer Floating Bar */}
+      {form && (form.title || "").toLowerCase().includes("present") && presentationTimeFieldId != null && (isPresentationTimerRunning || presentationTimerSeconds > 0) && (
+        <div
+          className="fixed top-2 left-1/2 z-50"
+          style={{ transform: "translateX(-50%) scale(1.3)", transformOrigin: "top center" }}
+        >
+          <div className="rounded-full border bg-background/95 backdrop-blur px-3 py-1.5 shadow-md flex items-center gap-2">
+            <span
+              className={`inline-block size-2.5 rounded-full ${
+                isPresentationFinished
+                  ? "bg-emerald-500"
+                  : isPresentationTimerRunning
+                    ? "bg-red-500 animate-pulse"
+                    : "bg-amber-400"
+              }`}
+              aria-label={
+                isPresentationFinished ? "Finished" : isPresentationTimerRunning ? "Live" : "Paused"
+              }
+              title={
+                isPresentationFinished ? "Finished" : isPresentationTimerRunning ? "Live" : "Paused"
+              }
+            />
+            <IconClock className="size-4 text-muted-foreground" />
+            <span className="font-mono text-sm tabular-nums">
+              {formatTimer(presentationTimerSeconds)}
+            </span>
+            <div className="w-px h-5 bg-border mx-1" />
+            <Button
+              size="sm"
+              variant={isPresentationTimerRunning ? "secondary" : "default"}
+              onClick={isPresentationTimerRunning ? handlePresentationPause : handlePresentationStart}
+              className="h-7 px-2 py-0 text-xs"
+            >
+              {isPresentationTimerRunning ? (
+                <>
+                  <IconPlayerPause className="size-3.5 mr-1" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <IconPlayerPlay className="size-3.5 mr-1" />
+                  Start
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePresentationReset}
+              className="h-7 px-2 py-0 text-xs"
+            >
+              <IconRefresh className="size-3.5 mr-1" />
+              Reset
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePresentationFinish}
+              className="h-7 px-2 py-0 text-xs"
+            >
+              <IconFlagCheck className="size-3.5 mr-1" />
+              Finish
+            </Button>
+          </div>
+        </div>
+      )}
       {/* AI Analysis Banner (global across tabs) */}
       <AIAnalysisBanner
         onAnalyze={handleAnalyzeClick}
@@ -1342,8 +1520,7 @@ if you read the cv from the link provided with the data add a short section name
         {/* Interview Tab */}
         <TabsContent
           value="interview"
-          className={`space-y-8 relative ${user.interviewedByMe ? "overflow-hidden max-h-screen" : ""
-            }`}
+          className={`space-y-8 relative`}
         >
           {/* Removed global overlay; we will disable per-form instead */}
 
@@ -1480,6 +1657,60 @@ if you read the cv from the link provided with the data add a short section name
             </CardContent>
           </Card>
 
+          {/* Presentation Timer - Top placement */}
+          {form && (form.title || "").toLowerCase().includes("present") && presentationTimeFieldId != null && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <IconClock className="size-5 text-muted-foreground" />
+                    <span className="text-3xl font-mono tabular-nums">
+                      {formatTimer(presentationTimerSeconds)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant={isPresentationTimerRunning ? "secondary" : "default"}
+                      onClick={isPresentationTimerRunning ? handlePresentationPause : handlePresentationStart}
+                      className="h-9"
+                    >
+                      {isPresentationTimerRunning ? (
+                        <>
+                          <IconPlayerPause className="size-4 mr-1" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <IconPlayerPlay className="size-4 mr-1" />
+                          Start
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handlePresentationReset}
+                      className="h-9"
+                    >
+                      <IconRefresh className="size-4 mr-1" />
+                      Reset
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handlePresentationFinish}
+                      className="h-9"
+                    >
+                      <IconFlagCheck className="size-4 mr-1" />
+                      Finish
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Dynamic Question Cards */}
           {!form && !isFormLoading && (
             <Card>
@@ -1497,6 +1728,13 @@ if you read the cv from the link provided with the data add a short section name
 
           {form &&
             form.fields.map((field) => {
+              const isPresentationForm = (form?.title || "").toLowerCase().includes("present");
+              const isPresentationTimeField =
+                isPresentationForm && (field.label || "").trim().toLowerCase() === "time" && field.type !== "question";
+              if (isPresentationTimeField) {
+                // Skip rendering the original Time field; handled by the top timer card
+                return null;
+              }
               return (
                 <Card
                   key={field.id}
@@ -1601,7 +1839,7 @@ if you read the cv from the link provided with the data add a short section name
                       </RadioGroup>
                     )}
 
-                    {/* Text/email */}
+                    {/* Text/email (hidden for Presentation Time field) */}
                     {field.type !== "question" && (
                       <div className="space-y-2 pt-2">
                         {field.type === "text" ? (
@@ -1918,6 +2156,128 @@ if you read the cv from the link provided with the data add a short section name
               ))}
             </CardContent>
           </Card>
+
+          {/* Dynamic breakdown for other forms (e.g., Presentation) */}
+          {otherForms.map((formEntry, idx) => {
+            const formId = formEntry.form.id;
+            const title = formEntry.form.title || `Form ${formId}`;
+            const sections = buildGenericSections(formEntry.entries as any);
+            const totals = (formEntry.entries ?? []).map((e: any) => {
+              const fieldsArr = (e.fields as any[]) || [];
+              const findByLabel = (substr: string) =>
+                fieldsArr.find(
+                  (f: any) => typeof f?.label === "string" && f.label.toLowerCase().includes(substr)
+                );
+              const noteField = findByLabel("notes") || findByLabel("note");
+              const timeField = findByLabel("time");
+              const note = typeof (noteField as any)?.text === "string" ? (noteField as any).text.trim() : "";
+              const time = typeof (timeField as any)?.text === "string" ? (timeField as any).text.trim() : "";
+              return {
+                interviewer: e.submitted_by?.name || "Unknown",
+                score: Number(e.final_score) || 0,
+                note,
+                time,
+              } as { interviewer: string; score: number; note?: string; time?: string };
+            });
+            const isOpen = detailsOpenByFormId[formId] ?? false;
+            return (
+              <Card key={`${formId}-${idx}`}>
+                <CardHeader className="pb-3">
+                   <CardTitle className="flex items-center justify-between text-xl">
+                     <span>Score Breakdown - {title}</span>
+                     <div className="flex items-center gap-3">
+                       <button
+                         className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                         onClick={() => setDetailsOpenByFormId((prev) => ({ ...prev, [formId]: !isOpen }))}
+                       >
+                         <span>{isOpen ? "Hide details" : "Show details"}</span>
+                         <svg
+                           xmlns="http://www.w3.org/2000/svg"
+                           viewBox="0 0 24 24"
+                           fill="currentColor"
+                           className={`size-4 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+                         >
+                           <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                         </svg>
+                       </button>
+                     </div>
+                   </CardTitle>
+                  <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-6">
+                  {/* Totals per interviewer */}
+                  {totals.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {totals.map((it, i) => (
+                        <div key={i} className="relative rounded border p-4 overflow-hidden">
+                          <div className="pointer-events-none absolute -inset-24 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.22),transparent_45%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.18),transparent_45%)] blur-2xl" />
+                          <div className="flex items-center gap-3">
+                            <ConsistentAvatar
+                              user={{ name: it.interviewer, email: it.interviewer }}
+                              className="size-10"
+                            />
+                            <div className="text-base font-medium text-foreground">{it.interviewer}</div>
+                          </div>
+                          <div className="mt-3 flex items-baseline gap-2">
+                            <div className="text-3xl font-bold tracking-tight">{it.score}</div>
+                            {/* Unknown totals for generic forms, so no denominator */}
+                          </div>
+                          {it.note && (
+                            <div className="mt-3 text-sm">
+                              <div className="rounded-2xl border bg-muted/70 px-3 py-2 text-foreground">
+                                {it.note}
+                              </div>
+                            </div>
+                          )}
+                          {it.time && (
+                            <div className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
+                              <IconClock className="size-4" />
+                              <span className="font-mono tabular-nums">{it.time}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isOpen && sections.map((section, sectionIndex) => (
+                    <div key={sectionIndex} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="size-1.5 rounded-full bg-foreground/70" />
+                        <div className="font-medium">{section.name}</div>
+                      </div>
+                      <div className="space-y-3">
+                        {section.ratings.map((r, rIndex) => {
+                          const pct = Math.max(0, Math.min(100, (r.score / 5) * 100));
+                          return (
+                            <div key={rIndex} className="grid grid-cols-12 items-center gap-3">
+                              <div className="col-span-3 sm:col-span-2 text-sm text-muted-foreground">
+                                {r.interviewer}
+                              </div>
+                              <div className="col-span-7 sm:col-span-8">
+                                <div className="h-2 w-full rounded bg-muted">
+                                  <div
+                                    className="h-2 rounded bg-primary"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="col-span-2 sm:col-span-2 text-right font-medium">
+                                {r.score}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {sectionIndex < sections.length - 1 && (
+                        <Separator className="my-2" />
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </TabsContent>
       </Tabs>
 
