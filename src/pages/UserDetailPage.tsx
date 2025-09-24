@@ -370,33 +370,56 @@ export function UserDetailPage() {
   const [isPresentationTimerRunning, setIsPresentationTimerRunning] = useState(false);
   const [presentationTimeFieldId, setPresentationTimeFieldId] = useState<number | null>(null);
   const [isPresentationFinished, setIsPresentationFinished] = useState(false);
+  const [presentationAccumulatedMs, setPresentationAccumulatedMs] = useState(0);
+  const [presentationLastStartMs, setPresentationLastStartMs] = useState<number | null>(null);
+  const [activePresentationFormId, setActivePresentationFormId] = useState<number | null>(null);
 
   // Tick timer when running
   useEffect(() => {
     if (!isPresentationTimerRunning) return;
     const interval = setInterval(() => {
-      setPresentationTimerSeconds((s) => s + 1);
-    }, 1000);
+      setPresentationTimerSeconds(() => {
+        const now = Date.now();
+        const runningMs = presentationLastStartMs != null ? now - presentationLastStartMs : 0;
+        const totalMs = presentationAccumulatedMs + runningMs;
+        return Math.floor(totalMs / 1000);
+      });
+    }, 250);
     return () => clearInterval(interval);
-  }, [isPresentationTimerRunning]);
+  }, [isPresentationTimerRunning, presentationLastStartMs, presentationAccumulatedMs]);
+
+  // Keep seconds in sync when paused
+  useEffect(() => {
+    if (!isPresentationTimerRunning) {
+      setPresentationTimerSeconds(Math.floor(presentationAccumulatedMs / 1000));
+    }
+  }, [isPresentationTimerRunning, presentationAccumulatedMs]);
 
   // When form changes, detect Presentation form and the Time field
   useEffect(() => {
     const isPresentation = (form?.title || "").toLowerCase().includes("present");
     if (!isPresentation || !form) {
       setPresentationTimeFieldId(null);
-      setPresentationTimerSeconds(0);
+      setActivePresentationFormId(null);
       setIsPresentationTimerRunning(false);
       setIsPresentationFinished(false);
+      setPresentationLastStartMs(null);
+      setPresentationAccumulatedMs(0);
+      setPresentationTimerSeconds(0);
       return;
     }
     const timeField = form.fields.find((f) => f.type !== "question" && (f.label || "").trim().toLowerCase() === "time");
     setPresentationTimeFieldId(timeField ? timeField.id : null);
-    // Reset timer when switching to a Presentation form
-    setPresentationTimerSeconds(0);
-    setIsPresentationTimerRunning(false);
-    setIsPresentationFinished(false);
-  }, [form]);
+    // Only reset timer when switching to a NEW presentation form
+    if (activePresentationFormId !== form.id) {
+      setActivePresentationFormId(form.id);
+      setIsPresentationTimerRunning(false);
+      setIsPresentationFinished(false);
+      setPresentationLastStartMs(null);
+      setPresentationAccumulatedMs(0);
+      setPresentationTimerSeconds(0);
+    }
+  }, [form, activePresentationFormId]);
 
   function formatTimer(totalSeconds: number): string {
     const hours = Math.floor(totalSeconds / 3600);
@@ -409,18 +432,35 @@ export function UserDetailPage() {
   }
 
   function handlePresentationStart() {
+    if (!isPresentationTimerRunning) {
+      setPresentationLastStartMs(Date.now());
+    }
     setIsPresentationTimerRunning(true);
   }
 
   function handlePresentationPause() {
+    if (presentationLastStartMs != null) {
+      const now = Date.now();
+      setPresentationAccumulatedMs((ms) => ms + (now - presentationLastStartMs));
+    }
+    setPresentationLastStartMs(null);
     setIsPresentationTimerRunning(false);
   }
 
   function handlePresentationFinish() {
+    const now = Date.now();
+    let totalMs = presentationAccumulatedMs;
+    if (presentationLastStartMs != null) {
+      totalMs += now - presentationLastStartMs;
+    }
+    const totalSeconds = Math.floor(totalMs / 1000);
     setIsPresentationTimerRunning(false);
     setIsPresentationFinished(true);
+    setPresentationLastStartMs(null);
+    setPresentationAccumulatedMs(totalMs);
+    setPresentationTimerSeconds(totalSeconds);
     if (presentationTimeFieldId != null) {
-      const value = formatTimer(presentationTimerSeconds);
+      const value = formatTimer(totalSeconds);
       setAnswers((prev) => ({ ...prev, [presentationTimeFieldId]: value }));
       toast.success(`Presentation time saved: ${value}`);
     }
@@ -430,6 +470,8 @@ export function UserDetailPage() {
     setIsPresentationTimerRunning(false);
     setPresentationTimerSeconds(0);
     setIsPresentationFinished(false);
+    setPresentationLastStartMs(null);
+    setPresentationAccumulatedMs(0);
     if (presentationTimeFieldId != null) {
       setAnswers((prev) => {
         const next = { ...prev } as Record<number, string | number>;
@@ -444,7 +486,7 @@ export function UserDetailPage() {
     try {
       setIsGeminiLoading(true);
       setGeminiResponse(null);
-      
+
       const instruction = `You are an expert AI assistant tasked with evaluating candidates for the "Tatweer Graduate Program 2025" (TGP2025). Your purpose is to analyze a candidate's profile, provided in JSON format, and provide a concise, data-driven evaluation that strongly incorporates CV evidence and calibrates interview scores for interviewer bias.
 
 **Program Context: TGP2025**
@@ -770,11 +812,21 @@ if you read the cv from the link provided with the data add a short section name
     // Prepare final answers; if Presentation timer is running, auto-finish and include value
     const isPresentationFormSelected = (form.title || "").toLowerCase().includes("present");
     let finalAnswers: Record<number, string | number> = { ...answers };
-    if (isPresentationFormSelected && isPresentationTimerRunning && presentationTimeFieldId != null) {
-      const value = formatTimer(presentationTimerSeconds);
+    if (isPresentationFormSelected && presentationTimeFieldId != null) {
+      // If running, compute wall-clock based time; otherwise use accumulated
+      const now = Date.now();
+      const runningMs = isPresentationTimerRunning && presentationLastStartMs != null ? now - presentationLastStartMs : 0;
+      const totalMs = presentationAccumulatedMs + runningMs;
+      const totalSeconds = Math.floor(totalMs / 1000);
+      const value = formatTimer(totalSeconds);
       finalAnswers[presentationTimeFieldId] = value;
-      setIsPresentationTimerRunning(false);
-      setIsPresentationFinished(true);
+      if (isPresentationTimerRunning) {
+        setIsPresentationTimerRunning(false);
+        setIsPresentationFinished(true);
+        setPresentationLastStartMs(null);
+        setPresentationAccumulatedMs(totalMs);
+        setPresentationTimerSeconds(totalSeconds);
+      }
     }
     // Validate required fields
     const missing = new Set<number>();
@@ -1010,13 +1062,12 @@ if you read the cv from the link provided with the data add a short section name
         >
           <div className="rounded-full border bg-background/95 backdrop-blur px-3 py-1.5 shadow-md flex items-center gap-2">
             <span
-              className={`inline-block size-2.5 rounded-full ${
-                isPresentationFinished
+              className={`inline-block size-2.5 rounded-full ${isPresentationFinished
                   ? "bg-emerald-500"
                   : isPresentationTimerRunning
                     ? "bg-red-500 animate-pulse"
                     : "bg-amber-400"
-              }`}
+                }`}
               aria-label={
                 isPresentationFinished ? "Finished" : isPresentationTimerRunning ? "Live" : "Paused"
               }
@@ -1575,14 +1626,14 @@ if you read the cv from the link provided with the data add a short section name
                       <IconMail className="size-4" />
                       <span>{user.email}</span>
                     </div>
-                  {user.presentationTopic && (
-                    <div className="flex items-center gap-2">
-                      <IconPresentation className="size-4" />
-                      <span className="truncate max-w-[32rem]" title={user.presentationTopic}>
-                        {user.presentationTopic}
-                      </span>
-                    </div>
-                  )}
+                    {user.presentationTopic && (
+                      <div className="flex items-center gap-2">
+                        <IconPresentation className="size-4" />
+                        <span className="truncate max-w-[32rem]" title={user.presentationTopic}>
+                          {user.presentationTopic}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -1636,33 +1687,33 @@ if you read the cv from the link provided with the data add a short section name
                     const alreadyByMe = (user.forms ?? []).some((uf) => uf.id === f.id && uf.forms_by_me);
                     const isSelected = selectedFormId === f.id;
                     return (
-                    <button
-                      key={f.id}
-                      onClick={() => !alreadyByMe && handleSelectForm({ id: f.id, title: f.title })}
-                      disabled={alreadyByMe}
-                      className={`text-left rounded-md border p-4 transition-colors ${
-                        alreadyByMe
-                          ? "opacity-60 cursor-not-allowed"
-                          : "hover:bg-muted"
-                      } ${isSelected ? "border-primary" : "border-border"}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="text-base font-medium">{f.title}</div>
-                          {f.expairy_date && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Expires {new Date(f.expairy_date).toLocaleDateString()}
-                            </div>
-                          )}
+                      <button
+                        key={f.id}
+                        onClick={() => !alreadyByMe && handleSelectForm({ id: f.id, title: f.title })}
+                        disabled={alreadyByMe}
+                        className={`text-left rounded-md border p-4 transition-colors ${alreadyByMe
+                            ? "opacity-60 cursor-not-allowed"
+                            : "hover:bg-muted"
+                          } ${isSelected ? "border-primary" : "border-border"}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-base font-medium">{f.title}</div>
+                            {f.expairy_date && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                Expires {new Date(f.expairy_date).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                          {alreadyByMe ? (
+                            <Badge variant="secondary" className="text-xs">Submitted</Badge>
+                          ) : isSelected ? (
+                            <Badge variant="secondary" className="text-xs">Selected</Badge>
+                          ) : null}
                         </div>
-                        {alreadyByMe ? (
-                          <Badge variant="secondary" className="text-xs">Submitted</Badge>
-                        ) : isSelected ? (
-                          <Badge variant="secondary" className="text-xs">Selected</Badge>
-                        ) : null}
-                      </div>
-                    </button>
-                  );})}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -1979,25 +2030,25 @@ if you read the cv from the link provided with the data add a short section name
           {/* Detailed HR Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-               <CardTitle className="flex items-center justify-between text-xl">
-                 <span>Score Breakdown - {hrBreakdown.title}</span>
-                 <div className="flex items-center gap-3">
-                   <button
-                     className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
-                     onClick={() => setHrDetailsOpen((v) => !v)}
-                   >
-                     <span>{hrDetailsOpen ? "Hide details" : "Show details"}</span>
-                     <svg
-                       xmlns="http://www.w3.org/2000/svg"
-                       viewBox="0 0 24 24"
-                       fill="currentColor"
-                       className={`size-4 transition-transform ${hrDetailsOpen ? "rotate-180" : "rotate-0"}`}
-                     >
-                       <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
-                     </svg>
-                   </button>
-                 </div>
-               </CardTitle>
+              <CardTitle className="flex items-center justify-between text-xl">
+                <span>Score Breakdown - {hrBreakdown.title}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                    onClick={() => setHrDetailsOpen((v) => !v)}
+                  >
+                    <span>{hrDetailsOpen ? "Hide details" : "Show details"}</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className={`size-4 transition-transform ${hrDetailsOpen ? "rotate-180" : "rotate-0"}`}
+                    >
+                      <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-6">
@@ -2080,25 +2131,25 @@ if you read the cv from the link provided with the data add a short section name
           {/* Technical Breakdown */}
           <Card>
             <CardHeader className="pb-3">
-               <CardTitle className="flex items-center justify-between text-xl">
-                 <span>Score Breakdown - {techBreakdown.title}</span>
-                 <div className="flex items-center gap-3">
-                   <button
-                     className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
-                     onClick={() => setTechDetailsOpen((v) => !v)}
-                   >
-                     <span>{techDetailsOpen ? "Hide details" : "Show details"}</span>
-                     <svg
-                       xmlns="http://www.w3.org/2000/svg"
-                       viewBox="0 0 24 24"
-                       fill="currentColor"
-                       className={`size-4 transition-transform ${techDetailsOpen ? "rotate-180" : "rotate-0"}`}
-                     >
-                       <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
-                     </svg>
-                   </button>
-                 </div>
-               </CardTitle>
+              <CardTitle className="flex items-center justify-between text-xl">
+                <span>Score Breakdown - {techBreakdown.title}</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                    onClick={() => setTechDetailsOpen((v) => !v)}
+                  >
+                    <span>{techDetailsOpen ? "Hide details" : "Show details"}</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className={`size-4 transition-transform ${techDetailsOpen ? "rotate-180" : "rotate-0"}`}
+                    >
+                      <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </CardTitle>
               <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-6">
@@ -2194,25 +2245,25 @@ if you read the cv from the link provided with the data add a short section name
             return (
               <Card key={`${formId}-${idx}`}>
                 <CardHeader className="pb-3">
-                   <CardTitle className="flex items-center justify-between text-xl">
-                     <span>Score Breakdown - {title}</span>
-                     <div className="flex items-center gap-3">
-                       <button
-                         className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
-                         onClick={() => setDetailsOpenByFormId((prev) => ({ ...prev, [formId]: !isOpen }))}
-                       >
-                         <span>{isOpen ? "Hide details" : "Show details"}</span>
-                         <svg
-                           xmlns="http://www.w3.org/2000/svg"
-                           viewBox="0 0 24 24"
-                           fill="currentColor"
-                           className={`size-4 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
-                         >
-                           <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
-                         </svg>
-                       </button>
-                     </div>
-                   </CardTitle>
+                  <CardTitle className="flex items-center justify-between text-xl">
+                    <span>Score Breakdown - {title}</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="inline-flex items-center gap-1.5 text-sm underline-offset-4 hover:underline text-muted-foreground"
+                        onClick={() => setDetailsOpenByFormId((prev) => ({ ...prev, [formId]: !isOpen }))}
+                      >
+                        <span>{isOpen ? "Hide details" : "Show details"}</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className={`size-4 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+                        >
+                          <path fillRule="evenodd" d="M12 15.5a1 1 0 0 1-.707-.293l-6-6a1 1 0 1 1 1.414-1.414L12 12.086l5.293-5.293a1 1 0 0 1 1.414 1.414l-6 6A1 1 0 0 1 12 15.5z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </CardTitle>
                   <CardDescription>Per-interviewer ratings for key criteria</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-6">
