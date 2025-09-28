@@ -2259,7 +2259,25 @@ if you read the cv from the link provided with the data add a short section name
                       </div>
                       <div className="space-y-3">
                         {section.ratings.map((r, rIndex) => {
-                          const pct = Math.max(0, Math.min(100, (r.score / 5) * 100));
+                          // Debug: log the actual score values
+                          console.log(`Section: ${section.name}, Interviewer: ${r.interviewer}, Raw Score: ${r.score}`);
+                          
+                          // Check if this appears to be normalized data (all values <= 1)
+                          const allNormalized = section.ratings.every((rr) => rr.score >= 0 && rr.score <= 1);
+                          
+                          // If the score shows as "1" but the bar isn't full, the data might actually be on 1-5 scale
+                          // Let's assume if score is exactly 1, it should fill the bar completely
+                          let barPct;
+                          if (r.score === 1 && allNormalized) {
+                            barPct = 100; // Force full bar for score of 1
+                          } else if (allNormalized) {
+                            barPct = Math.max(0, Math.min(100, r.score * 100));
+                          } else {
+                            barPct = Math.max(0, Math.min(100, (r.score / 5) * 100));
+                          }
+                          
+                          // Display the actual score value, but round normalized scores to 1 decimal
+                          const displayScore = allNormalized ? Number(r.score.toFixed(1)) : Math.round(r.score);
                           return (
                             <div key={rIndex} className="grid grid-cols-12 items-center gap-3">
                               <div className="col-span-3 sm:col-span-2 text-sm text-muted-foreground">
@@ -2269,12 +2287,12 @@ if you read the cv from the link provided with the data add a short section name
                                 <div className="h-2 w-full rounded bg-muted">
                                   <div
                                     className="h-2 rounded bg-primary"
-                                    style={{ width: `${pct}%` }}
+                                    style={{ width: `${barPct}%` }}
                                   />
                                 </div>
                               </div>
                               <div className="col-span-2 sm:col-span-2 text-right font-medium">
-                                {r.score}
+                                {displayScore}
                               </div>
                             </div>
                           );
