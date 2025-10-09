@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import { Loader } from "@/components/ui/loader";
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 import { useCandidates } from "@/context/CandidatesContext";
+import { useAuth } from "@/context/AuthContext";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
 const statusMeta = {
@@ -62,6 +63,8 @@ const statusMeta = {
 const ITEMS_PER_PAGE = 8;
 
 export function UsersPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,7 +78,14 @@ export function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getCandidates(); // group_id=5 for candidates
+      // Determine default behavior based on groups
+      const groups: string[] = Array.isArray(user?.groups) ? (user!.groups as string[]) : [];
+      const isTrainee = groups.some((g) => /trainee/i.test(g));
+      if (isTrainee) {
+        navigate("/forms", { replace: true });
+        return;
+      }
+      const response = await getCandidates();
       const transformedCandidates = response.results.map(
         transformBackendCandidate
       );

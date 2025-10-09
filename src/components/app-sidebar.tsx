@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconInnerShadowTop, IconUsers } from "@tabler/icons-react";
+import { IconInnerShadowTop, IconUsers, IconFileDescription } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -17,27 +17,27 @@ import { useAuth } from "@/context/AuthContext";
 const data = {
   // Nav items only; user comes from auth
   navMain: [
-    // {
-    //   title: "Dashboard",
-    //   url: "/overview",
-    //   icon: IconDashboard,
-    // },
     {
       title: "Candidates",
       url: "/candidates",
       icon: IconUsers,
     },
-    // {
-    //   title: "Forms",
-    //   url: "/forms",
-    //   icon: IconFileDescription,
-    // },
-    // Summary merged into Dashboard
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
+  const groups = Array.isArray(user?.groups) ? user!.groups : [];
+  const isTrainee = groups.some((g) => /trainee/i.test(g));
+  const items = isTrainee
+    ? [
+        {
+          title: "Forms",
+          url: "/forms",
+          icon: IconFileDescription,
+        },
+      ]
+    : data.navMain;
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -56,7 +56,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={items} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

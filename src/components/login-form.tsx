@@ -30,9 +30,19 @@ export function LoginForm({
     try {
       const data = await authLogin({ email, password });
       toast.success(`Welcome ${data.user?.name || data.user?.email}`);
-      const redirectTo =
-        (location.state as any)?.from?.pathname || "/candidates";
-      navigate(redirectTo, { replace: true });
+      // Determine redirect: trainees -> /forms, instructors -> /candidates
+      try {
+        const storedRaw = localStorage.getItem("auth_user");
+        const stored = storedRaw ? JSON.parse(storedRaw) : null;
+        const groups: string[] = Array.isArray(stored?.groups) ? stored.groups : [];
+        const isTrainee = groups.some((g) => /trainee/i.test(g));
+        const defaultPath = isTrainee ? "/forms" : "/candidates";
+        const redirectTo = (location.state as any)?.from?.pathname || defaultPath;
+        navigate(redirectTo, { replace: true });
+      } catch {
+        const redirectTo = (location.state as any)?.from?.pathname || "/candidates";
+        navigate(redirectTo, { replace: true });
+      }
     } catch (err) {
       const message =
         (err as any)?.data?.detail || (err as Error)?.message || "Login failed";

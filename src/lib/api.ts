@@ -159,6 +159,18 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
+// --- Auth / Current user profile ---
+export type CurrentUserResponse = {
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  groups: string[];
+};
+
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  return apiFetch<CurrentUserResponse>(`/me`);
+}
+
 // Candidate API types and functions
 export type BackendCandidate = {
   id: number;
@@ -181,7 +193,7 @@ export type CandidatesResponse = {
 export async function getCandidates(
   groupId: number = 1
 ): Promise<CandidatesResponse> {
-  return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`);
+  return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`); //TODO: remove this group_id
 }
 
 export async function getCandidateById(id: string): Promise<BackendCandidate> {
