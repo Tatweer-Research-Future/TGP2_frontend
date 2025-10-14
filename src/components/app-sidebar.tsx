@@ -1,6 +1,8 @@
 import * as React from "react";
-import { IconInnerShadowTop, IconUsers, IconClock } from "@tabler/icons-react";
+import { IconUsers, IconClock } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import logoImage from "@/assets/logo.png";
+import logoWhiteImage from "@/assets/logo-white.png";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useUserGroups } from "@/hooks/useUserGroups";
+import { useTheme } from "@/components/theme-provider";
 
 const getNavItems = (isAttendanceTracker: boolean, t: any) => {
   const baseItems = [];
@@ -44,6 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { isAttendanceTracker } = useUserGroups();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   
   const navItems = getNavItems(isAttendanceTracker, t);
   
@@ -57,8 +61,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">TGP</span>
+                <img 
+                  src={theme === "dark" ? logoWhiteImage : logoImage} 
+                  alt="TGP Logo" 
+                  className="h-24 w-auto"
+                />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

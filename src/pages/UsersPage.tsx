@@ -455,7 +455,7 @@ export function UsersPage() {
                                   Icon={(props: any) => (
                                     <IconUser
                                       {...props}
-                                      className="size-5 text-black dark:text-white"
+                                      className="size-5 text-primary dark:text-white"
                                     />
                                   )}
                                 />
@@ -466,7 +466,7 @@ export function UsersPage() {
                                   Icon={(props: any) => (
                                     <IconCpu
                                       {...props}
-                                      className="size-5 text-black dark:text-white"
+                                      className="size-5 text-primary dark:text-white"
                                     />
                                   )}
                                 />
@@ -477,7 +477,7 @@ export function UsersPage() {
                                   Icon={(props: any) => (
                                     <IconPresentation
                                       {...props}
-                                      className="size-5 text-black dark:text-white"
+                                      className="size-5 text-primary dark:text-white"
                                     />
                                   )}
                                 />

@@ -10,7 +10,9 @@ import { IconEye, IconEyeOff } from "@tabler/icons-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-// import AubergineImage from "@/assets/avatars/Aubergine.svg";
+import { useTheme } from "@/components/theme-provider";
+import backgroundSvg from "@/assets/background.svg";
+import backgroundWhiteSvg from "@/assets/background-white.svg";
 
 export function LoginForm({
   className,
@@ -20,6 +22,7 @@ export function LoginForm({
   const location = useLocation();
   const { login: authLogin } = useAuth();
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -55,76 +58,87 @@ export function LoginForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
-                <p className="text-muted-foreground text-balance">
-                  {t('pages.login.subtitle')}
-                </p>
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="email">{t('forms.email.label')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('forms.email.placeholder')}
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-3">
-                <div className="flex items-center">
-                  <Label htmlFor="password">{t('forms.password.label')}</Label>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
-                  >
-                    {t('auth.forgotPassword')}
-                  </a>
+    <div 
+      className={cn("fixed inset-0 flex items-center justify-center p-4", className)} 
+      style={{
+        backgroundImage: `url(${theme === "dark" ? backgroundSvg : backgroundWhiteSvg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        width: '100vw',
+        height: '100vh'
+      }}
+      {...props}
+    >
+      {/* Transparent overlay */}
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm pointer-events-none" />
+      
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="bg-card/30 backdrop-blur-lg border-border/30 shadow-xl">
+          <CardContent className="p-8">
+            <form onSubmit={handleSubmit}>
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center text-center">
+                  <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
+                  <p className="text-muted-foreground text-balance">
+                    {t('pages.login.subtitle')}
+                  </p>
                 </div>
-                <div className="relative">
+                <div className="grid gap-3">
+                  <Label htmlFor="email">{t('forms.email.label')}</Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder={t('forms.password.placeholder')}
+                    id="email"
+                    type="email"
+                    placeholder={t('forms.email.placeholder')}
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-background/50 backdrop-blur-sm border-border/50"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <IconEyeOff className="h-4 w-4" />
-                    ) : (
-                      <IconEye className="h-4 w-4" />
-                    )}
-                  </button>
                 </div>
+                <div className="grid gap-3">
+                  <div className="flex items-center">
+                    <Label htmlFor="password">{t('forms.password.label')}</Label>
+                    <a
+                      href="#"
+                      className="ml-auto text-sm underline-offset-2 hover:underline"
+                    >
+                      {t('auth.forgotPassword')}
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder={t('forms.password.placeholder')}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pr-10 bg-background/50 backdrop-blur-sm border-border/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <IconEyeOff className="h-4 w-4" />
+                      ) : (
+                        <IconEye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? t('auth.login') + "..." : t('auth.login')}
+                </Button>
+                {/** Social login buttons removed */}
               </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? t('auth.login') + "..." : t('auth.login')}
-              </Button>
-              {/** Social login buttons removed */}
-            </div>
-          </form>
-          <div className="bg-muted relative hidden md:block">
-            <img
-              src="/assets/avatars/Dark Nature.svg"
-              alt="TGP evaluation Login Background"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </div>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

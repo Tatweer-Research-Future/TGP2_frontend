@@ -346,16 +346,16 @@ export function AttendancePage() {
 
   const getTrackColor = (track: string) => {
     const colorMap: Record<string, string> = {
-      "Software & App Development": "bg-blue-100 text-blue-800 border-blue-200",
-      "Networking & Telecommunications": "bg-green-100 text-green-800 border-green-200",
-      "AI & Data Analysis": "bg-purple-100 text-purple-800 border-purple-200",
-      "Cybersecurity": "bg-red-100 text-red-800 border-red-200",
-      "Digital Marketing": "bg-yellow-100 text-yellow-800 border-yellow-200",
-      "Cloud Computing": "bg-indigo-100 text-indigo-800 border-indigo-200",
-      "IoT & Embedded Systems": "bg-pink-100 text-pink-800 border-pink-200",
-      "Blockchain & Cryptocurrency": "bg-orange-100 text-orange-800 border-orange-200",
+      "Software & App Development": "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-500/30",
+      "Networking & Telecommunications": "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30",
+      "AI & Data Analysis": "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-200 dark:border-purple-500/30",
+      "Cybersecurity": "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
+      "Digital Marketing": "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30",
+      "Cloud Computing": "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/30",
+      "IoT & Embedded Systems": "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-200 dark:border-pink-500/30",
+      "Blockchain & Cryptocurrency": "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/30",
     };
-    return colorMap[track] || "bg-gray-100 text-gray-800 border-gray-200";
+    return colorMap[track] || "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30";
   };
 
   if (isLoading) {
@@ -581,7 +581,6 @@ export function AttendancePage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                             onClick={() => handleUserCheckOut(user.user_id)}
                             disabled={!canCheckOut || isSubmitting}
                           >
@@ -590,7 +589,6 @@ export function AttendancePage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                             onClick={() => { setPendingUserId(user.user_id); setTimePickerMode('checkout'); setShowTimePicker(true); }}
                             disabled={!canCheckOut || isSubmitting}
                           >
