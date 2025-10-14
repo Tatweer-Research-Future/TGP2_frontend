@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconInnerShadowTop, IconUsers } from "@tabler/icons-react";
+import { IconInnerShadowTop, IconUsers, IconClock, IconCalendar } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -13,31 +13,41 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
+import { useUserGroups } from "@/hooks/useUserGroups";
 
-const data = {
-  // Nav items only; user comes from auth
-  navMain: [
-    // {
-    //   title: "Dashboard",
-    //   url: "/overview",
-    //   icon: IconDashboard,
-    // },
+const getNavItems = (isAttendanceTracker: boolean) => {
+  const baseItems = [
     {
       title: "Candidates",
       url: "/candidates",
       icon: IconUsers,
     },
-    // {
-    //   title: "Forms",
-    //   url: "/forms",
-    //   icon: IconFileDescription,
-    // },
-    // Summary merged into Dashboard
-  ],
+  ];
+
+  if (isAttendanceTracker) {
+    baseItems.push(
+      {
+        title: "My Attendance",
+        url: "/attendance",
+        icon: IconClock,
+      },
+      {
+        title: "Attendance Overview",
+        url: "/attendance/overview",
+        icon: IconCalendar,
+      }
+    );
+  }
+
+  return baseItems;
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
+  const { isAttendanceTracker } = useUserGroups();
+  
+  const navItems = getNavItems(isAttendanceTracker);
+  
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -56,7 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

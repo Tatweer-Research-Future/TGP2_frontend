@@ -35,3 +35,14 @@ export async function logout(): Promise<{ detail: string }> {
   setAccessToken(null);
   return data;
 }
+
+export type MeResponse = {
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  groups: string[];
+};
+
+export async function getMe(): Promise<MeResponse> {
+  return apiFetch<MeResponse>("/me/");
+}

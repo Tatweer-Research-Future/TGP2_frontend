@@ -325,3 +325,106 @@ export async function submitForm(
     requireCsrf: true,
   });
 }
+
+// Attendance API types and functions
+export type AttendanceEvent = {
+  id: number;
+  title: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type AttendanceLog = {
+  id: number;
+  trainee: { id: number; name: string; email: string };
+  event: AttendanceEvent;
+  attendance_date: string;
+  check_in_time: string;
+  check_out_time: string | null;
+  notes: string;
+};
+
+export type AttendanceOverviewUser = {
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  events: Array<{
+    event_id: number;
+    event_title: string;
+    has_log: boolean;
+    check_in_time: string | null;
+    check_out_time: string | null;
+    notes: string | null;
+    log_id: number | null;
+  }>;
+};
+
+export type AttendanceOverviewResponse = {
+  date: string;
+  events: AttendanceEvent[];
+  users: AttendanceOverviewUser[];
+  count: number;
+};
+
+export type CheckInPayload = {
+  candidate_id: number;
+  event: number;
+  attendance_date: string;
+  check_in_time: string;
+  notes?: string;
+};
+
+export type CheckOutPayload = {
+  candidate_id: number;
+  event: number;
+  attendance_date: string;
+  check_out_time: string;
+  notes?: string;
+};
+
+export type AttendanceSubmitResponse = {
+  total: number;
+  success: number;
+  errors: number;
+  results: Array<{
+    identifier: number;
+    status: 'success' | 'error';
+    message: string;
+    candidate?: { id: number; email: string; name: string };
+    data?: any;
+    errors?: any;
+  }>;
+};
+
+// Attendance API functions
+export async function getEvents(): Promise<AttendanceEvent[]> {
+  const response = await apiFetch<{ results: AttendanceEvent[] }>('/attendance/events/');
+  return response.results;
+}
+
+export async function submitCheckIn(payload: CheckInPayload): Promise<AttendanceSubmitResponse> {
+  return apiFetch<AttendanceSubmitResponse>('/attendance/submit/', {
+    method: 'POST',
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function submitCheckOut(payload: CheckOutPayload): Promise<AttendanceSubmitResponse> {
+  return apiFetch<AttendanceSubmitResponse>('/attendance/submit/', {
+    method: 'PUT',
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function getMyLogs(date?: string): Promise<AttendanceLog[]> {
+  const url = date ? `/attendance/my-logs/?date=${date}` : '/attendance/my-logs/';
+  const response = await apiFetch<{ results: AttendanceLog[] }>(url);
+  return response.results;
+}
+
+export async function getAttendanceOverview(date?: string): Promise<AttendanceOverviewResponse> {
+  const url = date ? `/attendance/overview/?date=${date}` : '/attendance/overview/';
+  return apiFetch<AttendanceOverviewResponse>(url);
+}

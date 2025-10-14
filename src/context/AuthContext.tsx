@@ -9,14 +9,17 @@ import {
 import {
   login as loginService,
   logout as logoutService,
+  getMe,
   type LoginRequest,
   type LoginResponse,
+  type MeResponse,
 } from "@/services/auth";
 
 export type AuthUser = {
   id: number;
   email: string;
   name: string;
+  groups?: string[];
 };
 
 type AuthContextValue = {
@@ -53,7 +56,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const resp = await loginService(credentials);
-      const nextUser: AuthUser = resp.user;
+      // Fetch user details including groups from /me endpoint
+      const meData = await getMe();
+      const nextUser: AuthUser = {
+        id: meData.user_id,
+        email: meData.user_email,
+        name: meData.user_name,
+        groups: meData.groups,
+      };
       setUser(nextUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       return resp;
