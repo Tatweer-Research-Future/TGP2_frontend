@@ -256,14 +256,14 @@ export function AttendanceOverviewPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Event</label>
               <Select
-                value={selectedEvent?.toString() || ""}
-                onValueChange={(value) => setSelectedEvent(value ? parseInt(value) : null)}
+                value={selectedEvent?.toString() || "all"}
+                onValueChange={(value) => setSelectedEvent(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All events" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All events</SelectItem>
+                  <SelectItem value="all">All events</SelectItem>
                   {data?.events.map((event) => (
                     <SelectItem key={event.id} value={event.id.toString()}>
                       {event.title}
