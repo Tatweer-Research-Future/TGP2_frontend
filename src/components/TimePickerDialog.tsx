@@ -93,7 +93,7 @@ export function TimePickerDialog({
         </DialogHeader>
         <div className="flex flex-col items-center gap-6 py-4">
           {/* Clock Face */}
-          <div className="relative w-64 h-64 border-4 border-gray-300 rounded-full bg-white shadow-lg">
+          <div className="relative w-64 h-64 border-4 border-border rounded-full bg-card shadow-lg">
             {/* Hour markers */}
             {hourPositions.map((hour) => {
               const angle = (hour - 3) * 30; // Start from 12 o'clock
@@ -105,8 +105,8 @@ export function TimePickerDialog({
                   onClick={() => handleHourClick(hour)}
                   className={`absolute w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transform -translate-x-1/2 -translate-y-1/2 transition-colors ${
                     hours === hour
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground'
                   }`}
                   style={{ left: x, top: y }}
                 >
@@ -127,7 +127,7 @@ export function TimePickerDialog({
                   className={`absolute w-6 h-6 rounded-full flex items-center justify-center text-xs transform -translate-x-1/2 -translate-y-1/2 transition-colors ${
                     minutes === minute
                       ? 'bg-green-600 text-white'
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-600'
+                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
                   }`}
                   style={{ left: x, top: y }}
                 >
@@ -137,7 +137,7 @@ export function TimePickerDialog({
             })}
             
             {/* Center dot */}
-            <div className="absolute w-4 h-4 bg-gray-800 rounded-full transform -translate-x-1/2 -translate-y-1/2" style={{ left: 128, top: 128 }} />
+            <div className="absolute w-4 h-4 bg-foreground rounded-full transform -translate-x-1/2 -translate-y-1/2" style={{ left: 128, top: 128 }} />
           </div>
 
           {/* AM/PM Toggle */}
@@ -159,7 +159,7 @@ export function TimePickerDialog({
           </div>
 
           {/* Current Selection Display */}
-          <div className="text-lg font-mono bg-gray-100 px-4 py-2 rounded">
+          <div className="text-lg font-mono bg-muted px-4 py-2 rounded">
             {time}
           </div>
         </div>
