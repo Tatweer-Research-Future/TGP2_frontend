@@ -16,14 +16,18 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserGroups } from "@/hooks/useUserGroups";
 
 const getNavItems = (isAttendanceTracker: boolean) => {
-  const baseItems = [
-    {
+  const baseItems = [];
+
+  // Only show Candidates for non-attendance trackers
+  if (!isAttendanceTracker) {
+    baseItems.push({
       title: "Candidates",
       url: "/candidates",
       icon: IconUsers,
-    },
-  ];
+    });
+  }
 
+  // Show Attendance for attendance trackers
   if (isAttendanceTracker) {
     baseItems.push({
       title: "Attendance",
