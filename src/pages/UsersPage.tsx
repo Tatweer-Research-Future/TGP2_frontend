@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,17 +26,17 @@ import {
   IconEye,
   IconChevronLeft,
   IconChevronRight,
-  IconCheck,
-  IconMinus,
   IconCopy,
   IconRefresh,
 } from "@tabler/icons-react";
+import { IconMinus, IconUser, IconCpu, IconPresentation } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
 import { useCandidates } from "@/context/CandidatesContext";
+import { useAuth } from "@/context/AuthContext";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
 const statusMeta = {
@@ -63,6 +63,8 @@ const statusMeta = {
 const ITEMS_PER_PAGE = 8;
 
 export function UsersPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,7 +78,14 @@ export function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getCandidates(); // group_id=5 for candidates
+      // Determine default behavior based on groups
+      const groups: string[] = Array.isArray(user?.groups) ? (user!.groups as string[]) : [];
+      const isTrainee = groups.some((g) => /trainee/i.test(g));
+      if (isTrainee) {
+        navigate("/forms", { replace: true });
+        return;
+      }
+      const response = await getCandidates();
       const transformedCandidates = response.results.map(
         transformBackendCandidate
       );
@@ -289,7 +298,7 @@ export function UsersPage() {
                   Not Interviewed
                 </SelectItem>
                 <SelectItem value="interviewed">
-                  <IconCheck className="text-emerald-600" />
+                  <IconFilter className="opacity-70" />
                   Interviewed
                 </SelectItem>
               </SelectContent>
@@ -397,12 +406,83 @@ export function UsersPage() {
                         {candidate.email}
                       </TableCell>
                       <TableCell>
-                        <Badge className={meta.className}>
-                          <span
-                            className={`inline-block size-2 rounded-full ${meta.dotClass}`}
-                          />
-                          {meta.label}
-                        </Badge>
+                        {/* Compact icon indicators: HR, Tech, Presentation */}
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const forms = candidate.forms ?? [];
+                            const match = (fn: (t: string) => boolean) => {
+                              const entry = forms.find((f) => fn((f.title || "").toLowerCase()));
+                              return {
+                                exists: Boolean(entry),
+                                submitted: Boolean(entry?.forms_by_me),
+                              };
+                            };
+                            const hr = match((t) => t.includes("hr"));
+                            const tech = match((t) => t.includes("tech"));
+                            const pres = match((t) => t.includes("present"));
+                            const Item = ({
+                              title,
+                              submitted,
+                              exists,
+                              Icon,
+                            }: {
+                              title: string;
+                              submitted: boolean;
+                              exists: boolean;
+                              Icon: any;
+                            }) => (
+                              <div className="relative" title={title}>
+                                <Icon className={`size-5 text-white dark:text-white`} />
+                                <span
+                                  className={`absolute -right-1 -bottom-1 block size-2.5 rounded-full border border-background ${
+                                    exists
+                                      ? submitted
+                                        ? "bg-emerald-400 dark:bg-emerald-300"
+                                        : "bg-red-400 dark:bg-red-300"
+                                      : "bg-muted-foreground/40"
+                                  }`}
+                                />
+                              </div>
+                            );
+                            return (
+                              <>
+                                <Item
+                                  title="HR"
+                                  submitted={hr.submitted}
+                                  exists={hr.exists}
+                                  Icon={(props: any) => (
+                                    <IconUser
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
+                                <Item
+                                  title="Tech"
+                                  submitted={tech.submitted}
+                                  exists={tech.exists}
+                                  Icon={(props: any) => (
+                                    <IconCpu
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
+                                <Item
+                                  title="Presentation"
+                                  submitted={pres.submitted}
+                                  exists={pres.exists}
+                                  Icon={(props: any) => (
+                                    <IconPresentation
+                                      {...props}
+                                      className="size-5 text-black dark:text-white"
+                                    />
+                                  )}
+                                />
+                              </>
+                            );
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" asChild>

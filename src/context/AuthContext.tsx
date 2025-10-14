@@ -14,12 +14,13 @@ import {
   type LoginResponse,
   type MeResponse,
 } from "@/services/auth";
+import { getCurrentUser, type CurrentUserResponse } from "@/lib/api";
 
 export type AuthUser = {
   id: number;
   email: string;
   name: string;
-  groups?: string[];
+  groups?: string[]; // e.g., ["instructor -> Data"], ["Trainee"]
 };
 
 type AuthContextValue = {
@@ -57,13 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const resp = await loginService(credentials);
       // Fetch user details including groups from /me endpoint
-      const meData = await getMe();
-      const nextUser: AuthUser = {
-        id: meData.user_id,
-        email: meData.user_email,
-        name: meData.user_name,
-        groups: meData.groups,
-      };
+      // After successful login, fetch current user profile (with groups)
+      let profile: CurrentUserResponse | null = null;
+      try {
+        profile = await getCurrentUser();
+      } catch (_) {
+        // ignore; fallback to resp.user
+      }
+      const nextUser: AuthUser = profile
+        ? {
+            id: profile.user_id,
+            email: profile.user_email,
+            name: profile.user_name || resp.user?.name || resp.user?.email,
+            groups: Array.isArray(profile.groups) ? profile.groups : [],
+          }
+        : resp.user;
       setUser(nextUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       return resp;

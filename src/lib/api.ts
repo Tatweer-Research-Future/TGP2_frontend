@@ -159,14 +159,26 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
+// --- Auth / Current user profile ---
+export type CurrentUserResponse = {
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  groups: string[];
+};
+
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+  return apiFetch<CurrentUserResponse>(`/me`);
+}
+
 // Candidate API types and functions
 export type BackendCandidate = {
   id: number;
   email: string;
   name: string;
   phone: string | null;
-  interviewed_by_me: boolean;
   full_name?: string;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
 };
 
 export type CandidatesResponse = {
@@ -179,9 +191,9 @@ export type CandidatesResponse = {
 };
 
 export async function getCandidates(
-  groupId: number = 1
+  groupId: number = 8
 ): Promise<CandidatesResponse> {
-  return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`);
+  return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`); //TODO: remove this group_id
 }
 
 export async function getCandidateById(id: string): Promise<BackendCandidate> {
@@ -193,7 +205,20 @@ export type BackendUserDetail = {
   id: number;
   email: string;
   name: string;
-  interviewed_by_me: boolean;
+  ai_analysis?: string | null;
+  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
+  forms_entries?: Array<{
+    form: { id: number; title: string };
+    entries: Array<{
+      id: number;
+      submitted_by: { id: number; name: string };
+      final_score: number;
+      fields: Array<
+        | { label: string; option: string; score: number }
+        | { label: string; text: string }
+      >;
+    }>;
+  }>;
   additional_fields?: {
     cert?: string;
     lang?: string;
@@ -427,4 +452,26 @@ export async function getMyLogs(date?: string): Promise<AttendanceLog[]> {
 export async function getAttendanceOverview(date?: string): Promise<AttendanceOverviewResponse> {
   const url = date ? `/attendance/overview/?date=${date}` : '/attendance/overview/';
   return apiFetch<AttendanceOverviewResponse>(url);
+}
+// --- AI analysis storage ---
+export type AiAnalysisResponse = {
+  ai_analysis: string | null;
+};
+
+export async function getUserAiAnalysis(
+  userId: string | number
+): Promise<AiAnalysisResponse> {
+  const user = await getUserDetailById(String(userId));
+  return { ai_analysis: user.ai_analysis ?? null } as AiAnalysisResponse;
+}
+
+export async function patchUserAiAnalysis(
+  userId: string | number,
+  aiText: string
+): Promise<AiAnalysisResponse> {
+  return apiFetch<AiAnalysisResponse>(`/users/${userId}/ai-analysis/`, {
+    method: "PATCH",
+    body: { ai_analysis: aiText },
+    requireCsrf: true,
+  });
 }
