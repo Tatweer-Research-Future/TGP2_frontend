@@ -1,5 +1,5 @@
 import * as React from "react";
-import { IconInnerShadowTop, IconUsers, IconClock, IconCalendar } from "@tabler/icons-react";
+import { IconInnerShadowTop, IconUsers, IconClock } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -25,18 +25,11 @@ const getNavItems = (isAttendanceTracker: boolean) => {
   ];
 
   if (isAttendanceTracker) {
-    baseItems.push(
-      {
-        title: "My Attendance",
-        url: "/attendance",
-        icon: IconClock,
-      },
-      {
-        title: "Attendance Overview",
-        url: "/attendance/overview",
-        icon: IconCalendar,
-      }
-    );
+    baseItems.push({
+      title: "Attendance",
+      url: "/attendance",
+      icon: IconClock,
+    });
   }
 
   return baseItems;
