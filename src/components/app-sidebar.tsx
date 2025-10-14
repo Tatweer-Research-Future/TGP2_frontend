@@ -1,5 +1,6 @@
 import * as React from "react";
 import { IconInnerShadowTop, IconUsers, IconClock } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -15,13 +16,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useUserGroups } from "@/hooks/useUserGroups";
 
-const getNavItems = (isAttendanceTracker: boolean) => {
+const getNavItems = (isAttendanceTracker: boolean, t: any) => {
   const baseItems = [];
 
   // Only show Candidates for non-attendance trackers
   if (!isAttendanceTracker) {
     baseItems.push({
-      title: "Candidates",
+      title: t('navigation.candidates'),
       url: "/candidates",
       icon: IconUsers,
     });
@@ -30,7 +31,7 @@ const getNavItems = (isAttendanceTracker: boolean) => {
   // Show Attendance for attendance trackers
   if (isAttendanceTracker) {
     baseItems.push({
-      title: "Attendance",
+      title: t('navigation.attendance'),
       url: "/attendance",
       icon: IconClock,
     });
@@ -42,8 +43,9 @@ const getNavItems = (isAttendanceTracker: boolean) => {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { isAttendanceTracker } = useUserGroups();
+  const { t } = useTranslation();
   
-  const navItems = getNavItems(isAttendanceTracker);
+  const navItems = getNavItems(isAttendanceTracker, t);
   
   return (
     <Sidebar collapsible="offcanvas" {...props}>

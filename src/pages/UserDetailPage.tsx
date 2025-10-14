@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import {
   Card,
@@ -335,6 +336,7 @@ function transformBackendForm(
 }
 
 export function UserDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -1131,9 +1133,9 @@ if you read the cv from the link provided with the data add a short section name
       {/* Main Tabs */}
       <Tabs defaultValue="information" className="w-full gap-4">
         <TabsList className="grid w-full grid-cols-3 mb-2">
-          <TabsTrigger value="information">Information</TabsTrigger>
-          <TabsTrigger value="interview">Interview</TabsTrigger>
-          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
+          <TabsTrigger value="information">{t('common.labels.information')}</TabsTrigger>
+          <TabsTrigger value="interview">{t('common.labels.interview')}</TabsTrigger>
+          <TabsTrigger value="breakdown">{t('common.labels.breakdown')}</TabsTrigger>
         </TabsList>
 
         {/* Information Tab */}
@@ -1249,7 +1251,7 @@ if you read the cv from the link provided with the data add a short section name
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <IconSchool className="size-5" />
-                  <span>Academic Performance</span>
+                  <span>{t('common.labels.academicPerformance')}</span>
                 </CardTitle>
               </CardHeader>
 
@@ -1275,7 +1277,7 @@ if you read the cv from the link provided with the data add a short section name
                 <div className="space-y-3">
                   <div>
                     <div className="text-xs text-muted-foreground">
-                      Graduation date
+                      {t('common.labels.graduationDate')}
                     </div>
                     <Badge
                       variant={
@@ -1290,7 +1292,7 @@ if you read the cv from the link provided with the data add a short section name
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">
-                      University
+                      {t('common.labels.university')}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <FaUniversity className="size-3.5 text-muted-foreground" />
@@ -1308,7 +1310,7 @@ if you read the cv from the link provided with the data add a short section name
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
                   <IconTarget className="size-5" />
-                  <span>Test Scores</span>
+                  <span>{t('common.labels.testScores')}</span>
                 </CardTitle>
               </CardHeader>
 
@@ -1317,7 +1319,7 @@ if you read the cv from the link provided with the data add a short section name
                   {/* IQ Score Section */}
                   <div className="flex flex-col gap-2 pb-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>IQ Score</span>
+                      <span>{t('common.labels.iqScore')}</span>
                     </div>
                     <div className="flex items-baseline gap-1.5">
                       <div className="text-5xl font-bold tracking-tighter">
@@ -1338,7 +1340,7 @@ if you read the cv from the link provided with the data add a short section name
                   {/* English Proficiency Section */}
                   <div className="flex flex-col gap-3 pt-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>English Proficiency</span>
+                      <span>{t('common.labels.englishProficiency')}</span>
                     </div>
                     <div>
                       <Badge
@@ -1355,7 +1357,7 @@ if you read the cv from the link provided with the data add a short section name
                         }
                         className="text-md font-medium"
                       >
-                        {user.englishExamScore || "Not tested"}
+                        {user.englishExamScore || t('common.labels.notTested')}
                       </Badge>
                     </div>
                   </div>
@@ -1368,10 +1370,10 @@ if you read the cv from the link provided with the data add a short section name
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <IconTags className="size-5" />
-                  <span>Selected Fields</span>
+                  <span>{t('common.labels.selectedFields')}</span>
                 </CardTitle>
                 <CardDescription>
-                  Areas of interest for opportunities.
+                  {t('common.labels.areasOfInterest')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow pt-0">
@@ -1385,7 +1387,7 @@ if you read the cv from the link provided with the data add a short section name
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No fields selected.
+                    {t('common.labels.noFieldsSelected')}
                   </p>
                 )}
               </CardContent>
@@ -1397,15 +1399,15 @@ if you read the cv from the link provided with the data add a short section name
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <IconBriefcase className="size-5" />
-                Professional Background
+                {t('common.labels.professionalBackground')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="skills" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="skills">Technical Skills</TabsTrigger>
-                  <TabsTrigger value="experience">Work Experience</TabsTrigger>
-                  <TabsTrigger value="courses">Courses Taken</TabsTrigger>
+                  <TabsTrigger value="skills">{t('common.labels.technicalSkills')}</TabsTrigger>
+                  <TabsTrigger value="experience">{t('common.labels.workExperience')}</TabsTrigger>
+                  <TabsTrigger value="courses">{t('common.labels.coursesTaken')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="skills" className="mt-4">
@@ -1414,9 +1416,9 @@ if you read the cv from the link provided with the data add a short section name
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Skill</TableHead>
-                            <TableHead>Proficiency</TableHead>
-                            <TableHead>Medium/Tools</TableHead>
+                            <TableHead>{t('common.labels.skill')}</TableHead>
+                            <TableHead>{t('common.labels.proficiency')}</TableHead>
+                            <TableHead>{t('common.labels.mediumTools')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1446,7 +1448,7 @@ if you read the cv from the link provided with the data add a short section name
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground italic">
-                      No technical skills to display
+                      {t('common.labels.noTechnicalSkills')}
                     </div>
                   )}
                 </TabsContent>
@@ -1457,9 +1459,9 @@ if you read the cv from the link provided with the data add a short section name
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Project</TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead>Duration</TableHead>
+                            <TableHead>{t('common.labels.project')}</TableHead>
+                            <TableHead>{t('common.labels.company')}</TableHead>
+                            <TableHead>{t('common.labels.duration')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1477,7 +1479,7 @@ if you read the cv from the link provided with the data add a short section name
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground italic">
-                      No work experience to display
+                      {t('common.labels.noWorkExperience')}
                     </div>
                   )}
                 </TabsContent>
@@ -1488,9 +1490,9 @@ if you read the cv from the link provided with the data add a short section name
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Course Name</TableHead>
-                            <TableHead>Provider</TableHead>
-                            <TableHead>Date Completed</TableHead>
+                            <TableHead>{t('common.labels.courseName')}</TableHead>
+                            <TableHead>{t('common.labels.provider')}</TableHead>
+                            <TableHead>{t('common.labels.dateCompleted')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1512,7 +1514,7 @@ if you read the cv from the link provided with the data add a short section name
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground italic">
-                      No courses to display
+                      {t('common.labels.noCourses')}
                     </div>
                   )}
                 </TabsContent>

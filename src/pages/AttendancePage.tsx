@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/api";
 
 export function AttendancePage() {
+  const { t } = useTranslation();
   const { isAttendanceTracker } = useUserGroups();
   const [data, setData] = useState<AttendanceOverviewResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -371,8 +373,8 @@ export function AttendancePage() {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Attendance</h1>
-          <p className="text-muted-foreground">Manage attendance for candidates</p>
+          <h1 className="text-3xl font-bold text-foreground">{t('pages.attendance.title')}</h1>
+          <p className="text-muted-foreground">{t('pages.attendance.subtitle')}</p>
         </div>
       </div>
 
@@ -388,7 +390,7 @@ export function AttendancePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date Picker */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date</label>
+              <label className="text-sm font-medium">{t('common.labels.date')}</label>
               <Input
                 type="date"
                 value={selectedDate}
@@ -423,25 +425,25 @@ export function AttendancePage() {
             <div className="flex gap-3 pt-4 border-t">
               <Button onClick={() => handleBulkCheckIn()} disabled={isSubmitting} className="flex items-center gap-2">
                 <IconClock className="size-4" />
-                Check In Selected ({selectedUsers.size})
+                {t('pages.attendance.markAttendance')} ({selectedUsers.size})
               </Button>
               <Button
                 variant="outline"
                 onClick={() => { setTimePickerMode('checkin'); setShowTimePicker(true); setPendingUserId(null); }}
                 disabled={isSubmitting}
               >
-                Check In (Custom Time)
+                {t('pages.attendance.markAttendance')} ({t('common.labels.time')})
               </Button>
               <Button onClick={() => handleBulkCheckOut()} disabled={isSubmitting} className="flex items-center gap-2">
                 <IconClock className="size-4" />
-                Check Out Selected ({selectedUsers.size})
+                {t('pages.attendance.checkOut')} ({selectedUsers.size})
               </Button>
               <Button
                 variant="outline"
                 onClick={() => { setTimePickerMode('checkout'); setShowTimePicker(true); setPendingUserId(null); }}
                 disabled={isSubmitting}
               >
-                Check Out (Custom Time)
+                {t('pages.attendance.checkOut')} ({t('common.labels.time')})
               </Button>
             </div>
           )}
@@ -464,7 +466,7 @@ export function AttendancePage() {
               <div className="relative">
                 <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
                 <Input
-                  placeholder="Search by name, email, or phone..."
+                  placeholder={t('common.placeholders.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -566,7 +568,7 @@ export function AttendancePage() {
                             onClick={() => handleUserCheckIn(user.user_id)}
                             disabled={!canCheckIn || isSubmitting}
                           >
-                            Check In Now
+                            {t('pages.attendance.markAttendance')}
                           </Button>
                           <Button
                             size="sm"
@@ -574,7 +576,7 @@ export function AttendancePage() {
                             onClick={() => { setPendingUserId(user.user_id); setTimePickerMode('checkin'); setShowTimePicker(true); }}
                             disabled={!canCheckIn || isSubmitting}
                           >
-                            Check In (Custom Time)
+                            {t('pages.attendance.markAttendance')} ({t('common.labels.time')})
                           </Button>
                           <Button
                             size="sm"
@@ -583,7 +585,7 @@ export function AttendancePage() {
                             onClick={() => handleUserCheckOut(user.user_id)}
                             disabled={!canCheckOut || isSubmitting}
                           >
-                            Check Out
+                            {t('pages.attendance.checkOut')}
                           </Button>
                           <Button
                             size="sm"
@@ -592,7 +594,7 @@ export function AttendancePage() {
                             onClick={() => { setPendingUserId(user.user_id); setTimePickerMode('checkout'); setShowTimePicker(true); }}
                             disabled={!canCheckOut || isSubmitting}
                           >
-                            Check Out (Custom Time)
+                            {t('pages.attendance.checkOut')} ({t('common.labels.time')})
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -610,7 +612,7 @@ export function AttendancePage() {
         open={showTimePicker}
         onOpenChange={setShowTimePicker}
         onTimeSelect={handleTimePickerConfirm}
-        title={timePickerMode === 'checkin' ? 'Check In Time' : 'Check Out Time'}
+        title={timePickerMode === 'checkin' ? t('pages.attendance.markAttendance') + ' ' + t('common.labels.time') : t('pages.attendance.checkOut') + ' ' + t('common.labels.time')}
         description={
           pendingUserId
             ? (timePickerMode === 'checkin' ? 'Select the time to check in this user.' : 'Select the time to check out this user.')

@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export function AccountPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   if (!user) return null;
@@ -11,7 +13,7 @@ export function AccountPage() {
     <div className="container mx-auto px-6 py-8">
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>My Profile</CardTitle>
+          <CardTitle>{t('pages.account.title')}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-6">
           <ConsistentAvatar

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 import { IconEye, IconStar } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Candidate } from "@/lib/candidates";
 
@@ -11,29 +12,30 @@ type Props = {
   candidate: Candidate;
 };
 
-const statusMeta = {
+const getStatusMeta = (t: any) => ({
   not_interviewed: {
-    label: "Not Interviewed",
+    label: t('status.pending'),
     className:
       "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
     dotClass: "bg-red-500 dark:bg-red-400",
   },
   in_progress: {
-    label: "In Progress",
+    label: t('status.inProgress'),
     className:
       "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600",
     dotClass: "bg-slate-500 dark:bg-slate-300",
   },
   interviewed: {
-    label: "Interviewed",
+    label: t('status.completed'),
     className:
       "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
     dotClass: "bg-emerald-500 dark:bg-emerald-400",
   },
-} as const;
+});
 
 export function CandidateCard({ candidate }: Props) {
-  const meta = statusMeta[candidate.status];
+  const { t } = useTranslation();
+  const meta = getStatusMeta(t)[candidate.status];
   const fields = candidate.fieldsChosen?.slice(0, 3) || [];
   const extraCount = (candidate.fieldsChosen?.length || 0) - fields.length;
 
@@ -83,7 +85,7 @@ export function CandidateCard({ candidate }: Props) {
       <CardFooter className="justify-end">
         <Button asChild size="sm" variant="outline">
           <Link to={`/candidates/${candidate.id}`}>
-            <IconEye className="size-4" /> View
+            <IconEye className="size-4" /> {t('common.buttons.view')}
           </Link>
         </Button>
       </CardFooter>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,32 +40,33 @@ import { useCandidates } from "@/context/CandidatesContext";
 import { useAuth } from "@/context/AuthContext";
 
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
-const statusMeta = {
+const getStatusMeta = (t: any) => ({
   not_interviewed: {
-    label: "Not Interviewed",
+    label: t('status.pending'),
     className:
       "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
     dotClass: "bg-red-500 dark:bg-red-400",
   },
   in_progress: {
-    label: "In Progress",
+    label: t('status.inProgress'),
     className:
       "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600",
     dotClass: "bg-slate-500 dark:bg-slate-300",
   },
   interviewed: {
-    label: "Interviewed",
+    label: t('status.completed'),
     className:
       "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
     dotClass: "bg-emerald-500 dark:bg-emerald-400",
   },
-} as const;
+});
 
 const ITEMS_PER_PAGE = 8;
 
 export function UsersPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -210,9 +212,9 @@ export function UsersPage() {
       <div className="container mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
             <p className="text-muted-foreground">
-              Manage and review candidate applications
+              {t('pages.candidates.subtitle')}
             </p>
           </div>
           <Card>
@@ -232,9 +234,9 @@ export function UsersPage() {
       <div className="container mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
             <p className="text-muted-foreground">
-              Manage and review candidate applications
+              {t('pages.candidates.subtitle')}
             </p>
           </div>
           <Card>
@@ -243,7 +245,7 @@ export function UsersPage() {
                 <div className="text-muted-foreground">{error}</div>
                 <Button onClick={fetchCandidates} variant="outline">
                   <IconRefresh className="size-4 mr-2" />
-                  Retry
+                  {t('common.buttons.refresh')}
                 </Button>
               </div>
             </CardContent>
@@ -259,9 +261,9 @@ export function UsersPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Candidates</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
             <p className="text-muted-foreground">
-              Manage and review candidate applications
+              {t('pages.candidates.subtitle')}
             </p>
           </div>
           <div className="flex w-full md:w-auto md:max-w-3xl items-center gap-3">
@@ -269,7 +271,7 @@ export function UsersPage() {
             <div className="relative flex-1">
               <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, Arabic name, or email..."
+                placeholder={t('common.placeholders.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
@@ -283,7 +285,7 @@ export function UsersPage() {
                   placeholder={
                     <span className="inline-flex items-center gap-2">
                       <IconFilter className="text-muted-foreground" />
-                      Filter status
+                      {t('common.buttons.filter')} {t('common.labels.status')}
                     </span>
                   }
                 />
@@ -291,15 +293,15 @@ export function UsersPage() {
               <SelectContent>
                 <SelectItem value="all">
                   <IconFilter className="opacity-70" />
-                  All Statuses
+                  {t('common.labels.all')} {t('common.labels.status')}
                 </SelectItem>
                 <SelectItem value="not_interviewed">
                   <IconMinus className="text-gray-500" />
-                  Not Interviewed
+                  {t('status.pending')}
                 </SelectItem>
                 <SelectItem value="interviewed">
                   <IconFilter className="opacity-70" />
-                  Interviewed
+                  {t('status.completed')}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -315,7 +317,7 @@ export function UsersPage() {
       {/* Candidates Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Candidates List</CardTitle>
+          <CardTitle>{t('pages.candidates.title')} {t('common.labels.list')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -323,7 +325,7 @@ export function UsersPage() {
               <TableRow>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <span>Name</span>
+                    <span>{t('table.headers.name')}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -344,7 +346,7 @@ export function UsersPage() {
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <span>Email</span>
+                    <span>{t('table.headers.email')}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -358,8 +360,8 @@ export function UsersPage() {
                     </Button>
                   </div>
                 </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead>{t('table.headers.status')}</TableHead>
+                <TableHead className="w-[100px]">{t('table.headers.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -367,13 +369,13 @@ export function UsersPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     <div className="text-muted-foreground">
-                      No candidates found matching your criteria.
+                      {t('pages.candidates.noCandidates')}
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedCandidates.map((candidate) => {
-                  const meta = statusMeta[candidate.status];
+                  const meta = getStatusMeta(t)[candidate.status];
                   return (
                     <TableRow key={candidate.id}>
                       <TableCell>
@@ -488,7 +490,7 @@ export function UsersPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link to={`/candidates/${candidate.id}`}>
                             <IconEye className="size-4" />
-                            View
+                            {t('common.buttons.view')}
                           </Link>
                         </Button>
                       </TableCell>
@@ -503,7 +505,7 @@ export function UsersPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
+                {t('table.pagination.page')} {currentPage} {t('table.pagination.of')} {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -513,7 +515,7 @@ export function UsersPage() {
                   disabled={currentPage === 1}
                 >
                   <IconChevronLeft className="size-4" />
-                  Previous
+                  {t('table.pagination.previous')}
                 </Button>
 
                 {/* Page Numbers */}
@@ -552,7 +554,7 @@ export function UsersPage() {
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
-                  Next
+                  {t('table.pagination.next')}
                   <IconChevronRight className="size-4" />
                 </Button>
               </div>
@@ -563,8 +565,8 @@ export function UsersPage() {
 
       {/* Pagination info moved outside the card */}
       <div className="text-sm text-muted-foreground">
-        Showing {paginatedCandidates.length} of {filteredCandidates.length}{" "}
-        candidates
+        {t('table.pagination.showing')} {paginatedCandidates.length} {t('table.pagination.of')} {filteredCandidates.length}{" "}
+        {t('pages.candidates.title').toLowerCase()}
       </div>
     </div>
   );

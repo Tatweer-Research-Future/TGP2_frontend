@@ -6,6 +6,7 @@ import {
   IconPalette,
   IconSun,
   IconUserCircle,
+  IconLanguage,
 } from "@tabler/icons-react";
 
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
@@ -31,6 +32,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export function NavUser({
   user,
@@ -45,6 +47,7 @@ export function NavUser({
   const { setTheme } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   return (
     <SidebarMenu>
@@ -94,28 +97,43 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => navigate("/account")}>
                 <IconUserCircle />
-                Account
+                {t('navigation.account')}
               </DropdownMenuItem>
               {/** Billing and Notifications removed */}
 
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <IconPalette />
-                  <span>Theme</span>
+                  <span>{t('theme.light')}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onClick={() => setTheme("light")}>
                     <IconSun />
-                    Light
+                    {t('theme.light')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme("dark")}>
                     <IconMoon />
-                    Dark
+                    {t('theme.dark')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setTheme("system")}>
                     <IconDeviceDesktop />
-                    System
+                    {t('theme.system')}
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <IconLanguage />
+                  <span>{t('language.english')}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage('en')}>
+                    {t('language.english')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => i18n.changeLanguage('ar')}>
+                    {t('language.arabic')}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -125,7 +143,7 @@ export function NavUser({
               onClick={async () => {
                 try {
                   await logout();
-                  toast.success("Logged out");
+                  toast.success(t('auth.logoutSuccess'));
                 } catch (e) {
                   // Even if backend fails, clear local state and continue
                 } finally {
@@ -134,7 +152,7 @@ export function NavUser({
               }}
             >
               <IconLogout />
-              Log out
+              {t('auth.logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

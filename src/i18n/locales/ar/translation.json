@@ -1,0 +1,221 @@
+{
+  "common": {
+    "buttons": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "submit": "إرسال",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "add": "إضافة",
+      "close": "إغلاق",
+      "back": "رجوع",
+      "next": "التالي",
+      "previous": "السابق",
+      "search": "بحث",
+      "filter": "تصفية",
+      "clear": "مسح",
+      "refresh": "تحديث",
+      "download": "تحميل",
+      "upload": "رفع",
+      "view": "عرض",
+      "update": "تحديث",
+      "create": "إنشاء",
+      "remove": "إزالة",
+      "confirm": "تأكيد",
+      "yes": "نعم",
+      "no": "لا"
+    },
+    "labels": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "phone": "الهاتف",
+      "address": "العنوان",
+      "date": "التاريخ",
+      "time": "الوقت",
+      "status": "الحالة",
+      "type": "النوع",
+      "description": "الوصف",
+      "notes": "ملاحظات",
+      "required": "مطلوب",
+      "optional": "اختياري",
+      "list": "قائمة",
+      "all": "الكل",
+      "information": "المعلومات",
+      "interview": "المقابلة",
+      "breakdown": "التفصيل",
+      "academicPerformance": "الأداء الأكاديمي",
+      "graduationDate": "تاريخ التخرج",
+      "university": "الجامعة",
+      "testScores": "درجات الاختبارات",
+      "iqScore": "درجة الذكاء",
+      "englishProficiency": "الكفاءة في اللغة الإنجليزية",
+      "notTested": "لم يتم اختباره",
+      "selectedFields": "المجالات المختارة",
+      "areasOfInterest": "مجالات الاهتمام للفرص",
+      "noFieldsSelected": "لم يتم اختيار مجالات",
+      "professionalBackground": "الخلفية المهنية",
+      "technicalSkills": "المهارات التقنية",
+      "workExperience": "الخبرة العملية",
+      "coursesTaken": "الدورات المأخوذة",
+      "skill": "المهارة",
+      "proficiency": "الكفاءة",
+      "mediumTools": "الوسيلة/الأدوات",
+      "noTechnicalSkills": "لا توجد مهارات تقنية للعرض",
+      "project": "المشروع",
+      "company": "الشركة",
+      "duration": "المدة",
+      "noWorkExperience": "لا توجد خبرة عمل للعرض",
+      "courseName": "اسم الدورة",
+      "provider": "المقدم",
+      "dateCompleted": "تاريخ الإكمال",
+      "noCourses": "لا توجد دورات للعرض"
+    },
+    "placeholders": {
+      "enterEmail": "أدخل بريدك الإلكتروني",
+      "enterPassword": "أدخل كلمة المرور",
+      "enterName": "أدخل اسمك",
+      "enterPhone": "أدخل رقم هاتفك",
+      "searchPlaceholder": "بحث...",
+      "selectOption": "اختر خيار"
+    }
+  },
+  "navigation": {
+    "candidates": "المرشحون",
+    "attendance": "الحضور",
+    "overview": "نظرة عامة",
+    "forms": "النماذج",
+    "account": "الحساب",
+    "dashboard": "لوحة التحكم"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "welcome": "مرحباً",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "loginSuccess": "تم تسجيل الدخول بنجاح",
+    "loginFailed": "فشل في تسجيل الدخول",
+    "logoutSuccess": "تم تسجيل الخروج بنجاح"
+  },
+  "theme": {
+    "light": "فاتح",
+    "dark": "داكن",
+    "system": "النظام"
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "forms": {
+    "email": {
+      "label": "البريد الإلكتروني",
+      "placeholder": "أدخل بريدك الإلكتروني",
+      "required": "البريد الإلكتروني مطلوب",
+      "invalid": "يرجى إدخال بريد إلكتروني صحيح"
+    },
+    "password": {
+      "label": "كلمة المرور",
+      "placeholder": "أدخل كلمة المرور",
+      "required": "كلمة المرور مطلوبة",
+      "minLength": "كلمة المرور يجب أن تكون 6 أحرف على الأقل"
+    },
+    "name": {
+      "label": "الاسم",
+      "placeholder": "أدخل اسمك",
+      "required": "الاسم مطلوب"
+    },
+    "phone": {
+      "label": "الهاتف",
+      "placeholder": "أدخل رقم هاتفك",
+      "required": "رقم الهاتف مطلوب"
+    }
+  },
+  "errors": {
+    "required": "هذا الحقل مطلوب",
+    "invalid": "قيمة غير صحيحة",
+    "networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+    "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
+    "unauthorized": "وصول غير مصرح به",
+    "forbidden": "الوصول مرفوض",
+    "notFound": "المورد غير موجود",
+    "validation": "يرجى التحقق من المدخلات والمحاولة مرة أخرى"
+  },
+  "success": {
+    "saved": "تم الحفظ بنجاح",
+    "updated": "تم التحديث بنجاح",
+    "deleted": "تم الحذف بنجاح",
+    "created": "تم الإنشاء بنجاح"
+  },
+  "pages": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "أدخل بياناتك للوصول إلى حسابك"
+    },
+    "candidates": {
+      "title": "المرشحون",
+      "subtitle": "إدارة معلومات المرشحين",
+      "addCandidate": "إضافة مرشح",
+      "searchCandidates": "البحث في المرشحين...",
+      "noCandidates": "لا يوجد مرشحون",
+      "totalCandidates": "إجمالي المرشحين"
+    },
+    "attendance": {
+      "title": "الحضور",
+      "subtitle": "تتبع سجلات الحضور",
+      "markAttendance": "تسجيل الحضور",
+      "checkOut": "تسجيل الخروج",
+      "attendanceRecords": "سجلات الحضور",
+      "present": "حاضر",
+      "absent": "غائب",
+      "late": "متأخر"
+    },
+    "account": {
+      "title": "إعدادات الحساب",
+      "subtitle": "إدارة معلومات حسابك",
+      "personalInfo": "المعلومات الشخصية",
+      "preferences": "التفضيلات",
+      "security": "الأمان"
+    },
+    "dashboard": {
+      "title": "لوحة التحكم",
+      "subtitle": "نظرة عامة على بياناتك",
+      "statistics": "الإحصائيات",
+      "recentActivity": "النشاط الأخير"
+    },
+    "forms": {
+      "title": "النماذج",
+      "subtitle": "أكمل النماذج المطلوبة",
+      "submitForm": "إرسال النموذج",
+      "formSubmitted": "تم إرسال النموذج بنجاح"
+    }
+  },
+  "table": {
+    "headers": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "status": "الحالة",
+      "date": "التاريخ",
+      "actions": "الإجراءات"
+    },
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "page": "صفحة",
+      "of": "من",
+      "rowsPerPage": "صفوف في الصفحة",
+      "showing": "عرض"
+    },
+    "noData": "لا توجد بيانات متاحة",
+    "loading": "جاري التحميل..."
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "pending": "في الانتظار",
+    "approved": "موافق عليه",
+    "rejected": "مرفوض",
+    "completed": "مكتمل",
+    "inProgress": "قيد التنفيذ"
+  }
+}

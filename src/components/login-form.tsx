@@ -9,6 +9,7 @@ import { IconEye, IconEyeOff } from "@tabler/icons-react";
 // auth handled via context
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 // import AubergineImage from "@/assets/avatars/Aubergine.svg";
 
 export function LoginForm({
@@ -18,6 +19,7 @@ export function LoginForm({
   const navigate = useNavigate();
   const location = useLocation();
   const { login: authLogin } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +31,7 @@ export function LoginForm({
     setIsSubmitting(true);
     try {
       const data = await authLogin({ email, password });
-      toast.success(`Welcome ${data.user?.name || data.user?.email}`);
+      toast.success(`${t('auth.welcome')} ${data.user?.name || data.user?.email}`);
       // Determine redirect: trainees -> /forms, instructors -> /candidates
       try {
         const storedRaw = localStorage.getItem("auth_user");
@@ -45,7 +47,7 @@ export function LoginForm({
       }
     } catch (err) {
       const message =
-        (err as any)?.data?.detail || (err as Error)?.message || "Login failed";
+        (err as any)?.data?.detail || (err as Error)?.message || t('auth.loginFailed');
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -59,17 +61,17 @@ export function LoginForm({
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl font-bold">Welcome back</h1>
+                <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
                 <p className="text-muted-foreground text-balance">
-                  Login to your TGP evaluation account
+                  {t('pages.login.subtitle')}
                 </p>
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('forms.email.label')}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder={t('forms.email.placeholder')}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -77,18 +79,19 @@ export function LoginForm({
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('forms.password.label')}</Label>
                   <a
                     href="#"
                     className="ml-auto text-sm underline-offset-2 hover:underline"
                   >
-                    Forgot your password?
+                    {t('auth.forgotPassword')}
                   </a>
                 </div>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    placeholder={t('forms.password.placeholder')}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -108,7 +111,7 @@ export function LoginForm({
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Login"}
+                {isSubmitting ? t('auth.login') + "..." : t('auth.login')}
               </Button>
               {/** Social login buttons removed */}
             </div>
