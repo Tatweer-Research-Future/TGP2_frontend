@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { CandidateStatusChart } from "@/components/candidate-status-chart";
 import { getCandidates } from "@/lib/api";
 import { transformBackendCandidate, type Candidate } from "@/lib/candidates";
@@ -10,6 +11,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { useCandidates } from "@/context/CandidatesContext";
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +74,7 @@ export function DashboardPage() {
           className="px-6 py-2 text-base font-medium transition-all duration-300 hover:scale-105"
           onClick={() => navigate("/candidates")}
         >
-          Go to Candidates
+          {t('navigation.candidates')}
           <IconArrowRight className="ml-2 size-4 transition-transform duration-300 group-hover:translate-x-1" />
         </Button>
       </div>

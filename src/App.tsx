@@ -7,7 +7,6 @@ import { FormsPage } from "./pages/FormsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { AttendancePage } from "./pages/AttendancePage";
-import { AttendanceOverviewPage } from "./pages/AttendanceOverviewPage";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -39,7 +38,6 @@ export default function App() {
                       />
                       <Route path="/forms" element={<FormsPage />} />
                       <Route path="/attendance" element={<AttendancePage />} />
-                      <Route path="/attendance/overview" element={<AttendanceOverviewPage />} />
                       <Route path="/account" element={<AccountPage />} />
                     </Routes>
                   </AppLayout>

@@ -191,7 +191,7 @@ export type CandidatesResponse = {
 };
 
 export async function getCandidates(
-  groupId: number = 8
+  groupId: number = 1
 ): Promise<CandidatesResponse> {
   return apiFetch<CandidatesResponse>(`/users/?group_id=${groupId}`); //TODO: remove this group_id
 }

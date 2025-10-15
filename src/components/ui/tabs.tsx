@@ -44,7 +44,7 @@ function TabsTrigger({
         // Text-only tabs with bold colored underline when active
         "relative -mb-px px-1.5 py-2 text-sm font-medium text-muted-foreground border-b-2 border-transparent",
         // Active underline: black in light mode, white in dark mode
-        "data-[state=active]:text-foreground data-[state=active]:border-black dark:data-[state=active]:border-white",
+        "data-[state=active]:text-foreground data-[state=active]:border-primary dark:data-[state=active]:border-white",
         // Focus visible ring
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
         // Disabled

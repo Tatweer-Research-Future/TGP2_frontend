@@ -16,7 +16,7 @@ type Props = {
 export function SectionCards({ total, interviewed, notInterviewed }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
-      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30">
+      <Card className="border-amber-200/30 bg-amber-50/30 dark:bg-amber-500/15 dark:border-amber-500/20 backdrop-blur-lg">
         <CardHeader>
           <CardDescription className="flex items-center gap-2 text-amber-700 dark:text-amber-200">
             <IconUsers className="text-amber-600 dark:text-amber-300" /> Total Candidates
@@ -27,7 +27,7 @@ export function SectionCards({ total, interviewed, notInterviewed }: Props) {
         </CardHeader>
       </Card>
 
-      <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-500/10 dark:border-emerald-500/30">
+      <Card className="border-emerald-200/30 bg-emerald-50/30 dark:bg-emerald-500/15 dark:border-emerald-500/20 backdrop-blur-lg">
         <CardHeader>
           <CardDescription className="flex items-center gap-2 text-emerald-700 dark:text-emerald-200">
             <IconUserCheck className="text-emerald-600 dark:text-emerald-300" /> Interviewed
@@ -38,7 +38,7 @@ export function SectionCards({ total, interviewed, notInterviewed }: Props) {
         </CardHeader>
       </Card>
 
-      <Card className="border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30">
+      <Card className="border-red-200/30 bg-red-50/30 dark:bg-red-500/15 dark:border-red-500/20 backdrop-blur-lg">
         <CardHeader>
           <CardDescription className="flex items-center gap-2 text-red-700 dark:text-red-200">
             <IconUserX className="text-red-600 dark:text-red-300" /> Not Interviewed

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ function transformBackendForm(
 }
 
 export function FormsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isFormLoading, setIsFormLoading] = useState(false);
@@ -208,10 +210,10 @@ export function FormsPage() {
     try {
       setIsSubmitting(true);
       await submitForm(payload);
-      toast.success("Form submitted successfully");
+      toast.success(t('pages.forms.formSubmitted'));
       setAnswers({});
     } catch (err) {
-      toast.error("Failed to submit form");
+      toast.error(t('errors.serverError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -232,11 +234,11 @@ export function FormsPage() {
       {/* Forms chooser (reused style from UserDetailPage) */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">Choose a form</CardTitle>
+          <CardTitle className="text-base font-semibold">{t('pages.forms.title')}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {availableForms.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No forms available</div>
+            <div className="text-sm text-muted-foreground">{t('table.noData')}</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {availableForms.map((f) => {
@@ -350,7 +352,7 @@ export function FormsPage() {
               className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
               size="sm"
             >
-              {isSubmitting ? "Submitting..." : "Submit Form"}
+              {isSubmitting ? t('common.buttons.submit') + "..." : t('pages.forms.submitForm')}
             </Button>
           </div>
         </>
