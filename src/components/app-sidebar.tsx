@@ -1,5 +1,10 @@
 import * as React from "react";
-import { IconUsers, IconClock } from "@tabler/icons-react";
+import {
+  IconUsers,
+  IconClock,
+  IconPresentation,
+  IconChartBar,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import logoImage from "@/assets/logo.png";
 import logoWhiteImage from "@/assets/logo-white.png";
@@ -19,38 +24,47 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useTheme } from "@/components/theme-provider";
 
-const getNavItems = (isAttendanceTracker: boolean, t: any) => {
-  const baseItems = [];
+// Map route paths to icons and translated titles
+const getNavItemDetails = (url: string, t: any) => {
+  const iconMap: Record<string, any> = {
+    "/candidates": IconUsers,
+    "/forms": IconPresentation,
+    "/attendance": IconClock,
+    "/overview": IconChartBar,
+  };
 
-  // Only show Candidates for non-attendance trackers
-  if (!isAttendanceTracker) {
-    baseItems.push({
-      title: t('navigation.candidates'),
-      url: "/candidates",
-      icon: IconUsers,
-    });
-  }
+  const titleMap: Record<string, string> = {
+    "/candidates": t("navigation.candidates"),
+    "/forms": t("navigation.forms"),
+    "/attendance": t("navigation.attendance"),
+    "/overview": t("navigation.overview"),
+  };
 
-  // Show Attendance for attendance trackers
-  if (isAttendanceTracker) {
-    baseItems.push({
-      title: t('navigation.attendance'),
-      url: "/attendance",
-      icon: IconClock,
-    });
-  }
-
-  return baseItems;
+  return {
+    icon: iconMap[url],
+    title: titleMap[url] || url,
+  };
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
-  const { isAttendanceTracker } = useUserGroups();
+  const { getNavigationItems } = useUserGroups();
   const { t } = useTranslation();
   const { theme } = useTheme();
-  
-  const navItems = getNavItems(isAttendanceTracker, t);
-  
+
+  // Get navigation items based on user permissions
+  const permissionBasedItems = getNavigationItems();
+
+  // Transform permission-based items to include icons and proper titles
+  const navItems = permissionBasedItems.map((item) => {
+    const details = getNavItemDetails(item.url, t);
+    return {
+      title: details.title,
+      url: item.url,
+      icon: details.icon,
+    };
+  });
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -61,9 +75,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="#">
-                <img 
-                  src={theme === "dark" ? logoWhiteImage : logoImage} 
-                  alt="TGP Logo" 
+                <img
+                  src={theme === "dark" ? logoWhiteImage : logoImage}
+                  alt="TGP Logo"
                   className="h-24 w-auto"
                 />
               </a>

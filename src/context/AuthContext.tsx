@@ -15,12 +15,14 @@ import {
   type MeResponse,
 } from "@/services/auth";
 import { getCurrentUser, type CurrentUserResponse } from "@/lib/api";
+import { inferGroupIdFromGroups } from "@/lib/permissions";
 
 export type AuthUser = {
   id: number;
   email: string;
   name: string;
   groups?: string[]; // e.g., ["instructor -> Data"], ["Trainee"]
+  group_id?: number; // Numeric group ID for permission system
 };
 
 type AuthContextValue = {
@@ -71,6 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: profile.user_email,
             name: profile.user_name || resp.user?.name || resp.user?.email,
             groups: Array.isArray(profile.groups) ? profile.groups : [],
+            group_id:
+              profile.group_id ||
+              inferGroupIdFromGroups(profile.groups) ||
+              undefined,
           }
         : resp.user;
       setUser(nextUser);

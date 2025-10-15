@@ -34,23 +34,18 @@ export function LoginForm({
     setIsSubmitting(true);
     try {
       const data = await authLogin({ email, password });
-      toast.success(`${t('auth.welcome')} ${data.user?.name || data.user?.email}`);
-      // Determine redirect: trainees -> /forms, instructors -> /candidates
-      try {
-        const storedRaw = localStorage.getItem("auth_user");
-        const stored = storedRaw ? JSON.parse(storedRaw) : null;
-        const groups: string[] = Array.isArray(stored?.groups) ? stored.groups : [];
-        const isTrainee = groups.some((g) => /trainee/i.test(g));
-        const defaultPath = isTrainee ? "/forms" : "/candidates";
-        const redirectTo = (location.state as any)?.from?.pathname || defaultPath;
-        navigate(redirectTo, { replace: true });
-      } catch {
-        const redirectTo = (location.state as any)?.from?.pathname || "/candidates";
-        navigate(redirectTo, { replace: true });
-      }
+      toast.success(
+        `${t("auth.welcome")} ${data.user?.name || data.user?.email}`
+      );
+      // The HomeRedirect component will handle redirecting to the appropriate home page
+      // based on the user's group_id permissions
+      const redirectTo = (location.state as any)?.from?.pathname || "/";
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message =
-        (err as any)?.data?.detail || (err as Error)?.message || t('auth.loginFailed');
+        (err as any)?.data?.detail ||
+        (err as Error)?.message ||
+        t("auth.loginFailed");
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -58,39 +53,44 @@ export function LoginForm({
   }
 
   return (
-    <div 
-      className={cn("fixed inset-0 flex items-center justify-center p-4", className)} 
+    <div
+      className={cn(
+        "fixed inset-0 flex items-center justify-center p-4",
+        className
+      )}
       style={{
-        backgroundImage: `url(${theme === "dark" ? backgroundSvg : backgroundWhiteSvg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        width: '100vw',
-        height: '100vh'
+        backgroundImage: `url(${
+          theme === "dark" ? backgroundSvg : backgroundWhiteSvg
+        })`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+        width: "100vw",
+        height: "100vh",
       }}
       {...props}
     >
       {/* Transparent overlay */}
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm pointer-events-none" />
-      
+
       <div className="relative z-10 w-full max-w-md">
         <Card className="bg-card/30 backdrop-blur-lg border-border/30 shadow-xl">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit}>
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col items-center text-center">
-                  <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
+                  <h1 className="text-2xl font-bold">{t("auth.welcome")}</h1>
                   <p className="text-muted-foreground text-balance">
-                    {t('pages.login.subtitle')}
+                    {t("pages.login.subtitle")}
                   </p>
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="email">{t('forms.email.label')}</Label>
+                  <Label htmlFor="email">{t("forms.email.label")}</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder={t('forms.email.placeholder')}
+                    placeholder={t("forms.email.placeholder")}
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -99,19 +99,21 @@ export function LoginForm({
                 </div>
                 <div className="grid gap-3">
                   <div className="flex items-center">
-                    <Label htmlFor="password">{t('forms.password.label')}</Label>
+                    <Label htmlFor="password">
+                      {t("forms.password.label")}
+                    </Label>
                     <a
                       href="#"
                       className="ml-auto text-sm underline-offset-2 hover:underline"
                     >
-                      {t('auth.forgotPassword')}
+                      {t("auth.forgotPassword")}
                     </a>
                   </div>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder={t('forms.password.placeholder')}
+                      placeholder={t("forms.password.placeholder")}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -130,8 +132,12 @@ export function LoginForm({
                     </button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? t('auth.login') + "..." : t('auth.login')}
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t("auth.login") + "..." : t("auth.login")}
                 </Button>
                 {/** Social login buttons removed */}
               </div>

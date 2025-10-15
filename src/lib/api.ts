@@ -6,6 +6,14 @@
  - Attaches Authorization header when access token is available (fallback)
 */
 
+/* permissions
+
+HR, TECH , PRESENTATION -- 3  (see UserDetailPage and UsersPage only, UserDetailPage home)
+PRESENTATION -- 4 (UserDetailPage and UsersPage only, UserDetailPage home)
+INSTRUCTOR,DATA -- 5 (UserDetailPage and UsersPage and FormsPage only, FormsPage home)
+TRAINEE -- 8 (FormsPage only, is home)
+SUPPORT -- 9 (AttendancePage only, is home)
+*/
 const defaultBaseUrl = "https://cbl.futr.ly/api/v1";
 
 export const apiBaseUrl: string =
@@ -165,6 +173,7 @@ export type CurrentUserResponse = {
   user_name: string;
   user_email: string;
   groups: string[];
+  group_id?: number; // Add group_id field for permission system
 };
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
@@ -413,7 +422,7 @@ export type AttendanceSubmitResponse = {
   errors: number;
   results: Array<{
     identifier: number;
-    status: 'success' | 'error';
+    status: "success" | "error";
     message: string;
     candidate?: { id: number; email: string; name: string };
     data?: any;
@@ -423,34 +432,46 @@ export type AttendanceSubmitResponse = {
 
 // Attendance API functions
 export async function getEvents(): Promise<AttendanceEvent[]> {
-  const response = await apiFetch<{ results: AttendanceEvent[] }>('/attendance/events/');
+  const response = await apiFetch<{ results: AttendanceEvent[] }>(
+    "/attendance/events/"
+  );
   return response.results;
 }
 
-export async function submitCheckIn(payload: CheckInPayload): Promise<AttendanceSubmitResponse> {
-  return apiFetch<AttendanceSubmitResponse>('/attendance/submit/', {
-    method: 'POST',
+export async function submitCheckIn(
+  payload: CheckInPayload
+): Promise<AttendanceSubmitResponse> {
+  return apiFetch<AttendanceSubmitResponse>("/attendance/submit/", {
+    method: "POST",
     body: payload,
     requireCsrf: true,
   });
 }
 
-export async function submitCheckOut(payload: CheckOutPayload): Promise<AttendanceSubmitResponse> {
-  return apiFetch<AttendanceSubmitResponse>('/attendance/submit/', {
-    method: 'PUT',
+export async function submitCheckOut(
+  payload: CheckOutPayload
+): Promise<AttendanceSubmitResponse> {
+  return apiFetch<AttendanceSubmitResponse>("/attendance/submit/", {
+    method: "PUT",
     body: payload,
     requireCsrf: true,
   });
 }
 
 export async function getMyLogs(date?: string): Promise<AttendanceLog[]> {
-  const url = date ? `/attendance/my-logs/?date=${date}` : '/attendance/my-logs/';
+  const url = date
+    ? `/attendance/my-logs/?date=${date}`
+    : "/attendance/my-logs/";
   const response = await apiFetch<{ results: AttendanceLog[] }>(url);
   return response.results;
 }
 
-export async function getAttendanceOverview(date?: string): Promise<AttendanceOverviewResponse> {
-  const url = date ? `/attendance/overview/?date=${date}` : '/attendance/overview/';
+export async function getAttendanceOverview(
+  date?: string
+): Promise<AttendanceOverviewResponse> {
+  const url = date
+    ? `/attendance/overview/?date=${date}`
+    : "/attendance/overview/";
   return apiFetch<AttendanceOverviewResponse>(url);
 }
 // --- AI analysis storage ---

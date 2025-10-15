@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -12,6 +12,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 import { CandidatesProvider } from "@/context/CandidatesContext";
+import {
+  PermissionProtectedRoute,
+  HomeRedirect,
+} from "@/components/PermissionProtectedRoute";
 
 export default function App() {
   return (
@@ -29,15 +33,52 @@ export default function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Routes>
-                      <Route path="/" element={<AttendancePage />} />
-                      <Route path="/overview" element={<DashboardPage />} />
-                      <Route path="/candidates" element={<UsersPage />} />
+                      {/* Redirect root to user's home page */}
+                      <Route path="/" element={<HomeRedirect />} />
+
+                      {/* Permission-protected routes */}
+                      <Route
+                        path="/overview"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/overview">
+                            <DashboardPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/candidates"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/candidates">
+                            <UsersPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/candidates/:id"
-                        element={<UserDetailPage />}
+                        element={
+                          <PermissionProtectedRoute requiredPage="/candidates/:id">
+                            <UserDetailPage />
+                          </PermissionProtectedRoute>
+                        }
                       />
-                      <Route path="/forms" element={<FormsPage />} />
-                      <Route path="/attendance" element={<AttendancePage />} />
+                      <Route
+                        path="/forms"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/forms">
+                            <FormsPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/attendance"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/attendance">
+                            <AttendancePage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+
+                      {/* Account page - accessible to all authenticated users */}
                       <Route path="/account" element={<AccountPage />} />
                     </Routes>
                   </AppLayout>

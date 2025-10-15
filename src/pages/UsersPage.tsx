@@ -30,7 +30,12 @@ import {
   IconCopy,
   IconRefresh,
 } from "@tabler/icons-react";
-import { IconMinus, IconUser, IconCpu, IconPresentation } from "@tabler/icons-react";
+import {
+  IconMinus,
+  IconUser,
+  IconCpu,
+  IconPresentation,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 
@@ -42,19 +47,19 @@ import { useAuth } from "@/context/AuthContext";
 // Visual style for each status (colors aligned with Pending/Completed/Declined)
 const getStatusMeta = (t: any) => ({
   not_interviewed: {
-    label: t('status.pending'),
+    label: t("status.pending"),
     className:
       "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
     dotClass: "bg-red-500 dark:bg-red-400",
   },
   in_progress: {
-    label: t('status.inProgress'),
+    label: t("status.inProgress"),
     className:
       "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600",
     dotClass: "bg-slate-500 dark:bg-slate-300",
   },
   interviewed: {
-    label: t('status.completed'),
+    label: t("status.completed"),
     className:
       "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/30",
     dotClass: "bg-emerald-500 dark:bg-emerald-400",
@@ -80,13 +85,7 @@ export function UsersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Determine default behavior based on groups
-      const groups: string[] = Array.isArray(user?.groups) ? (user!.groups as string[]) : [];
-      const isTrainee = groups.some((g) => /trainee/i.test(g));
-      if (isTrainee) {
-        navigate("/forms", { replace: true });
-        return;
-      }
+      // Permission-based routing is now handled by PermissionProtectedRoute
       const response = await getCandidates();
       const transformedCandidates = response.results.map(
         transformBackendCandidate
@@ -112,7 +111,8 @@ export function UsersPage() {
       const matchesSearch =
         candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (candidate.fullNameArabic && candidate.fullNameArabic.includes(searchTerm));
+        (candidate.fullNameArabic &&
+          candidate.fullNameArabic.includes(searchTerm));
 
       const matchesStatus =
         statusFilter === "all" || candidate.status === statusFilter;
@@ -212,9 +212,11 @@ export function UsersPage() {
       <div className="container mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t("pages.candidates.title")}
+            </h1>
             <p className="text-muted-foreground">
-              {t('pages.candidates.subtitle')}
+              {t("pages.candidates.subtitle")}
             </p>
           </div>
           <Card>
@@ -234,9 +236,11 @@ export function UsersPage() {
       <div className="container mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t("pages.candidates.title")}
+            </h1>
             <p className="text-muted-foreground">
-              {t('pages.candidates.subtitle')}
+              {t("pages.candidates.subtitle")}
             </p>
           </div>
           <Card>
@@ -245,7 +249,7 @@ export function UsersPage() {
                 <div className="text-muted-foreground">{error}</div>
                 <Button onClick={fetchCandidates} variant="outline">
                   <IconRefresh className="size-4 mr-2" />
-                  {t('common.buttons.refresh')}
+                  {t("common.buttons.refresh")}
                 </Button>
               </div>
             </CardContent>
@@ -261,9 +265,11 @@ export function UsersPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{t('pages.candidates.title')}</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t("pages.candidates.title")}
+            </h1>
             <p className="text-muted-foreground">
-              {t('pages.candidates.subtitle')}
+              {t("pages.candidates.subtitle")}
             </p>
           </div>
           <div className="flex w-full md:w-auto md:max-w-3xl items-center gap-3">
@@ -271,7 +277,7 @@ export function UsersPage() {
             <div className="relative flex-1">
               <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
-                placeholder={t('common.placeholders.searchPlaceholder')}
+                placeholder={t("common.placeholders.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
@@ -285,7 +291,7 @@ export function UsersPage() {
                   placeholder={
                     <span className="inline-flex items-center gap-2">
                       <IconFilter className="text-muted-foreground" />
-                      {t('common.buttons.filter')} {t('common.labels.status')}
+                      {t("common.buttons.filter")} {t("common.labels.status")}
                     </span>
                   }
                 />
@@ -293,15 +299,15 @@ export function UsersPage() {
               <SelectContent>
                 <SelectItem value="all">
                   <IconFilter className="opacity-70" />
-                  {t('common.labels.all')} {t('common.labels.status')}
+                  {t("common.labels.all")} {t("common.labels.status")}
                 </SelectItem>
                 <SelectItem value="not_interviewed">
                   <IconMinus className="text-gray-500" />
-                  {t('status.pending')}
+                  {t("status.pending")}
                 </SelectItem>
                 <SelectItem value="interviewed">
                   <IconFilter className="opacity-70" />
-                  {t('status.completed')}
+                  {t("status.completed")}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -317,7 +323,9 @@ export function UsersPage() {
       {/* Candidates Table */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('pages.candidates.title')} {t('common.labels.list')}</CardTitle>
+          <CardTitle>
+            {t("pages.candidates.title")} {t("common.labels.list")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -325,7 +333,7 @@ export function UsersPage() {
               <TableRow>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <span>{t('table.headers.name')}</span>
+                    <span>{t("table.headers.name")}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -346,7 +354,7 @@ export function UsersPage() {
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
-                    <span>{t('table.headers.email')}</span>
+                    <span>{t("table.headers.email")}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -360,8 +368,10 @@ export function UsersPage() {
                     </Button>
                   </div>
                 </TableHead>
-                <TableHead>{t('table.headers.status')}</TableHead>
-                <TableHead className="w-[100px]">{t('table.headers.actions')}</TableHead>
+                <TableHead>{t("table.headers.status")}</TableHead>
+                <TableHead className="w-[100px]">
+                  {t("table.headers.actions")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -369,7 +379,7 @@ export function UsersPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     <div className="text-muted-foreground">
-                      {t('pages.candidates.noCandidates')}
+                      {t("pages.candidates.noCandidates")}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -413,7 +423,9 @@ export function UsersPage() {
                           {(() => {
                             const forms = candidate.forms ?? [];
                             const match = (fn: (t: string) => boolean) => {
-                              const entry = forms.find((f) => fn((f.title || "").toLowerCase()));
+                              const entry = forms.find((f) =>
+                                fn((f.title || "").toLowerCase())
+                              );
                               return {
                                 exists: Boolean(entry),
                                 submitted: Boolean(entry?.forms_by_me),
@@ -434,7 +446,9 @@ export function UsersPage() {
                               Icon: any;
                             }) => (
                               <div className="relative" title={title}>
-                                <Icon className={`size-5 text-white dark:text-white`} />
+                                <Icon
+                                  className={`size-5 text-white dark:text-white`}
+                                />
                                 <span
                                   className={`absolute -right-1 -bottom-1 block size-2.5 rounded-full border border-background ${
                                     exists
@@ -490,7 +504,7 @@ export function UsersPage() {
                         <Button variant="outline" size="sm" asChild>
                           <Link to={`/candidates/${candidate.id}`}>
                             <IconEye className="size-4" />
-                            {t('common.buttons.view')}
+                            {t("common.buttons.view")}
                           </Link>
                         </Button>
                       </TableCell>
@@ -505,7 +519,8 @@ export function UsersPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-muted-foreground">
-                {t('table.pagination.page')} {currentPage} {t('table.pagination.of')} {totalPages}
+                {t("table.pagination.page")} {currentPage}{" "}
+                {t("table.pagination.of")} {totalPages}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -515,7 +530,7 @@ export function UsersPage() {
                   disabled={currentPage === 1}
                 >
                   <IconChevronLeft className="size-4" />
-                  {t('table.pagination.previous')}
+                  {t("table.pagination.previous")}
                 </Button>
 
                 {/* Page Numbers */}
@@ -554,7 +569,7 @@ export function UsersPage() {
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
-                  {t('table.pagination.next')}
+                  {t("table.pagination.next")}
                   <IconChevronRight className="size-4" />
                 </Button>
               </div>
@@ -565,8 +580,9 @@ export function UsersPage() {
 
       {/* Pagination info moved outside the card */}
       <div className="text-sm text-muted-foreground">
-        {t('table.pagination.showing')} {paginatedCandidates.length} {t('table.pagination.of')} {filteredCandidates.length}{" "}
-        {t('pages.candidates.title').toLowerCase()}
+        {t("table.pagination.showing")} {paginatedCandidates.length}{" "}
+        {t("table.pagination.of")} {filteredCandidates.length}{" "}
+        {t("pages.candidates.title").toLowerCase()}
       </div>
     </div>
   );
