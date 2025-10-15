@@ -167,7 +167,12 @@
       "attendanceRecords": "سجلات الحضور",
       "present": "حاضر",
       "absent": "غائب",
-      "late": "متأخر"
+      "late": "متأخر",
+      "statistics": {
+        "totalUsers": "إجمالي المستخدمين",
+        "presentToday": "حاضر اليوم",
+        "absentToday": "غائب اليوم"
+      }
     },
     "account": {
       "title": "إعدادات الحساب",

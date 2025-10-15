@@ -167,7 +167,12 @@
       "attendanceRecords": "Attendance Records",
       "present": "Present",
       "absent": "Absent",
-      "late": "Late"
+      "late": "Late",
+      "statistics": {
+        "totalUsers": "Total Users",
+        "presentToday": "Present Today",
+        "absentToday": "Absent Today"
+      }
     },
     "account": {
       "title": "Account Settings",

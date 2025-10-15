@@ -358,6 +358,30 @@ export function AttendancePage() {
     return colorMap[track] || "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30";
   };
 
+  // Calculate attendance statistics
+  const getAttendanceStats = () => {
+    if (!data || !selectedEvent) {
+      return { totalUsers: 0, presentCount: 0, absentCount: 0 };
+    }
+
+    const totalUsers = data.users.length;
+    let presentCount = 0;
+    let absentCount = 0;
+
+    data.users.forEach(user => {
+      const eventData = user.events.find(e => e.event_id === selectedEvent);
+      const checkInTime = eventData?.check_in_time || null;
+      
+      if (checkInTime) {
+        presentCount++;
+      } else {
+        absentCount++;
+      }
+    });
+
+    return { totalUsers, presentCount, absentCount };
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-6 py-8">
@@ -377,6 +401,53 @@ export function AttendancePage() {
           <p className="text-muted-foreground">{t('pages.attendance.subtitle')}</p>
         </div>
       </div>
+
+      {/* Attendance Statistics */}
+      {selectedEvent && data && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.totalUsers')}</p>
+                  <p className="text-2xl font-bold">{getAttendanceStats().totalUsers}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+                  <IconUsers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.presentToday')}</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{getAttendanceStats().presentCount}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
+                  <IconClock className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.absentToday')}</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{getAttendanceStats().absentCount}</p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
+                  <IconCalendar className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Controls */}
       <Card>
