@@ -30,7 +30,7 @@ export default function App() {
                 <ProtectedRoute>
                   <AppLayout>
                     <Routes>
-                      <Route path="/" element={<UsersPage />} />
+                      <Route path="/" element={<AttendancePage />} />
                       <Route path="/overview" element={<DashboardPage />} />
                       <Route path="/candidates" element={<UsersPage />} />
                       <Route
