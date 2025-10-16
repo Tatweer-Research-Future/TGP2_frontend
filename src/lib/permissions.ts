@@ -51,7 +51,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
 /**
  * Get user permissions based on group_id
  */
-export function getUserPermissions(groupId?: number): GroupPermissions | null {
+export function getUserPermissions(groupId: number | undefined): GroupPermissions | null {
   if (!groupId || !GROUP_PERMISSIONS[groupId]) {
     return null;
   }
@@ -61,7 +61,7 @@ export function getUserPermissions(groupId?: number): GroupPermissions | null {
 /**
  * Check if user can access a specific page
  */
-export function canAccessPage(groupId?: number, page: string): boolean {
+export function canAccessPage(groupId: number | undefined, page: string): boolean {
   const permissions = getUserPermissions(groupId);
   if (!permissions) return false;
 
@@ -83,7 +83,7 @@ export function canAccessPage(groupId?: number, page: string): boolean {
 /**
  * Get the home page for a user based on group_id
  */
-export function getHomePage(groupId?: number): string {
+export function getHomePage(groupId: number | undefined): string {
   const permissions = getUserPermissions(groupId);
   if (!permissions) return "/candidates"; // fallback
 
@@ -99,7 +99,7 @@ export function getHomePage(groupId?: number): string {
 /**
  * Get navigation items based on user permissions
  */
-export function getNavigationItems(groupId?: number): Array<{
+export function getNavigationItems(groupId: number | undefined): Array<{
   title: string;
   url: string;
   icon?: any;
