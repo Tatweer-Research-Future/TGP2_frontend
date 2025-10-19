@@ -28,6 +28,7 @@ import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 import { Loader } from "@/components/ui/loader";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { AttendanceBreakdown } from "@/components/AttendanceBreakdown";
 import {
   Dialog,
   DialogContent,
@@ -2360,6 +2361,9 @@ if you read the cv from the link provided with the data add a short section name
               </Card>
             );
           })}
+
+          {/* Attendance History */}
+          <AttendanceBreakdown userId={id!} />
         </TabsContent>
       </Tabs>
 

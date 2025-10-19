@@ -474,6 +474,81 @@ export async function getAttendanceOverview(
     : "/attendance/overview/";
   return apiFetch<AttendanceOverviewResponse>(url);
 }
+
+export async function getUserAttendanceHistory(
+  userId: string
+): Promise<AttendanceLog[]> {
+  const response = await apiFetch<{ results: AttendanceLog[] }>(
+    `/attendance/user-logs/${userId}/`
+  );
+  return response.results;
+}
+
+// Alternative: Get user attendance from overview data
+export async function getUserAttendanceFromOverview(
+  userId: string
+): Promise<AttendanceLog[]> {
+  try {
+    console.log("Getting attendance for user:", userId);
+    
+    // Get attendance overview for the last 30 days to find user's attendance
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const logs: AttendanceLog[] = [];
+    
+    // Check last 30 days for attendance data
+    for (let i = 0; i < 30; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      try {
+        const overview = await getAttendanceOverview(dateString);
+        console.log(`Checking date ${dateString}:`, overview);
+        
+        const user = overview.users.find(u => u.user_id.toString() === userId);
+        console.log(`Found user for date ${dateString}:`, user);
+        
+        if (user) {
+          user.events.forEach(event => {
+            if (event.check_in_time) {
+              console.log(`Adding attendance log for date ${dateString}:`, event);
+              logs.push({
+                id: 0, // We don't have the actual log ID from overview
+                trainee: {
+                  id: user.user_id,
+                  name: user.user_name,
+                  email: user.user_email
+                },
+                event: overview.events.find(e => e.id === event.event_id) || {
+                  id: event.event_id,
+                  title: `Event ${event.event_id}`,
+                  start_time: '',
+                  end_time: ''
+                },
+                attendance_date: dateString,
+                check_in_time: event.check_in_time,
+                check_out_time: event.check_out_time,
+                notes: ''
+              });
+            }
+          });
+        }
+      } catch (error) {
+        // Skip dates that don't have data
+        console.log(`No data for date ${dateString}:`, error);
+        continue;
+      }
+    }
+    
+    console.log("Final logs:", logs);
+    return logs;
+  } catch (error) {
+    console.error("Failed to get user attendance from overview:", error);
+    return [];
+  }
+}
 // --- AI analysis storage ---
 export type AiAnalysisResponse = {
   ai_analysis: string | null;
