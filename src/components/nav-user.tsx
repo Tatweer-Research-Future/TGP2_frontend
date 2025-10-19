@@ -44,7 +44,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -104,21 +104,22 @@ export function NavUser({
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <IconPalette />
-                  <span>{t('theme.light')}</span>
+                  <span>{t(`theme.${theme}`)}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => setTheme("light")}>
+                  <DropdownMenuItem 
+                    onClick={() => setTheme("light")}
+                    className={theme === "light" ? "bg-accent text-accent-foreground" : ""}
+                  >
                     <IconSun />
                     {t('theme.light')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme("dark")}>
+                  <DropdownMenuItem 
+                    onClick={() => setTheme("dark")}
+                    className={theme === "dark" ? "bg-accent text-accent-foreground" : ""}
+                  >
                     <IconMoon />
                     {t('theme.dark')}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setTheme("system")}>
-                    <IconDeviceDesktop />
-                    {t('theme.system')}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -126,13 +127,19 @@ export function NavUser({
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <IconLanguage />
-                  <span>{t('language.english')}</span>
+                  <span>{t(`language.${i18n.language === 'ar' ? 'arabic' : 'english'}`)}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage('en')}>
+                  <DropdownMenuItem 
+                    onClick={() => i18n.changeLanguage('en')}
+                    className={i18n.language === 'en' ? "bg-accent text-accent-foreground" : ""}
+                  >
                     {t('language.english')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => i18n.changeLanguage('ar')}>
+                  <DropdownMenuItem 
+                    onClick={() => i18n.changeLanguage('ar')}
+                    className={i18n.language === 'ar' ? "bg-accent text-accent-foreground" : ""}
+                  >
                     {t('language.arabic')}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
