@@ -10,6 +10,18 @@ import { Loader } from "@/components/ui/loader";
 interface AttendanceBreakdownProps {
   userId: string;
   className?: string;
+  attendanceLog?: {
+    attendance_days: number;
+    absent_days: number;
+    details: Array<{
+      date: string;
+      event: string;
+      check_in: string | null;
+      check_out: string | null;
+      status: string | null;
+      notes: string | null;
+    }>;
+  } | null;
 }
 
 interface AttendanceStats {
@@ -30,7 +42,7 @@ interface AttendanceDay {
   }>;
 }
 
-export function AttendanceBreakdown({ userId, className }: AttendanceBreakdownProps) {
+export function AttendanceBreakdown({ userId, className, attendanceLog }: AttendanceBreakdownProps) {
   const { t } = useTranslation();
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,13 +56,34 @@ export function AttendanceBreakdown({ userId, className }: AttendanceBreakdownPr
   const [attendanceDays, setAttendanceDays] = useState<AttendanceDay[]>([]);
 
   useEffect(() => {
-    const fetchAttendanceData = async () => {
-      setIsLoading(true);
+    const hydrateFromBackend = () => {
+      if (attendanceLog && Array.isArray(attendanceLog.details)) {
+        // Map backend attendance_log.details into AttendanceLog-like structure
+        const mapped: AttendanceLog[] = attendanceLog.details.map((d, idx) => ({
+          id: idx + 1,
+          trainee: { id: Number(userId), name: "", email: "" },
+          event: { id: idx + 1, title: d.event, start_time: "", end_time: "" },
+          attendance_date: d.date,
+          check_in_time: d.check_in ?? "",
+          check_out_time: d.check_out,
+          notes: d.notes ?? "",
+        }));
+        setAttendanceLogs(mapped);
+        processAttendanceData(mapped);
+        setIsLoading(false);
+        return true;
+      }
+      return false;
+    };
+
+    setIsLoading(true);
+    if (hydrateFromBackend()) return;
+
+    // Fallback: derive from overview if backend did not send attendance_log
+    (async () => {
       try {
-        // Import the API function dynamically to avoid circular imports
         const { getUserAttendanceFromOverview } = await import("@/lib/api");
         const logs = await getUserAttendanceFromOverview(userId);
-        console.log("Fetched attendance logs for user", userId, ":", logs);
         setAttendanceLogs(logs);
         processAttendanceData(logs);
       } catch (error) {
@@ -58,10 +91,8 @@ export function AttendanceBreakdown({ userId, className }: AttendanceBreakdownPr
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchAttendanceData();
-  }, [userId]);
+    })();
+  }, [userId, attendanceLog]);
 
   const processAttendanceData = (logs: AttendanceLog[]) => {
     console.log("Processing attendance data:", logs);

@@ -277,6 +277,19 @@ export type BackendUserDetail = {
       }> | null;
     } | null;
   } | null;
+  // Optional attendance log returned by backend for this user
+  attendance_log?: {
+    attendance_days: number;
+    absent_days: number;
+    details: Array<{
+      date: string;
+      event: string;
+      check_in: string | null;
+      check_out: string | null;
+      status: string | null;
+      notes: string | null;
+    }>;
+  } | null;
 };
 
 export async function getUserDetailById(

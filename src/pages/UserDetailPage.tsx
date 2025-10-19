@@ -125,6 +125,18 @@ type UserDetail = {
       >;
     }>;
   }>;
+  attendanceLog?: {
+    attendance_days: number;
+    absent_days: number;
+    details: Array<{
+      date: string;
+      event: string;
+      check_in: string | null;
+      check_out: string | null;
+      status: string | null;
+      notes: string | null;
+    }>;
+  } | null;
 };
 
 function normalizeScore(raw: unknown): string | undefined {
@@ -200,6 +212,7 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     interviewedByMe: hasInterviewedMe,
     forms: (data as any).forms ?? [],
     formsEntries: (data as any).forms_entries ?? [],
+    attendanceLog: (data as any).attendance_log ?? null,
   };
 }
 
@@ -2363,7 +2376,7 @@ if you read the cv from the link provided with the data add a short section name
           })}
 
           {/* Attendance History */}
-          <AttendanceBreakdown userId={id!} />
+          <AttendanceBreakdown userId={id!} attendanceLog={user?.attendanceLog ?? null} />
         </TabsContent>
       </Tabs>
 
