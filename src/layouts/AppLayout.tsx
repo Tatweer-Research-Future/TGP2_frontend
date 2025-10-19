@@ -33,7 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         }}
       >
         {/* Transparent overlay */}
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm pointer-events-none rounded-xl" />
+        <div className="absolute inset-0 bg-background/85 backdrop-blur-sm pointer-events-none rounded-xl" />
         <div className="relative z-10">
           <SiteHeader />
           <div className="flex flex-1 flex-col">

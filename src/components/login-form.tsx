@@ -72,7 +72,7 @@ export function LoginForm({
       {...props}
     >
       {/* Transparent overlay */}
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm pointer-events-none" />
+      <div className="absolute inset-0 bg-background/85 backdrop-blur-sm pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md">
         <Card className="bg-card/30 backdrop-blur-lg border-border/30 shadow-xl">
