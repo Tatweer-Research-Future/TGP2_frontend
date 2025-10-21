@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconCalendar, IconClock, IconCheck, IconX, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
-import { AttendanceLog } from "@/lib/api";
+import type { AttendanceLog } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 
 interface AttendanceBreakdownProps {
