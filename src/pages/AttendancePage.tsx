@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,8 @@ import {
 
 export function AttendancePage() {
   const { t } = useTranslation();
-  const { isAttendanceTracker } = useUserGroups();
+  const navigate = useNavigate();
+  const { isAttendanceTracker, isInGroup } = useUserGroups();
   const [data, setData] = useState<AttendanceOverviewResponse | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedEvent, setSelectedEvent] = useState<number | null>(null);
@@ -274,6 +276,20 @@ export function AttendancePage() {
     const next = new Set(selectedUsers);
     if (checked) next.add(userId); else next.delete(userId);
     setSelectedUsers(next);
+  };
+
+  const handleUserClick = (userId: number) => {
+    navigate(`/candidates/${userId}`);
+  };
+
+  // Check if user has both instructor and attendance_tracker permissions
+  const canNavigateToUserDetails = () => {
+    const hasInstructor = isInGroup('instructor -> Software') || 
+                         isInGroup('instructor -> Network') || 
+                         isInGroup('instructor -> Data') ||
+                         isInGroup('instructor');
+    const hasAttendanceTracker = isInGroup('attendance_tracker');
+    return hasInstructor && hasAttendanceTracker;
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -615,7 +631,12 @@ export function AttendancePage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{user.user_name}</div>
+                            <div 
+                              className={`font-medium ${canNavigateToUserDetails() ? 'cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors' : ''}`}
+                              onClick={canNavigateToUserDetails() ? () => handleUserClick(user.user_id) : undefined}
+                            >
+                              {user.user_name}
+                            </div>
                             <div className="text-sm text-muted-foreground">{user.user_email}</div>
                             {(user as any).phone && (
                               <div className="text-sm text-muted-foreground">{(user as any).phone}</div>

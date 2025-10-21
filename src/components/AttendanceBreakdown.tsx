@@ -152,12 +152,23 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
 
     setAttendanceDays(days);
 
-    // Calculate statistics
-    const totalDays = days.length;
-    const presentDays = days.filter(d => d.status === 'present').length;
-    const partialDays = days.filter(d => d.status === 'partial').length;
-    const absentDays = days.filter(d => d.status === 'absent').length;
-    const attendanceRate = totalDays > 0 ? ((presentDays + partialDays * 0.5) / totalDays) * 100 : 0;
+    // Calculate statistics - use backend values when available
+    let totalDays, presentDays, absentDays, attendanceRate;
+    
+    if (attendanceLog && attendanceLog.attendance_days !== undefined && attendanceLog.absent_days !== undefined) {
+      // Use backend values when available
+      totalDays = attendanceLog.attendance_days + attendanceLog.absent_days;
+      presentDays = attendanceLog.attendance_days;
+      absentDays = attendanceLog.absent_days;
+      attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+    } else {
+      // Fallback to calculated values from details
+      totalDays = days.length;
+      presentDays = days.filter(d => d.status === 'present').length;
+      const partialDays = days.filter(d => d.status === 'partial').length;
+      absentDays = days.filter(d => d.status === 'absent').length;
+      attendanceRate = totalDays > 0 ? ((presentDays + partialDays * 0.5) / totalDays) * 100 : 0;
+    }
 
     setStats({
       totalDays,
