@@ -319,9 +319,9 @@ export function AttendancePage() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(user => 
-        user.user_name.toLowerCase().includes(query) ||
-        user.user_email.toLowerCase().includes(query) ||
-        (user as any).phone?.toLowerCase().includes(query)
+        (user.user_name && user.user_name.toLowerCase().includes(query)) ||
+        (user.user_email && user.user_email.toLowerCase().includes(query)) ||
+        ((user as any).phone && (user as any).phone.toLowerCase().includes(query))
       );
     }
     
