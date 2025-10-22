@@ -128,13 +128,19 @@ type UserDetail = {
   attendanceLog?: {
     attendance_days: number;
     absent_days: number;
-    details: Array<{
-      date: string;
-      event: string;
-      check_in: string | null;
-      check_out: string | null;
-      status: string | null;
-      notes: string | null;
+    events: Array<{
+      event_id: number;
+      event_title: string;
+      start_time: string;
+      end_time: string;
+      attended_days: Array<{
+        date: string;
+        check_in: string;
+        check_out: string;
+      }>;
+      absent_days: Array<{
+        date: string;
+      }>;
     }>;
   } | null;
 };
