@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { IconClock, IconCalendar, IconUsers, IconSearch } from "@tabler/icons-react";
+import { IconClock, IconCalendar, IconUsers, IconSearch, IconDownload } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { TimePickerDialog } from "@/components/TimePickerDialog";
@@ -51,6 +51,7 @@ export function AttendancePage() {
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent">("all");
 
   // Check if user has permission
   if (!isAttendanceTracker) {
@@ -332,6 +333,21 @@ export function AttendancePage() {
       );
     }
     
+    // Apply status filter
+    if (statusFilter !== "all" && selectedEvent) {
+      filtered = filtered.filter(user => {
+        const eventData = user.events.find(e => e.event_id === selectedEvent);
+        const checkInTime = eventData?.check_in_time || null;
+        
+        if (statusFilter === "present") {
+          return !!checkInTime;
+        } else if (statusFilter === "absent") {
+          return !checkInTime;
+        }
+        return true;
+      });
+    }
+    
     return filtered;
   };
 
@@ -380,11 +396,12 @@ export function AttendancePage() {
       return { totalUsers: 0, presentCount: 0, absentCount: 0 };
     }
 
-    const totalUsers = data.users.length;
+    const filteredUsers = getFilteredUsers();
+    const totalUsers = filteredUsers.length;
     let presentCount = 0;
     let absentCount = 0;
 
-    data.users.forEach(user => {
+    filteredUsers.forEach(user => {
       const eventData = user.events.find(e => e.event_id === selectedEvent);
       const checkInTime = eventData?.check_in_time || null;
       
@@ -396,6 +413,110 @@ export function AttendancePage() {
     });
 
     return { totalUsers, presentCount, absentCount };
+  };
+
+  const exportToCSV = () => {
+    if (!data || !selectedEvent) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const filteredUsers = getSortedUsers();
+    const selectedEventData = data.events.find(e => e.id === selectedEvent);
+    
+    if (!selectedEventData) {
+      toast.error("Event not found");
+      return;
+    }
+
+    // Prepare CSV headers
+    const headers = [
+      "Name",
+      "Email", 
+      "Phone",
+      "Track",
+      "Status",
+      "Check In Time",
+      "Check Out Time",
+      "Date",
+      "Event"
+    ];
+
+    // Prepare CSV data with proper text handling
+    const csvData = filteredUsers.map(user => {
+      const eventData = user.events.find(e => e.event_id === selectedEvent);
+      const checkInTime = eventData?.check_in_time || "";
+      const checkOutTime = eventData?.check_out_time || "";
+      
+      let status = "Absent";
+      if (checkInTime && checkOutTime) {
+        status = "Present";
+      } else if (checkInTime && !checkOutTime) {
+        status = "Partial";
+      }
+
+      // Ensure proper text encoding for Arabic and other Unicode characters
+      const sanitizeText = (text: string) => {
+        if (!text) return "";
+        // Remove any control characters but preserve Arabic and other Unicode characters
+        return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      };
+
+      // Format date as simple text to avoid Excel display issues
+      const formatDateForExcel = (dateString: string) => {
+        const date = new Date(dateString);
+        // Use simple DD/MM/YYYY text format
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+
+      return [
+        sanitizeText(user.user_name || ""),
+        sanitizeText(user.user_email || ""),
+        sanitizeText((user as any).phone || ""),
+        sanitizeText((user as any).track || ""),
+        status,
+        checkInTime,
+        checkOutTime,
+        formatDateForExcel(selectedDate),
+        sanitizeText(selectedEventData.title)
+      ];
+    });
+
+    // Create CSV content with UTF-8 BOM for proper Arabic text support
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map(row => 
+        row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")
+      )
+    ].join("\n");
+
+    // Add UTF-8 BOM (Byte Order Mark) to ensure proper Arabic text encoding
+    // This is essential for Excel and other applications to correctly display Arabic text
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
+
+    // Create and download file with proper UTF-8 encoding
+    const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    
+    // Generate filename with date and filters
+    const dateStr = selectedDate.replace(/-/g, "");
+    const eventStr = selectedEventData.title.replace(/[^a-zA-Z0-9]/g, "_");
+    const filterStr = statusFilter !== "all" ? `_${statusFilter}` : "";
+    const trackStr = selectedTrack !== "all" ? `_${selectedTrack.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
+    
+    link.setAttribute("download", `attendance_${dateStr}_${eventStr}${filterStr}${trackStr}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`Exported ${filteredUsers.length} records to CSV (UTF-8 with Arabic support, Excel-compatible dates)`);
   };
 
   if (isLoading) {
@@ -541,9 +662,32 @@ export function AttendancePage() {
       {selectedEvent && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <IconUsers className="size-5" />
-              Users ({getSortedUsers().length})
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <IconUsers className="size-5" />
+                Users ({getSortedUsers().length})
+              </div>
+              <div className="flex items-center gap-4">
+                {(searchQuery || statusFilter !== "all" || selectedTrack !== "all") && (
+                  <div className="text-sm text-muted-foreground">
+                    {searchQuery && <span className="mr-2">Search: "{searchQuery}"</span>}
+                    {statusFilter !== "all" && <span className="mr-2">Status: {statusFilter}</span>}
+                    {selectedTrack !== "all" && <span>Track: {selectedTrack}</span>}
+                  </div>
+                )}
+                {getSortedUsers().length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportToCSV}
+                    className="flex items-center gap-2"
+                    title={`Export ${getSortedUsers().length} filtered records to CSV`}
+                  >
+                    <IconDownload className="size-4" />
+                    Export CSV
+                  </Button>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -560,33 +704,84 @@ export function AttendancePage() {
                 />
               </div>
               
-              {/* Track Filter */}
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant={selectedTrack === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedTrack("all")}
-                >
-                  All Tracks
-                </Button>
-                {getAvailableTracks().map((track) => (
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Track Filter */}
+                <div className="flex gap-2 flex-wrap">
                   <Button
-                    key={track}
-                    variant={selectedTrack === track ? "default" : "outline"}
+                    variant={selectedTrack === "all" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedTrack(track)}
-                    className={selectedTrack === track ? "" : `border-2 ${getTrackColor(track).split(' ')[2]}`}
+                    onClick={() => setSelectedTrack("all")}
                   >
-                    <div className={`w-2 h-2 rounded-full mr-2 ${getTrackColor(track).split(' ')[0]}`} />
-                    {track}
+                    All Tracks
                   </Button>
-                ))}
+                  {getAvailableTracks().map((track) => (
+                    <Button
+                      key={track}
+                      variant={selectedTrack === track ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedTrack(track)}
+                      className={selectedTrack === track ? "" : `border-2 ${getTrackColor(track).split(' ')[2]}`}
+                    >
+                      <div className={`w-2 h-2 rounded-full mr-2 ${getTrackColor(track).split(' ')[0]}`} />
+                      {track}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Status Filter */}
+                <div className="flex gap-2">
+                  <Button
+                    variant={statusFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    All Status
+                  </Button>
+                  <Button
+                    variant={statusFilter === "present" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("present")}
+                    className={statusFilter === "present" ? "" : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-500/30 dark:text-green-200 dark:hover:bg-green-500/10"}
+                  >
+                    <div className="w-2 h-2 rounded-full mr-2 bg-green-500" />
+                    Present
+                  </Button>
+                  <Button
+                    variant={statusFilter === "absent" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("absent")}
+                    className={statusFilter === "absent" ? "" : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"}
+                  >
+                    <div className="w-2 h-2 rounded-full mr-2 bg-red-500" />
+                    Absent
+                  </Button>
+                </div>
+
+                {/* Clear Filters Button */}
+                {(searchQuery || statusFilter !== "all" || selectedTrack !== "all") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setStatusFilter("all");
+                      setSelectedTrack("all");
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             </div>
 
             {!data || getSortedUsers().length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? "No users found matching your search" : "No users found for the selected date"}
+                {searchQuery || statusFilter !== "all" || selectedTrack !== "all" 
+                  ? "No users found matching your filters" 
+                  : "No users found for the selected date"
+                }
               </div>
             ) : (
               <Table>
