@@ -337,14 +337,21 @@ export type BackendFormField = {
   suggested_questions?: string;
 };
 
+export type BackendForm = {
+  id: number;
+  title: string;
+  is_sub_questions: boolean;
+  fields: BackendFormField[];
+};
+
 export async function getForms(): Promise<BackendFormsList> {
   return apiFetch<BackendFormsList>(`/forms/`);
 }
 
 export async function getFormById(
   id: number | string
-): Promise<BackendFormField[]> {
-  return apiFetch<BackendFormField[]>(`/forms/${id}`);
+): Promise<BackendForm> {
+  return apiFetch<BackendForm>(`/forms/${id}`);
 }
 
 // Submit completed form

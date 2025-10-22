@@ -27,9 +27,15 @@ import {
   getFormById,
   submitForm,
   type BackendFormsList,
+  type BackendForm,
   type BackendFormField,
   type SubmitFormPayload,
 } from "@/lib/api";
+
+// Labels that should always be visible and never treated as sub-questions
+const EXCEPTION_ALWAYS_VISIBLE_LABELS = new Set<string>([
+  "هل لديك اي ملاحظات او اقتراحات؟",
+]);
 
 type InterviewField = {
   id: number;
@@ -45,16 +51,15 @@ type InterviewField = {
 type InterviewForm = {
   id: number;
   title: string;
+  is_sub_questions: boolean;
   fields: InterviewField[];
   totalPoints: number;
 };
 
 function transformBackendForm(
-  fields: BackendFormField[],
-  formId: number,
-  title: string
+  backendForm: BackendForm
 ): InterviewForm {
-  const transformed: InterviewField[] = fields
+  const transformed: InterviewField[] = backendForm.fields
     .slice()
     .sort((a, b) => a.order - b.order)
     .map((f) => ({
@@ -86,7 +91,104 @@ function transformBackendForm(
     return sum;
   }, 0);
 
-  return { id: formId, title, fields: transformed, totalPoints };
+  return { 
+    id: backendForm.id, 
+    title: backendForm.title, 
+    is_sub_questions: backendForm.is_sub_questions,
+    fields: transformed, 
+    totalPoints 
+  };
+}
+
+// Helper function to check if a field should be visible based on sub-questions logic
+function shouldFieldBeVisible(
+  fieldIndex: number,
+  fields: InterviewField[],
+  answers: Record<number, string | number>,
+  isSubQuestions: boolean
+): boolean {
+  if (!isSubQuestions) return true;
+  
+  const currentField = fields[fieldIndex];
+  if (EXCEPTION_ALWAYS_VISIBLE_LABELS.has((currentField.label || "").trim())) {
+    return true;
+  }
+  
+  // Required fields are always visible
+  if (currentField.required) {
+    return true;
+  }
+  
+  // For non-required fields, check if they are sub-questions of a Yes/No question
+  // Look backwards to find the most recent Yes/No question
+  for (let i = fieldIndex - 1; i >= 0; i--) {
+    const field = fields[i];
+    
+    // Check if this is a Yes/No question (regardless of whether it's required)
+    // Yes/No questions have exactly 2 options with scores 0 and 1
+    if (field.type === "question" && field.options && field.options.length === 2) {
+      const isYesNo = field.options.every(opt => opt.score === 0 || opt.score === 1);
+      if (isYesNo) {
+        const answer = answers[field.id];
+        if (answer !== undefined) {
+          // Find the "Yes" option (score = 1)
+          const yesOption = field.options.find(opt => opt.score === 1);
+          const isYes = yesOption ? Number(answer) === yesOption.id : false;
+          
+          // If "Yes" was selected, show this sub-question
+          // If "No" was selected, hide this sub-question
+          return isYes;
+        }
+        // If no answer yet, hide the sub-question
+        return false;
+      }
+    }
+    
+    // If we hit a required field that is NOT a Yes/No question, stop looking
+    // This field is not a sub-question
+    if (field.required && !(field.type === "question" && field.options && field.options.length === 2 && field.options.every(opt => opt.score === 0 || opt.score === 1))) {
+      return true;
+    }
+  }
+  
+  // If no Yes/No question found before this field, show it
+  return true;
+}
+
+// Helper to determine if a field is a sub-question (for styling/indent only)
+function isSubQuestionField(
+  fieldIndex: number,
+  fields: InterviewField[],
+  answers: Record<number, string | number>,
+  isSubQuestions: boolean
+): boolean {
+  if (!isSubQuestions) return false;
+  const current = fields[fieldIndex];
+  if (EXCEPTION_ALWAYS_VISIBLE_LABELS.has((current.label || "").trim())) {
+    return false;
+  }
+  if (current.required) return false; // required questions are never styled as sub
+
+  for (let i = fieldIndex - 1; i >= 0; i--) {
+    const prev = fields[i];
+    const isYesNo =
+      prev.type === "question" &&
+      !!prev.options &&
+      prev.options.length === 2 &&
+      prev.options.every((opt) => opt.score === 0 || opt.score === 1);
+
+    if (isYesNo) {
+      // Nearest Yes/No found → current is a sub-question of it
+      return true;
+    }
+
+    // Hitting a required non-Yes/No question breaks the chain
+    if (prev.required) {
+      return false;
+    }
+  }
+
+  return false;
 }
 
 export function FormsPage() {
@@ -136,10 +238,9 @@ export function FormsPage() {
     async function loadForm(id: number) {
       setIsFormLoading(true);
       try {
-        const fields = await getFormById(id);
+        const backendForm = await getFormById(id);
         if (isCancelled) return;
-        const meta = availableForms.find((f) => f.id === id);
-        const transformed = transformBackendForm(fields, id, meta?.title || "");
+        const transformed = transformBackendForm(backendForm);
         setFormsCache((prev) => ({ ...prev, [id]: transformed }));
         setForm(transformed);
         setAnswers({});
@@ -188,10 +289,14 @@ export function FormsPage() {
 
   const handleSubmit = async () => {
     if (!form || !user || selectedFormHasSubmitted) return;
-    // Validate required fields
+    // Validate required fields (only visible ones)
     const missing = new Set<number>();
-    for (const field of form.fields) {
-      if (!field.required) continue;
+    for (let i = 0; i < form.fields.length; i++) {
+      const field = form.fields[i];
+      const isVisible = shouldFieldBeVisible(i, form.fields, answers, form.is_sub_questions);
+      
+      if (!isVisible || !field.required) continue;
+      
       const v = answers[field.id];
       if (field.type === "question") {
         if (v === undefined || v === null || v === "") missing.add(field.id);
@@ -209,24 +314,27 @@ export function FormsPage() {
     const payload: SubmitFormPayload = {
       form_id: form.id,
       targeted_user_id: Number(user.id),
-      form_fields: form.fields.map((f) => {
-        const value = answers[f.id];
-        if (f.type === "question") {
+      form_fields: form.fields
+        .map((f, index) => ({ field: f, index }))
+        .filter(({ index }) => shouldFieldBeVisible(index, form.fields, answers, form.is_sub_questions))
+        .map(({ field: f }) => {
+          const value = answers[f.id];
+          if (f.type === "question") {
+            return {
+              form_field_id: f.id,
+              selected_option_id:
+                value !== undefined && value !== null && value !== ""
+                  ? Number(value)
+                  : null,
+              text_field_entry: "",
+            };
+          }
           return {
             form_field_id: f.id,
-            selected_option_id:
-              value !== undefined && value !== null && value !== ""
-                ? Number(value)
-                : null,
-            text_field_entry: "",
+            selected_option_id: null,
+            text_field_entry: (value ?? "").toString(),
           };
-        }
-        return {
-          form_field_id: f.id,
-          selected_option_id: null,
-          text_field_entry: (value ?? "").toString(),
-        };
-      }),
+        }),
     };
 
     try {
@@ -332,15 +440,26 @@ export function FormsPage() {
               </CardContent>
             </Card>
           )}
-          {form.fields.map((field) => (
+          {form.fields.map((field, fieldIndex) => {
+            const isVisible = shouldFieldBeVisible(fieldIndex, form.fields, answers, form.is_sub_questions);
+            
+            if (!isVisible) return null;
+            
+          // Sub-question styling: based on structure, not on answer
+          const isSubQuestion = isSubQuestionField(fieldIndex, form.fields, answers, form.is_sub_questions);
+            
+            return (
             <Card
               key={field.id}
-              className={`${invalidFields.has(field.id) ? "border-1 border-destructive" : ""}`}
+              className={`${invalidFields.has(field.id) ? "border-1 border-destructive" : ""} ${isSubQuestion ? "ml-6 border-l-4 border-l-blue-200 bg-blue-50/30 dark:border-l-blue-500/40 dark:bg-blue-900/20" : ""}`}
             >
               <CardContent className="pt-0 space-y-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold flex items-center gap-2">
+                      {isSubQuestion && (
+                        <span className="text-blue-600 dark:text-blue-400 text-sm font-normal">↳</span>
+                      )}
                       {field.label}
                       {field.required && (
                         <span className="text-red-500 text-lg">*</span>
@@ -404,7 +523,8 @@ export function FormsPage() {
                 )}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
 
           <div className="flex justify-end">
             {selectedFormHasSubmitted ? (
