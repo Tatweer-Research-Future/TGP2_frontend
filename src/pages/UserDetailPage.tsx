@@ -67,6 +67,7 @@ import {
   type BackendUserDetail,
   getForms,
   getFormById,
+  type BackendForm,
   type BackendFormField,
   submitForm,
   type SubmitFormPayload,
@@ -312,11 +313,9 @@ type InterviewForm = {
 };
 
 function transformBackendForm(
-  fields: BackendFormField[],
-  formId: number,
-  title: string
+  backendForm: BackendForm
 ): InterviewForm {
-  const transformed: InterviewField[] = fields
+  const transformed: InterviewField[] = backendForm.fields
     .slice()
     .sort((a, b) => a.order - b.order)
     .map((f) => ({
@@ -352,7 +351,12 @@ function transformBackendForm(
     return sum;
   }, 0);
 
-  return { id: formId, title, fields: transformed, totalPoints };
+  return { 
+    id: backendForm.id, 
+    title: backendForm.title, 
+    fields: transformed, 
+    totalPoints 
+  };
 }
 
 export function UserDetailPage() {
@@ -788,8 +792,8 @@ if you read the cv from the link provided with the data add a short section name
     }
     try {
       setIsFormLoading(true);
-      const fields = await getFormById(formMeta.id);
-      const transformed = transformBackendForm(fields, formMeta.id, formMeta.title);
+      const backendForm = await getFormById(formMeta.id);
+      const transformed = transformBackendForm(backendForm);
       setFormsCache((prev) => ({ ...prev, [formMeta.id]: transformed }));
       setForm(transformed);
     } catch (e) {
