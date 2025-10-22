@@ -585,3 +585,36 @@ export async function patchUserAiAnalysis(
     requireCsrf: true,
   });
 }
+
+// Export attendance CSV from backend
+export async function exportAttendanceCSV(params: {
+  from_date: string;
+  to_date: string;
+  track?: string;
+  event?: string;
+}): Promise<Blob> {
+  const searchParams = new URLSearchParams({
+    from_date: params.from_date,
+    to_date: params.to_date,
+  });
+
+  if (params.track) {
+    searchParams.append('track', params.track);
+  }
+  if (params.event) {
+    searchParams.append('event', params.event);
+  }
+
+  const response = await fetch(`${apiBaseUrl}/export-attendance-csv/?${searchParams}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to export CSV: ${response.statusText}`);
+  }
+
+  return response.blob();
+}

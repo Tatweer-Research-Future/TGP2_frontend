@@ -31,6 +31,7 @@ import {
   getAttendanceOverview,
   submitCheckIn,
   submitCheckOut,
+  exportAttendanceCSV,
   type AttendanceOverviewResponse,
   type CheckInPayload,
   type CheckOutPayload,
@@ -52,6 +53,13 @@ export function AttendancePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent">("all");
+  
+  // Export section state
+  const [exportFromDate, setExportFromDate] = useState<string>("");
+  const [exportToDate, setExportToDate] = useState<string>("");
+  const [exportTrack, setExportTrack] = useState<string>("all");
+  const [exportEvent, setExportEvent] = useState<string>("all");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Check if user has permission
   if (!isAttendanceTracker) {
@@ -462,14 +470,10 @@ export function AttendancePage() {
         return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
       };
 
-      // Format date as simple text to avoid Excel display issues
+      // Use original date format - Excel will recognize it as a date
+      // Users just need to make the column wider if they see #####
       const formatDateForExcel = (dateString: string) => {
-        const date = new Date(dateString);
-        // Use simple DD/MM/YYYY text format
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+        return dateString; // Keep original YYYY-MM-DD format
       };
 
       return [
@@ -516,7 +520,53 @@ export function AttendancePage() {
     link.click();
     document.body.removeChild(link);
     
-    toast.success(`Exported ${filteredUsers.length} records to CSV (UTF-8 with Arabic support, Excel-compatible dates)`);
+    toast.success(`Exported ${filteredUsers.length} records to CSV (UTF-8 with Arabic support, proper date format)`);
+  };
+
+  const handleBackendExport = async () => {
+    if (!exportFromDate || !exportToDate) {
+      toast.error("Please select both from and to dates");
+      return;
+    }
+
+    if (new Date(exportFromDate) > new Date(exportToDate)) {
+      toast.error("From date cannot be later than to date");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const blob = await exportAttendanceCSV({
+        from_date: exportFromDate,
+        to_date: exportToDate,
+        track: exportTrack !== "all" ? exportTrack : undefined,
+        event: exportEvent !== "all" ? exportEvent : undefined,
+      });
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      // Generate filename
+      const fromDateStr = exportFromDate.replace(/-/g, "");
+      const toDateStr = exportToDate.replace(/-/g, "");
+      const trackStr = exportTrack !== "all" ? `_${exportTrack.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
+      const eventStr = exportEvent !== "all" ? `_${exportEvent.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
+      
+      link.download = `attendance_${fromDateStr}_to_${toDateStr}${trackStr}${eventStr}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Attendance data exported successfully from backend");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export attendance data");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -585,6 +635,108 @@ export function AttendancePage() {
           </Card>
         </div>
       )}
+
+      {/* Export Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <IconDownload className="size-5" />
+            Export Attendance Data
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* From Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">From Date</label>
+              <Input
+                type="date"
+                value={exportFromDate}
+                onChange={(e) => setExportFromDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* To Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To Date</label>
+              <Input
+                type="date"
+                value={exportToDate}
+                onChange={(e) => setExportToDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Track Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Track (Optional)</label>
+              <Select value={exportTrack} onValueChange={setExportTrack}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Tracks" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tracks</SelectItem>
+                  {getAvailableTracks().map((track) => (
+                    <SelectItem key={track} value={track}>
+                      {track}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Event Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Event (Optional)</label>
+              <Select value={exportEvent} onValueChange={setExportEvent}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All Events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {data?.events.map((event) => (
+                    <SelectItem key={event.id} value={event.title}>
+                      {event.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Export Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={handleBackendExport}
+              disabled={isExporting || !exportFromDate || !exportToDate}
+              className="flex items-center gap-2"
+            >
+              {isExporting ? (
+                <>
+                  <Loader className="size-4" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <IconDownload className="size-4" />
+                  Export CSV
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Export Info */}
+          {exportFromDate && exportToDate && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <div className="font-medium mb-1">Export Summary:</div>
+              <div>Date Range: {exportFromDate} to {exportToDate}</div>
+              {exportTrack !== "all" && <div>Track: {exportTrack}</div>}
+              {exportEvent !== "all" && <div>Event: {exportEvent}</div>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Controls */}
       <Card>
