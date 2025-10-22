@@ -309,6 +309,7 @@ export type BackendFormsList = {
     id: number;
     title: string;
     expairy_date: string;
+    has_submitted: boolean;
   }>;
 };
 
@@ -503,26 +504,26 @@ export async function getUserAttendanceFromOverview(
 ): Promise<AttendanceLog[]> {
   try {
     console.log("Getting attendance for user:", userId);
-    
+
     // Get attendance overview for the last 30 days to find user's attendance
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const logs: AttendanceLog[] = [];
-    
+
     // Check last 30 days for attendance data
     for (let i = 0; i < 30; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateString = date.toISOString().split('T')[0];
-      
+
       try {
         const overview = await getAttendanceOverview(dateString);
         console.log(`Checking date ${dateString}:`, overview);
-        
+
         const user = overview.users.find(u => u.user_id.toString() === userId);
         console.log(`Found user for date ${dateString}:`, user);
-        
+
         if (user) {
           user.events.forEach(event => {
             if (event.check_in_time) {
@@ -554,7 +555,7 @@ export async function getUserAttendanceFromOverview(
         continue;
       }
     }
-    
+
     console.log("Final logs:", logs);
     return logs;
   } catch (error) {

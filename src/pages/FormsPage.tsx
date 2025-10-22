@@ -15,6 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   getForms,
   getFormById,
   submitForm,
@@ -58,14 +66,14 @@ function transformBackendForm(
       weight: Number(f.weight ?? "1"),
       options: f.scale
         ? f.scale.options
-            .slice()
-            .sort((a, b) => a.order - b.order)
-            .map((o) => ({
-              id: o.id,
-              label: o.label,
-              score: Number(o.score),
-              order: o.order,
-            }))
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map((o) => ({
+            id: o.id,
+            label: o.label,
+            score: Number(o.score),
+            order: o.order,
+          }))
         : undefined,
       suggested_questions: f.suggested_questions,
     }));
@@ -89,12 +97,14 @@ export function FormsPage() {
   const [availableForms, setAvailableForms] = useState<
     BackendFormsList["results"]
   >([]);
+  const [selectedFormHasSubmitted, setSelectedFormHasSubmitted] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
   const [form, setForm] = useState<InterviewForm | null>(null);
   const [formsCache, setFormsCache] = useState<Record<number, InterviewForm>>({});
   const [answers, setAnswers] = useState<Record<number, string | number>>({});
   const [invalidFields, setInvalidFields] = useState<Set<number>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -107,6 +117,7 @@ export function FormsPage() {
         setAvailableForms(results);
         if (results.length > 0) {
           setSelectedFormId(results[0].id);
+          setSelectedFormHasSubmitted(results[0].has_submitted || false);
         }
       } catch (err) {
         toast.error("Failed to load forms");
@@ -141,6 +152,10 @@ export function FormsPage() {
       }
     }
     if (selectedFormId != null) {
+      // Update the has_submitted status for the selected form
+      const selectedForm = availableForms.find(f => f.id === selectedFormId);
+      setSelectedFormHasSubmitted(selectedForm?.has_submitted || false);
+
       if (formsCache[selectedFormId]) {
         setForm(formsCache[selectedFormId]);
       } else {
@@ -148,6 +163,7 @@ export function FormsPage() {
       }
     } else {
       setForm(null);
+      setSelectedFormHasSubmitted(false);
     }
     return () => {
       isCancelled = true;
@@ -155,6 +171,7 @@ export function FormsPage() {
   }, [selectedFormId, availableForms, formsCache]);
 
   const handleAnswerChange = (fieldId: number, value: string | number) => {
+    if (selectedFormHasSubmitted) return; // Prevent changes if form is already submitted
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
     setInvalidFields((prev) => {
       if (!prev.has(fieldId)) return prev;
@@ -164,8 +181,13 @@ export function FormsPage() {
     });
   };
 
+  const handleSubmitClick = () => {
+    if (!form || !user || selectedFormHasSubmitted) return;
+    setShowConfirmDialog(true);
+  };
+
   const handleSubmit = async () => {
-    if (!form || !user) return;
+    if (!form || !user || selectedFormHasSubmitted) return;
     // Validate required fields
     const missing = new Set<number>();
     for (const field of form.fields) {
@@ -211,7 +233,9 @@ export function FormsPage() {
       setIsSubmitting(true);
       await submitForm(payload);
       toast.success(t('pages.forms.formSubmitted'));
-      setAnswers({});
+      setShowConfirmDialog(false);
+      // Refresh the page to update form states
+      window.location.reload();
     } catch (err) {
       toast.error(t('errors.serverError'));
     } finally {
@@ -243,13 +267,18 @@ export function FormsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {availableForms.map((f) => {
                 const isSelected = selectedFormId === f.id;
+                const isSubmitted = f.has_submitted;
                 return (
                   <button
                     key={f.id}
-                    onClick={() => setSelectedFormId(f.id)}
-                    className={`text-left rounded-md border p-4 transition-colors ${
-                      isSelected ? "border-primary" : "border-border hover:bg-muted"
-                    }`}
+                    onClick={() => !isSubmitted && setSelectedFormId(f.id)}
+                    disabled={isSubmitted}
+                    className={`text-left rounded-md border p-4 transition-colors ${isSelected
+                      ? "border-primary"
+                      : isSubmitted
+                        ? "border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800 cursor-not-allowed opacity-60"
+                        : "border-border hover:bg-muted"
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -260,9 +289,16 @@ export function FormsPage() {
                           </div>
                         )}
                       </div>
-                      {isSelected ? (
-                        <Badge variant="secondary" className="text-xs">Selected</Badge>
-                      ) : null}
+                      <div className="flex flex-col gap-1">
+                        {isSelected && (
+                          <Badge variant="secondary" className="text-xs">Selected</Badge>
+                        )}
+                        {isSubmitted && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500/40">
+                            Submitted
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -281,6 +317,21 @@ export function FormsPage() {
 
       {form && !isFormLoading && (
         <>
+          {selectedFormHasSubmitted && (
+            <Card className="border-green-200 bg-green-50 dark:border-green-500/40 dark:bg-green-900/30">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">Form Already Submitted</h3>
+                    <p className="text-xs text-green-600 dark:text-green-400">This form has been completed and cannot be modified.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {form.fields.map((field) => (
             <Card
               key={field.id}
@@ -307,12 +358,20 @@ export function FormsPage() {
                   <RadioGroup
                     value={String(answers[field.id] ?? "")}
                     onValueChange={(value) => handleAnswerChange(field.id, value)}
-                    className={`flex flex-wrap gap-6 w-full justify-around`}
+                    disabled={selectedFormHasSubmitted}
+                    className={`flex flex-wrap gap-6 w-full justify-around ${selectedFormHasSubmitted ? 'opacity-60' : ''}`}
                   >
                     {field.options.map((option) => (
                       <div key={option.id} className="flex items-center space-x-3 min-w-[48px]">
-                        <RadioGroupItem value={String(option.id)} id={`f${field.id}-o${option.id}`} />
-                        <Label htmlFor={`f${field.id}-o${option.id}`} className="text-base font-normal cursor-pointer">
+                        <RadioGroupItem
+                          value={String(option.id)}
+                          id={`f${field.id}-o${option.id}`}
+                          disabled={selectedFormHasSubmitted}
+                        />
+                        <Label
+                          htmlFor={`f${field.id}-o${option.id}`}
+                          className={`text-base font-normal ${selectedFormHasSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
                           {option.label}
                         </Label>
                       </div>
@@ -328,13 +387,15 @@ export function FormsPage() {
                         placeholder="Type here..."
                         value={String(answers[field.id] ?? "")}
                         onChange={(e) => handleAnswerChange(field.id, e.target.value)}
-                        className={`min-h-[100px]`}
+                        disabled={selectedFormHasSubmitted}
+                        className={`min-h-[100px] ${selectedFormHasSubmitted ? 'opacity-60 cursor-not-allowed' : ''}`}
                       />
                     ) : (
                       <input
                         id={`field-${field.id}`}
                         type="email"
-                        className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50`}
+                        disabled={selectedFormHasSubmitted}
+                        className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${selectedFormHasSubmitted ? 'opacity-60 cursor-not-allowed' : ''}`}
                         value={String(answers[field.id] ?? "")}
                         onChange={(e) => handleAnswerChange(field.id, e.target.value)}
                       />
@@ -346,17 +407,54 @@ export function FormsPage() {
           ))}
 
           <div className="flex justify-end">
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !form}
-              className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
-              size="sm"
-            >
-              {isSubmitting ? t('common.buttons.submit') + "..." : t('pages.forms.submitForm')}
-            </Button>
+            {selectedFormHasSubmitted ? (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500/40">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-medium">Form Already Submitted</span>
+              </div>
+            ) : (
+              <Button
+                onClick={handleSubmitClick}
+                disabled={isSubmitting || !form}
+                className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
+                size="sm"
+              >
+                {isSubmitting ? t('common.buttons.submit') + "..." : t('pages.forms.submitForm')}
+              </Button>
+            )}
           </div>
         </>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Confirm Form Submission</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Are you sure you want to submit this form? Once submitted, you won't be able to make changes.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-[#1EDE9E] text-white hover:bg-[#19c98c]"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Form"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
