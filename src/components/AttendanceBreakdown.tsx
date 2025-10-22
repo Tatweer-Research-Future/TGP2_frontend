@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconCalendar, IconClock, IconCheck, IconX, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IconCalendar, IconClock, IconCheck, IconX, IconChevronDown, IconChevronUp, IconSearch, IconFilter } from "@tabler/icons-react";
 import type { AttendanceLog } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 
@@ -13,13 +15,19 @@ interface AttendanceBreakdownProps {
   attendanceLog?: {
     attendance_days: number;
     absent_days: number;
-    details: Array<{
-      date: string;
-      event: string;
-      check_in: string | null;
-      check_out: string | null;
-      status: string | null;
-      notes: string | null;
+    events: Array<{
+      event_id: number;
+      event_title: string;
+      start_time: string;
+      end_time: string;
+      attended_days: Array<{
+        date: string;
+        check_in: string;
+        check_out: string;
+      }>;
+      absent_days: Array<{
+        date: string;
+      }>;
     }>;
   } | null;
 }
@@ -35,7 +43,10 @@ interface AttendanceDay {
   date: string;
   status: 'present' | 'absent' | 'partial';
   events: Array<{
-    event: string;
+    eventId: number;
+    eventTitle: string;
+    startTime: string;
+    endTime: string;
     checkInTime?: string;
     checkOutTime?: string;
     duration?: string;
@@ -54,22 +65,16 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     attendanceRate: 0,
   });
   const [attendanceDays, setAttendanceDays] = useState<AttendanceDay[]>([]);
+  const [filteredDays, setFilteredDays] = useState<AttendanceDay[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent" | "partial">("all");
+  const [eventFilter, setEventFilter] = useState<string>("all");
 
   useEffect(() => {
     const hydrateFromBackend = () => {
-      if (attendanceLog && Array.isArray(attendanceLog.details)) {
-        // Map backend attendance_log.details into AttendanceLog-like structure
-        const mapped: AttendanceLog[] = attendanceLog.details.map((d, idx) => ({
-          id: idx + 1,
-          trainee: { id: Number(userId), name: "", email: "" },
-          event: { id: idx + 1, title: d.event, start_time: "", end_time: "" },
-          attendance_date: d.date,
-          check_in_time: d.check_in ?? "",
-          check_out_time: d.check_out,
-          notes: d.notes ?? "",
-        }));
-        setAttendanceLogs(mapped);
-        processAttendanceData(mapped);
+      if (attendanceLog && Array.isArray(attendanceLog.events)) {
+        // Process the new event-based structure
+        processNewAttendanceData(attendanceLog);
         setIsLoading(false);
         return true;
       }
@@ -93,6 +98,129 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
       }
     })();
   }, [userId, attendanceLog]);
+
+  // Filter attendance days based on search and filters
+  useEffect(() => {
+    let filtered = attendanceDays;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(day => 
+        day.date.toLowerCase().includes(query) ||
+        day.events.some(event => 
+          event.eventTitle.toLowerCase().includes(query)
+        )
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(day => day.status === statusFilter);
+    }
+
+    // Apply event filter
+    if (eventFilter !== "all") {
+      filtered = filtered.filter(day => 
+        day.events.some(event => event.eventId.toString() === eventFilter)
+      );
+    }
+
+    setFilteredDays(filtered);
+  }, [attendanceDays, searchQuery, statusFilter, eventFilter]);
+
+  const processNewAttendanceData = (attendanceLog: NonNullable<AttendanceBreakdownProps['attendanceLog']>) => {
+    console.log("Processing new attendance data:", attendanceLog);
+    
+    // Create a map to track all unique dates across all events
+    const allDates = new Set<string>();
+    const eventDataByDate = new Map<string, Array<{
+      eventId: number;
+      eventTitle: string;
+      startTime: string;
+      endTime: string;
+      checkInTime?: string;
+      checkOutTime?: string;
+      duration?: string;
+    }>>();
+
+    // Process each event
+    attendanceLog.events.forEach(event => {
+      // Add attended days
+      event.attended_days.forEach(day => {
+        allDates.add(day.date);
+        if (!eventDataByDate.has(day.date)) {
+          eventDataByDate.set(day.date, []);
+        }
+        
+        const duration = calculateDuration(day.check_in, day.check_out);
+        eventDataByDate.get(day.date)!.push({
+          eventId: event.event_id,
+          eventTitle: event.event_title,
+          startTime: event.start_time,
+          endTime: event.end_time,
+          checkInTime: day.check_in,
+          checkOutTime: day.check_out,
+          duration,
+        });
+      });
+
+      // Add absent days
+      event.absent_days.forEach(day => {
+        allDates.add(day.date);
+        if (!eventDataByDate.has(day.date)) {
+          eventDataByDate.set(day.date, []);
+        }
+        
+        eventDataByDate.get(day.date)!.push({
+          eventId: event.event_id,
+          eventTitle: event.event_title,
+          startTime: event.start_time,
+          endTime: event.end_time,
+        });
+      });
+    });
+
+    // Convert to attendance days
+    const days: AttendanceDay[] = Array.from(allDates).sort().map(date => {
+      const events = eventDataByDate.get(date) || [];
+      const hasCompleteAttendance = events.some(event => 
+        event.checkInTime && event.checkOutTime
+      );
+      const hasPartialAttendance = events.some(event => 
+        event.checkInTime && !event.checkOutTime
+      );
+
+      let status: 'present' | 'absent' | 'partial' = 'absent';
+      if (hasCompleteAttendance) {
+        status = 'present';
+      } else if (hasPartialAttendance) {
+        status = 'partial';
+      }
+
+      return {
+        date,
+        status,
+        events,
+      };
+    });
+
+    setAttendanceDays(days);
+    setFilteredDays(days);
+
+    // Calculate statistics using backend values
+    const totalDays = attendanceLog.attendance_days + attendanceLog.absent_days;
+    const presentDays = attendanceLog.attendance_days;
+    const absentDays = attendanceLog.absent_days;
+    const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 0;
+
+    setStats({
+      totalDays,
+      presentDays,
+      absentDays,
+      attendanceRate,
+    });
+  };
 
   const processAttendanceData = (logs: AttendanceLog[]) => {
     console.log("Processing attendance data:", logs);
@@ -121,7 +249,10 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
           : undefined;
         
         return {
-          event: log.event.title,
+          eventId: log.event.id,
+          eventTitle: log.event.title,
+          startTime: log.event.start_time || '',
+          endTime: log.event.end_time || '',
           checkInTime: log.check_in_time,
           checkOutTime: log.check_out_time || undefined,
           duration,
@@ -151,6 +282,7 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     });
 
     setAttendanceDays(days);
+    setFilteredDays(days);
 
     // Calculate statistics - use backend values when available
     let totalDays, presentDays, absentDays, attendanceRate;
@@ -292,21 +424,208 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
           </div>
         </div>
 
+        {/* Event-specific Statistics */}
+        {attendanceLog && attendanceLog.events.length > 0 && (
+          <div className="space-y-4">
+            <div className="text-sm font-medium text-muted-foreground">
+              Event-wise Attendance Summary
+            </div>
+            <div className="grid gap-3">
+              {attendanceLog.events.map((event) => {
+                const totalEventDays = event.attended_days.length + event.absent_days.length;
+                const eventAttendanceRate = totalEventDays > 0 ? (event.attended_days.length / totalEventDays) * 100 : 0;
+                
+                return (
+                  <div key={event.event_id} className="bg-muted/30 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium">{event.event_title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {event.start_time} - {event.end_time}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                          {event.attended_days.length}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Attended</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                          {event.absent_days.length}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Absent</div>
+                      </div>
+                      <div>
+                        <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                          {eventAttendanceRate.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">Rate</div>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Attendance Progress</span>
+                        <span>{eventAttendanceRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${eventAttendanceRate}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Trend Visualization */}
+        {attendanceDays.length > 0 && (
+          <div className="space-y-4">
+            <div className="text-sm font-medium text-muted-foreground">
+              Attendance Trend (Last 7 Days)
+            </div>
+            <div className="bg-muted/30 rounded-lg p-4">
+              <div className="flex items-end justify-between h-20 space-x-1">
+                {attendanceDays.slice(-7).map((day, index) => {
+                  const isPresent = day.status === 'present';
+                  const isPartial = day.status === 'partial';
+                  const height = isPresent ? 100 : isPartial ? 60 : 20;
+                  
+                  return (
+                    <div key={index} className="flex flex-col items-center space-y-1 flex-1">
+                      <div 
+                        className={`w-full rounded-t transition-all duration-300 ${
+                          isPresent 
+                            ? 'bg-green-500' 
+                            : isPartial 
+                            ? 'bg-yellow-500' 
+                            : 'bg-red-500'
+                        }`}
+                        style={{ height: `${height}%` }}
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-center mt-2 space-x-4 text-xs text-muted-foreground">
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-green-500 rounded"></div>
+                  <span>Present</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+                  <span>Partial</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 bg-red-500 rounded"></div>
+                  <span>Absent</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Detailed Attendance History */}
         {isExpanded && (
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-muted-foreground">
-              Daily Attendance Records
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-muted-foreground">
+                Daily Attendance Records ({filteredDays.length} of {attendanceDays.length})
+              </div>
             </div>
-            {attendanceDays.length === 0 ? (
+
+            {/* Filters */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search */}
+                <div className="relative flex-1">
+                  <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
+                  <Input
+                    placeholder="Search by date or event..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Event Filter */}
+                {attendanceLog && attendanceLog.events.length > 0 && (
+                  <Select value={eventFilter} onValueChange={setEventFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Event" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Events</SelectItem>
+                      {attendanceLog.events.map((event) => (
+                        <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                          {event.event_title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Clear Filters */}
+                {(searchQuery || statusFilter !== "all" || eventFilter !== "all") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setStatusFilter("all");
+                      setEventFilter("all");
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    <IconFilter className="size-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </div>
+            {filteredDays.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <div className="mb-2">No attendance records found</div>
-                <div className="text-sm">This user may not have any attendance records in the last 30 days.</div>
-                <div className="text-xs mt-1">User ID: {userId}</div>
+                <div className="mb-2">
+                  {attendanceDays.length === 0 
+                    ? "No attendance records found" 
+                    : "No records match your filters"
+                  }
+                </div>
+                <div className="text-sm">
+                  {attendanceDays.length === 0 
+                    ? "This user may not have any attendance records in the last 30 days."
+                    : "Try adjusting your search or filter criteria."
+                  }
+                </div>
+                {attendanceDays.length === 0 && (
+                  <div className="text-xs mt-1">User ID: {userId}</div>
+                )}
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {attendanceDays.map((day, index) => (
+                {filteredDays.map((day, index) => (
                   <div key={index} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{formatDate(day.date)}</div>
@@ -316,28 +635,36 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                     {day.events.length > 0 && (
                       <div className="space-y-2">
                         {day.events.map((event, eventIndex) => (
-                          <div key={eventIndex} className="bg-muted/50 rounded p-3 space-y-1">
-                            <div className="font-medium text-sm">{event.event}</div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              {event.checkInTime && (
+                          <div key={eventIndex} className="bg-muted/50 rounded p-3 space-y-2">
+                            <div className="font-medium text-sm">{event.eventTitle}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Scheduled: {event.startTime} - {event.endTime}
+                            </div>
+                            {event.checkInTime ? (
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <IconClock className="size-3" />
                                   In: {event.checkInTime}
                                 </div>
-                              )}
-                              {event.checkOutTime && (
-                                <div className="flex items-center gap-1">
-                                  <IconClock className="size-3" />
-                                  Out: {event.checkOutTime}
-                                </div>
-                              )}
-                              {event.duration && (
-                                <div className="flex items-center gap-1">
-                                  <IconCheck className="size-3" />
-                                  Duration: {event.duration}
-                                </div>
-                              )}
-                            </div>
+                                {event.checkOutTime && (
+                                  <div className="flex items-center gap-1">
+                                    <IconClock className="size-3" />
+                                    Out: {event.checkOutTime}
+                                  </div>
+                                )}
+                                {event.duration && (
+                                  <div className="flex items-center gap-1">
+                                    <IconCheck className="size-3" />
+                                    Duration: {event.duration}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-red-500 dark:text-red-400">
+                                <IconX className="size-3 inline mr-1" />
+                                Absent
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
