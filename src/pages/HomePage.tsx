@@ -30,6 +30,17 @@ function formatDate(dateString: string): string {
 
 function AnnouncementCard({ announcement }: { announcement: Announcement }) {
   const { t } = useTranslation();
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  
+  const reactions: Array<{ emoji: string; label: string; count: number }> = [
+    { emoji: "👍", label: "Like", count: 12 },
+    { emoji: "❤️", label: "Love", count: 8 },
+    { emoji: "😂", label: "Funny", count: 5 },
+    { emoji: "🤔", label: "Thinking", count: 3 },
+    { emoji: "🙌", label: "Celebrate", count: 15 },
+    { emoji: "💯", label: "Perfect", count: 7 },
+    { emoji: "😢", label: "Sad", count: 2 },
+  ];
   
   return (
     <Card className="border-l-4 border-l-blue-500">
@@ -48,6 +59,25 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
             <p className="text-base text-muted-foreground whitespace-pre-wrap break-words">
               {announcement.body}
             </p>
+            
+            {/* Emoji Reaction Buttons */}
+            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border/50">
+              {reactions.map((reaction) => (
+                <button
+                  key={reaction.emoji}
+                  onClick={() => setSelectedEmoji(selectedEmoji === reaction.emoji ? null : reaction.emoji)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors hover:bg-muted ${
+                    selectedEmoji === reaction.emoji
+                      ? "bg-blue-100 dark:bg-blue-900/30"
+                      : ""
+                  }`}
+                  title={reaction.label}
+                >
+                  <span className="text-lg">{reaction.emoji}</span>
+                  <span className="text-xs text-muted-foreground">{reaction.count}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -39,15 +39,10 @@ export default function App() {
                       {/* Redirect root to user's home page */}
                       <Route path="/" element={<HomeRedirect />} />
 
+                      {/* Home page - accessible to all authenticated users */}
+                      <Route path="/home" element={<HomePage />} />
+                      
                       {/* Permission-protected routes */}
-                      <Route
-                        path="/home"
-                        element={
-                          <PermissionProtectedRoute requiredPage="/home">
-                            <HomePage />
-                          </PermissionProtectedRoute>
-                        }
-                      />
                       <Route
                         path="/overview"
                         element={
