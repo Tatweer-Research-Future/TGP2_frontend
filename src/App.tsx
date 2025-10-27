@@ -7,6 +7,8 @@ import { FormsPage } from "./pages/FormsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { AccountPage } from "./pages/AccountPage";
 import { AttendancePage } from "./pages/AttendancePage";
+import { TrackPage } from "./pages/TrackPage";
+import SessionEditPage from "./pages/SessionEditPage";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -74,6 +76,24 @@ export default function App() {
                         element={
                           <PermissionProtectedRoute requiredPage="/attendance">
                             <AttendancePage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/track"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/track">
+                            <TrackPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/track/sessions/:id/edit"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/track/sessions/:id/edit">
+                            <SessionEditPage />
                           </PermissionProtectedRoute>
                         }
                       />

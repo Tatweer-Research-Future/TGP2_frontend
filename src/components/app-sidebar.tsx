@@ -4,6 +4,7 @@ import {
   IconClock,
   IconPresentation,
   IconChartBar,
+  IconBook,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import logoImage from "@/assets/logo.png";
@@ -31,6 +32,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/forms": IconPresentation,
     "/attendance": IconClock,
     "/overview": IconChartBar,
+    "/track": IconBook,
   };
 
   const titleMap: Record<string, string> = {
@@ -38,6 +40,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/forms": t("navigation.forms"),
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
+    "/track": t("navigation.track"),
   };
 
   return {

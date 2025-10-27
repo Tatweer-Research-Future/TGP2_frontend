@@ -11,7 +11,9 @@ export type PageRoute =
   | "/candidates/:id" // UserDetailPage
   | "/forms" // FormsPage
   | "/attendance" // AttendancePage
-  | "/overview"; // DashboardPage
+  | "/overview" // DashboardPage
+  | "/track" // TrackPage
+  | "/track/sessions/:id/edit"; // SessionEditPage
 
 export type GroupPermissions = {
   allowedPages: PageRoute[];
@@ -32,12 +34,18 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
     groupName: "PRESENTATION",
   },
   5: {
-    allowedPages: ["/candidates", "/candidates/:id", "/forms"],
+    allowedPages: [
+      "/candidates",
+      "/candidates/:id",
+      "/forms",
+      "/track",
+      "/track/sessions/:id/edit",
+    ],
     homePage: "/forms",
     groupName: "INSTRUCTOR/DATA",
   },
   8: {
-    allowedPages: ["/forms"],
+    allowedPages: ["/forms", "/track"],
     homePage: "/forms",
     groupName: "TRAINEE",
   },
@@ -51,7 +59,9 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
 /**
  * Get user permissions based on group_id
  */
-export function getUserPermissions(groupId: number | undefined): GroupPermissions | null {
+export function getUserPermissions(
+  groupId: number | undefined
+): GroupPermissions | null {
   if (!groupId || !GROUP_PERMISSIONS[groupId]) {
     return null;
   }
@@ -61,7 +71,9 @@ export function getUserPermissions(groupId: number | undefined): GroupPermission
 /**
  * Get user permissions based on groups array (for multiple roles)
  */
-export function getUserPermissionsFromGroups(groups: string[]): GroupPermissions | null {
+export function getUserPermissionsFromGroups(
+  groups: string[]
+): GroupPermissions | null {
   if (!groups || !Array.isArray(groups)) return null;
 
   const groupMappings: Record<string, number> = {
@@ -76,17 +88,27 @@ export function getUserPermissionsFromGroups(groups: string[]): GroupPermissions
   };
 
   // Check if user has both instructor and attendance_tracker roles
-  const hasInstructor = groups.some(group => 
-    group.toLowerCase().includes('instructor') || group.toLowerCase().includes('data')
+  const hasInstructor = groups.some(
+    (group) =>
+      group.toLowerCase().includes("instructor") ||
+      group.toLowerCase().includes("data")
   );
-  const hasAttendanceTracker = groups.some(group => 
-    group.toLowerCase().includes('attendance_tracker') || group.toLowerCase().includes('support')
+  const hasAttendanceTracker = groups.some(
+    (group) =>
+      group.toLowerCase().includes("attendance_tracker") ||
+      group.toLowerCase().includes("support")
   );
 
   // If user has both instructor and attendance_tracker roles, combine permissions
   if (hasInstructor && hasAttendanceTracker) {
     return {
-      allowedPages: ["/candidates", "/candidates/:id", "/forms", "/attendance"],
+      allowedPages: [
+        "/candidates",
+        "/candidates/:id",
+        "/forms",
+        "/attendance",
+        "/track",
+      ],
       homePage: "/forms", // Default to forms as home for instructor
       groupName: "INSTRUCTOR + ATTENDANCE_TRACKER",
     };
@@ -108,7 +130,10 @@ export function getUserPermissionsFromGroups(groups: string[]): GroupPermissions
 /**
  * Check if user can access a specific page
  */
-export function canAccessPage(groupId: number | undefined, page: string): boolean {
+export function canAccessPage(
+  groupId: number | undefined,
+  page: string
+): boolean {
   const permissions = getUserPermissions(groupId);
   if (!permissions) return false;
 
@@ -130,7 +155,10 @@ export function canAccessPage(groupId: number | undefined, page: string): boolea
 /**
  * Check if user can access a specific page based on groups array
  */
-export function canAccessPageFromGroups(groups: string[], page: string): boolean {
+export function canAccessPageFromGroups(
+  groups: string[],
+  page: string
+): boolean {
   const permissions = getUserPermissionsFromGroups(groups);
   if (!permissions) return false;
 
@@ -182,6 +210,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/forms": { title: "navigation.forms" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
+    "/track": { title: "navigation.track" },
   };
 
   return permissions.allowedPages
@@ -210,6 +239,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/forms": { title: "navigation.forms" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
+    "/track": { title: "navigation.track" },
   };
 
   return permissions.allowedPages

@@ -127,3 +127,34 @@
     transform: rotate(360deg);
   }
 }
+
+/* Light mode background gradient */
+.light body {
+  /* Set a base background color */
+  background-color: #f4f4f7;
+
+  /* Layer multiple radial gradients */
+  background-image:
+    /* Top-left warm light */ radial-gradient(
+      circle at 10% 20%,
+      rgba(255, 220, 180, 0.4),
+      transparent 30%
+    ),
+    /* Top-right cool light */
+      radial-gradient(
+        circle at 90% 15%,
+        rgba(200, 180, 255, 0.4),
+        transparent 35%
+      ),
+    /* Bottom-left cool light */
+      radial-gradient(
+        circle at 20% 85%,
+        rgba(180, 200, 255, 0.5),
+        transparent 40%
+      );
+
+  /* Ensure the background covers the full viewport */
+  min-height: 100vh;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}

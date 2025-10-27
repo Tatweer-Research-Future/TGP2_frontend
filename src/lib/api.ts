@@ -167,6 +167,63 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
+// Helper for multipart/form-data requests (file uploads)
+export async function apiFetchFormData<T>(
+  path: string,
+  formData: FormData,
+  options: {
+    method?: "POST" | "PUT" | "PATCH";
+    headers?: Record<string, string>;
+  } = {}
+): Promise<T> {
+  const method = options.method ?? "POST";
+  const url = joinUrl(apiBaseUrl, path);
+
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(options.headers ?? {}),
+  };
+
+  // CSRF for unsafe methods
+  const token = await ensureCsrfToken();
+  if (token) headers["X-CSRFToken"] = token;
+
+  // Auth
+  const accessToken = getAccessToken();
+  if (accessToken && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers, // Deliberately omit Content-Type so browser sets proper boundary
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let detail: unknown = undefined;
+    try {
+      detail = await response.json();
+    } catch (_) {}
+
+    const error = new Error(
+      typeof detail === "object" && detail !== null
+        ? JSON.stringify(detail)
+        : response.statusText
+    );
+    (error as any).status = response.status;
+    (error as any).data = detail;
+    throw error;
+  }
+
+  if (response.status === 204) {
+    return undefined as unknown as T;
+  }
+
+  return (await response.json()) as T;
+}
+
 // --- Auth / Current user profile ---
 export type CurrentUserResponse = {
   user_id: number;
@@ -348,9 +405,7 @@ export async function getForms(): Promise<BackendFormsList> {
   return apiFetch<BackendFormsList>(`/forms/`);
 }
 
-export async function getFormById(
-  id: number | string
-): Promise<BackendForm> {
+export async function getFormById(id: number | string): Promise<BackendForm> {
   return apiFetch<BackendForm>(`/forms/${id}`);
 }
 
@@ -522,36 +577,41 @@ export async function getUserAttendanceFromOverview(
     for (let i = 0; i < 30; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = date.toISOString().split("T")[0];
 
       try {
         const overview = await getAttendanceOverview(dateString);
         console.log(`Checking date ${dateString}:`, overview);
 
-        const user = overview.users.find(u => u.user_id.toString() === userId);
+        const user = overview.users.find(
+          (u) => u.user_id.toString() === userId
+        );
         console.log(`Found user for date ${dateString}:`, user);
 
         if (user) {
-          user.events.forEach(event => {
+          user.events.forEach((event) => {
             if (event.check_in_time) {
-              console.log(`Adding attendance log for date ${dateString}:`, event);
+              console.log(
+                `Adding attendance log for date ${dateString}:`,
+                event
+              );
               logs.push({
                 id: 0, // We don't have the actual log ID from overview
                 trainee: {
                   id: user.user_id,
                   name: user.user_name,
-                  email: user.user_email
+                  email: user.user_email,
                 },
-                event: overview.events.find(e => e.id === event.event_id) || {
+                event: overview.events.find((e) => e.id === event.event_id) || {
                   id: event.event_id,
                   title: `Event ${event.event_id}`,
-                  start_time: '',
-                  end_time: ''
+                  start_time: "",
+                  end_time: "",
                 },
                 attendance_date: dateString,
                 check_in_time: event.check_in_time,
                 check_out_time: event.check_out_time,
-                notes: ''
+                notes: "",
               });
             }
           });
@@ -606,22 +666,152 @@ export async function exportAttendanceCSV(params: {
   });
 
   if (params.track) {
-    searchParams.append('track', params.track);
+    searchParams.append("track", params.track);
   }
   if (params.event) {
-    searchParams.append('event', params.event);
+    searchParams.append("event", params.event);
   }
 
-  const response = await fetch(`${apiBaseUrl}/export-attendance-csv/?${searchParams}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
+  const response = await fetch(
+    `${apiBaseUrl}/export-attendance-csv/?${searchParams}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to export CSV: ${response.statusText}`);
   }
 
   return response.blob();
+}
+
+// --- Portal (Tracks/Modules/Sessions) ---
+export type PortalContent = {
+  id: number;
+  title: string;
+  file: string | null;
+  link: string | null;
+  created_at: string;
+};
+
+export type PortalAssignment = {
+  id: number;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  type: string;
+  is_gradable: boolean;
+};
+
+export type PortalSession = {
+  id: number;
+  title: string;
+  description: string | null;
+  order: number;
+  start_time: string | null;
+  end_time: string | null;
+  content: PortalContent[];
+  assignments: PortalAssignment[];
+};
+
+export type PortalModule = {
+  id: number;
+  title: string;
+  description: string | null;
+  order: number;
+  type: string; // "WEEK"
+  sessions: PortalSession[];
+};
+
+export type PortalTrack = {
+  id: number;
+  name: string;
+  description: string | null;
+  modules: PortalModule[];
+};
+
+export type PortalTracksResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: PortalTrack[];
+};
+
+export async function getPortalTracks(): Promise<PortalTracksResponse> {
+  return apiFetch<PortalTracksResponse>(`/portal/tracks/`);
+}
+
+// --- Portal Sessions ---
+export async function getPortalSession(
+  id: number | string
+): Promise<PortalSession> {
+  return apiFetch<PortalSession>(`/portal/sessions/${id}/`);
+}
+
+export type UpdatePortalSessionPayload = Partial<
+  Pick<PortalSession, "title" | "description" | "start_time" | "end_time">
+>;
+
+export async function updatePortalSession(
+  id: number | string,
+  payload: UpdatePortalSessionPayload
+): Promise<PortalSession> {
+  return apiFetch<PortalSession>(`/portal/sessions/${id}/`, {
+    method: "PUT",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function uploadPortalSessionContentFile(
+  id: number | string,
+  params: { file: File; title?: string; link?: string | null }
+): Promise<PortalContent> {
+  const form = new FormData();
+  form.append("file", params.file);
+  if (params.title) form.append("title", params.title);
+  if (params.link !== undefined && params.link !== null) {
+    form.append("link", params.link);
+  }
+  return apiFetchFormData<PortalContent>(
+    `/portal/sessions/${id}/content/`,
+    form,
+    {
+      method: "POST",
+    }
+  );
+}
+
+// --- Portal Assignments ---
+export type CreatePortalAssignmentPayload = {
+  title: string;
+  description?: string | null;
+  due_date?: string | null; // ISO string
+  type?: string; // default NOT_GRADED
+  is_gradable?: boolean;
+};
+
+export async function createPortalAssignment(
+  sessionId: number | string,
+  payload: CreatePortalAssignmentPayload
+): Promise<PortalAssignment> {
+  const body = {
+    type: "NOT_GRADED",
+    is_gradable: false,
+    ...payload,
+  };
+  return apiFetch<PortalAssignment>(
+    `/portal/sessions/${sessionId}/assignments/`,
+    {
+      method: "POST",
+      body,
+      requireCsrf: true,
+    }
+  );
 }

@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useTheme } from "@/components/theme-provider";
 import backgroundSvg from "@/assets/background.svg";
-import backgroundWhiteSvg from "@/assets/background-white.svg";
+// removed light-mode SVG background; using CSS gradient on body instead
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,7 +11,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { theme } = useTheme();
-  
+  const prefersDark =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = theme === "dark" || (theme === "system" && prefersDark);
+
   return (
     <SidebarProvider
       style={
@@ -25,15 +30,21 @@ export function AppLayout({ children }: AppLayoutProps) {
       <SidebarInset
         className="relative rounded-xl overflow-hidden"
         style={{
-          backgroundImage: `url(${theme === "dark" ? backgroundSvg : backgroundWhiteSvg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundAttachment: 'fixed'
+          backgroundImage: isDark ? `url(${backgroundSvg})` : "none",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed",
         }}
       >
-        {/* Transparent overlay */}
-        <div className="absolute inset-0 bg-background/85 backdrop-blur-sm pointer-events-none rounded-xl" />
+        {/* Page backdrop */}
+        <div
+          className={
+            isDark
+              ? "absolute inset-0 bg-background/85 backdrop-blur-sm pointer-events-none rounded-xl"
+              : "absolute inset-0 bg-white pointer-events-none rounded-xl"
+          }
+        />
         <div className="relative z-10">
           <SiteHeader />
           <div className="flex flex-1 flex-col">
