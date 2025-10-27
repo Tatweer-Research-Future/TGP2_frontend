@@ -81,11 +81,13 @@
     }
   },
   "navigation": {
+    "home": "الرئيسية",
     "candidates": "المرشحون",
     "attendance": "الحضور",
     "overview": "نظرة عامة",
     "forms": "النماذج",
     "account": "الحساب",
+    "track": "التتبع",
     "dashboard": "لوحة التحكم"
   },
   "auth": {
