@@ -130,31 +130,40 @@
 
 /* Light mode background gradient */
 .light body {
-  /* Set a base background color */
-  background-color: #f4f4f7;
+  /* Set a fallback color for older browsers */
+  background-color: #f8f7ff;
 
-  /* Layer multiple radial gradients */
-  background-image:
-    /* Top-left warm light */ radial-gradient(
-      circle at 10% 20%,
-      rgba(255, 220, 180, 0.4),
-      transparent 30%
-    ),
-    /* Top-right cool light */
-      radial-gradient(
-        circle at 90% 15%,
-        rgba(200, 180, 255, 0.4),
-        transparent 35%
-      ),
-    /* Bottom-left cool light */
-      radial-gradient(
-        circle at 20% 85%,
-        rgba(180, 200, 255, 0.5),
-        transparent 40%
-      );
+  /* The Gradient */
+  background-image: linear-gradient(
+    170deg,
+    #f8f7ff 0%,
+    /* Off-white with a hint of purple */ #eaddfc 60%,
+    /* Soft, muted purple in the middle */ #ffddbb 100%
+      /* Warm, soft amber/peach at the bottom */
+  );
 
-  /* Ensure the background covers the full viewport */
+  /* Ensure the gradient covers the full page */
   min-height: 100vh;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  margin: 0;
+}
+.dark body {
+  /* Fallback color for older browsers */
+  /* Fallback color for older browsers */
+  background-color: #1a1a2e;
+
+  /* The Dark Mode Gradient */
+  background-image: linear-gradient(
+    170deg,
+    #1a1a2e 0%,
+    /* Very dark blue/purple */ #3e2352 50%,
+    /* A slightly richer dark purple */ #5c3a21 100%
+      /* Dark, desaturated amber/brown */
+  );
+
+  /* Ensure the gradient covers the full page */
+  min-height: 100vh;
+  margin: 0;
+
+  /* Set text color to be readable on a dark background */
+  color: #eaeaea;
 }
