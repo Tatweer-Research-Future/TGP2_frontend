@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconPencil,
-} from "@tabler/icons-react";
+import { IconChevronRight, IconPencil } from "@tabler/icons-react";
 import { Loader } from "@/components/ui/loader";
 import { getPortalTracks, type PortalTrack } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
@@ -41,9 +37,7 @@ export function TrackPage() {
     [tracks]
   );
 
-  const toggleWeek = (index: number) => {
-    setOpenWeeks((prev) => ({ ...prev, [index]: !(prev[index] ?? true) }));
-  };
+  // removed unused toggleWeek helper; we toggle inline on the header button
 
   return (
     <div className="px-4 lg:px-6">
@@ -70,70 +64,76 @@ export function TrackPage() {
         <div className="grid grid-cols-1 gap-4">
           {firstTrack.modules
             .sort((a, b) => a.order - b.order)
-            .map((mod, idx) => {
+            .map((mod) => {
               const isOpen = openWeeks[mod.id] ?? true;
               return (
                 <Card
                   key={mod.id}
-                  className="overflow-hidden gap-0 border-none shadow-none py-3"
+                  className="overflow-hidden gap-0 border-none shadow-none py-2"
                 >
-                  <CardHeader className="pb-0">
-                    <CardTitle className="flex items-center justify-between text-lg">
-                      <span>{mod.title}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
-                        }
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        {isOpen ? (
-                          <>
-                            <IconChevronUp className="size-4 mr-1" />
-                            Hide
-                          </>
-                        ) : (
-                          <>
-                            <IconChevronDown className="size-4 mr-1" />
-                            Show
-                          </>
-                        )}
-                      </Button>
-                    </CardTitle>
+                  <CardHeader className="p-0">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() =>
+                        setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
+                      }
+                      className="w-full flex items-center rounded-md bg-[#6d5cff]/10 hover:bg-[#6d5cff]/15 px-4 py-3 transition-colors outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 active:outline-none"
+                    >
+                      <IconChevronRight
+                        className={`mr-2 size-4 text-[#6d5cff] transition-transform ${
+                          isOpen ? "rotate-90" : "rotate-0"
+                        }`}
+                      />
+                      <span className="mx-2 h-5 w-px bg-[#6d5cff]/30" />
+                      <CardTitle className="m-0 p-0 text-base font-medium">
+                        {mod.title}
+                      </CardTitle>
+                    </button>
                   </CardHeader>
-                  {isOpen && (
-                    <CardContent className="pt-0">
-                      <div className="mt-3 rounded-md border border-border/60">
-                        <div className="divide-y divide-border/70">
-                          {mod.sessions
-                            .sort((a, b) => a.order - b.order)
-                            .map((session) => (
-                              <div
-                                key={session.id}
-                                className="flex items-center justify-between py-3"
-                              >
-                                <div className="text-sm md:text-base">
-                                  Day {session.order} — {session.title}
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    navigate(
-                                      `/track/sessions/${session.id}/edit`
-                                    )
-                                  }
-                                >
-                                  <IconPencil className="size-4 mr-1" />
-                                  Edit
-                                </Button>
-                              </div>
-                            ))}
+                  <div
+                    className={`grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out ${
+                      isOpen
+                        ? "grid-rows-[1fr] opacity-100 translate-y-0"
+                        : "grid-rows-[0fr] opacity-95 -translate-y-0.5"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <CardContent className="px-0">
+                        <div>
+                          <table className="w-full border-collapse text-sm md:text-base">
+                            <tbody>
+                              {mod.sessions
+                                .sort((a, b) => a.order - b.order)
+                                .map((session) => (
+                                  <tr
+                                    key={session.id}
+                                    className="group cursor-pointer border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
+                                    onClick={() =>
+                                      navigate(
+                                        `/track/sessions/${session.id}/edit`
+                                      )
+                                    }
+                                  >
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      <span className="text-muted-foreground">
+                                        Day {session.order}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      {session.title}
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <IconPencil className="inline size-4 opacity-0 transition-opacity group-hover:opacity-60 text-muted-foreground" />
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
                         </div>
-                      </div>
-                    </CardContent>
-                  )}
+                      </CardContent>
+                    </div>
+                  </div>
                 </Card>
               );
             })}
