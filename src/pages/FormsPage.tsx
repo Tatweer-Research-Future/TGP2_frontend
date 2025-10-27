@@ -440,7 +440,7 @@ export function FormsPage() {
               </CardContent>
             </Card>
           )}
-          {form.fields.map((field, fieldIndex) => {
+          {!selectedFormHasSubmitted && form.fields.map((field, fieldIndex) => {
             const isVisible = shouldFieldBeVisible(fieldIndex, form.fields, answers, form.is_sub_questions);
             
             if (!isVisible) return null;
@@ -524,17 +524,10 @@ export function FormsPage() {
               </CardContent>
             </Card>
             );
-          })}
+          }          )}
 
-          <div className="flex justify-end">
-            {selectedFormHasSubmitted ? (
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500/40">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm font-medium">Form Already Submitted</span>
-              </div>
-            ) : (
+          {!selectedFormHasSubmitted && (
+            <div className="flex justify-end">
               <Button
                 onClick={handleSubmitClick}
                 disabled={isSubmitting || !form}
@@ -543,8 +536,8 @@ export function FormsPage() {
               >
                 {isSubmitting ? t('common.buttons.submit') + "..." : t('pages.forms.submitForm')}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
