@@ -815,3 +815,103 @@ export async function createPortalAssignment(
     }
   );
 }
+
+// --- Announcements API ---
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  scope: "GLOBAL" | "TRACK";
+  track: number | null;
+  publish_at: string;
+  expire_at: string | null;
+  is_disabled: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnnouncementsResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: Announcement[];
+};
+
+export async function getAnnouncements(params?: {
+  track?: string;
+  scope?: "GLOBAL" | "TRACK";
+  include_inactive?: boolean;
+}): Promise<AnnouncementsResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.track) searchParams.append("track", params.track);
+  if (params?.scope) searchParams.append("scope", params.scope);
+  if (params?.include_inactive) searchParams.append("include_inactive", "1");
+
+  const query = searchParams.toString();
+  return apiFetch<AnnouncementsResponse>(
+    `/portal/announcements/${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getAnnouncementById(id: number): Promise<Announcement> {
+  return apiFetch<Announcement>(`/portal/announcements/${id}/`);
+}
+
+// --- Polls API ---
+export type PollChoice = {
+  id: number;
+  text: string;
+  votes: number;
+};
+
+export type Poll = {
+  id: number;
+  question: string;
+  target_group: number | null;
+  publish_at: string;
+  expire_at: string | null;
+  is_disabled: boolean;
+  choices: PollChoice[];
+  my_vote_choice_id: number | null;
+};
+
+export type PollsResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: Poll[];
+};
+
+export async function getPolls(params?: {
+  group?: string;
+  include_inactive?: boolean;
+}): Promise<Poll[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.group) searchParams.append("group", params.group);
+  if (params?.include_inactive) searchParams.append("include_inactive", "1");
+
+  const query = searchParams.toString();
+  const response = await apiFetch<PollsResponse>(`/portal/polls/${query ? `?${query}` : ""}`);
+  return response.results;
+}
+
+export async function getPollById(id: number): Promise<Poll> {
+  return apiFetch<Poll>(`/portal/polls/${id}/`);
+}
+
+export type VotePayload = {
+  choice: number;
+};
+
+export async function voteOnPoll(pollId: number, payload: VotePayload): Promise<Poll> {
+  return apiFetch<Poll>(`/portal/polls/${pollId}/vote/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
+}
