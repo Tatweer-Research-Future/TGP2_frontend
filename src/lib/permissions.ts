@@ -7,6 +7,7 @@
 // SUPPORT -- 9 (AttendancePage only, is home)
 
 export type PageRoute =
+  | "/home" // HomePage (trainee)
   | "/candidates" // UsersPage
   | "/candidates/:id" // UserDetailPage
   | "/forms" // FormsPage
@@ -45,8 +46,8 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
     groupName: "INSTRUCTOR/DATA",
   },
   8: {
-    allowedPages: ["/forms", "/track"],
-    homePage: "/forms",
+    allowedPages: ["/home", "/forms", "/track"],
+    homePage: "/home",
     groupName: "TRAINEE",
   },
   9: {
@@ -205,20 +206,22 @@ export function getNavigationItems(groupId: number | undefined): Array<{
   if (!permissions) return [];
 
   const navigationMap: Record<PageRoute, { title: string; icon?: any }> = {
+    "/home": { title: "navigation.home" },
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
     "/forms": { title: "navigation.forms" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
+    "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
   };
 
   return permissions.allowedPages
     .filter((page) => page !== "/candidates/:id") // Don't show dynamic routes in nav
     .map((page) => ({
-      title: navigationMap[page]?.title || page,
+      title: navigationMap[page as PageRoute]?.title || page,
       url: page,
-      icon: navigationMap[page]?.icon,
+      icon: navigationMap[page as PageRoute]?.icon,
     }));
 }
 
@@ -234,20 +237,22 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
   if (!permissions) return [];
 
   const navigationMap: Record<PageRoute, { title: string; icon?: any }> = {
+    "/home": { title: "navigation.home" },
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
     "/forms": { title: "navigation.forms" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
+    "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
   };
 
   return permissions.allowedPages
     .filter((page) => page !== "/candidates/:id") // Don't show dynamic routes in nav
     .map((page) => ({
-      title: navigationMap[page]?.title || page,
+      title: navigationMap[page as PageRoute]?.title || page,
       url: page,
-      icon: navigationMap[page]?.icon,
+      icon: navigationMap[page as PageRoute]?.icon,
     }));
 }
 

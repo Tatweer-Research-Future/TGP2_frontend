@@ -9,6 +9,7 @@ import { AccountPage } from "./pages/AccountPage";
 import { AttendancePage } from "./pages/AttendancePage";
 import { TrackPage } from "./pages/TrackPage";
 import SessionEditPage from "./pages/SessionEditPage";
+import { HomePage } from "./pages/HomePage";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -39,6 +40,14 @@ export default function App() {
                       <Route path="/" element={<HomeRedirect />} />
 
                       {/* Permission-protected routes */}
+                      <Route
+                        path="/home"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/home">
+                            <HomePage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
                       <Route
                         path="/overview"
                         element={

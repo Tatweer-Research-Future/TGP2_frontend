@@ -81,6 +81,7 @@
     }
   },
   "navigation": {
+    "home": "Home",
     "candidates": "Candidates",
     "attendance": "Attendance",
     "overview": "Overview",

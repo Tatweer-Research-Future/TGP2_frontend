@@ -5,6 +5,7 @@ import {
   IconPresentation,
   IconChartBar,
   IconBook,
+  IconHome,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import logoImage from "@/assets/logo.png";
@@ -28,6 +29,7 @@ import { useTheme } from "@/components/theme-provider";
 // Map route paths to icons and translated titles
 const getNavItemDetails = (url: string, t: any) => {
   const iconMap: Record<string, any> = {
+    "/home": IconHome,
     "/candidates": IconUsers,
     "/forms": IconPresentation,
     "/attendance": IconClock,
@@ -36,6 +38,7 @@ const getNavItemDetails = (url: string, t: any) => {
   };
 
   const titleMap: Record<string, string> = {
+    "/home": t("navigation.home"),
     "/candidates": t("navigation.candidates"),
     "/forms": t("navigation.forms"),
     "/attendance": t("navigation.attendance"),
