@@ -429,7 +429,7 @@ export function FormsPage() {
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Forms chooser (reused style from UserDetailPage) */}
-      <Card dir="rtl" className="shadow-none">
+      <Card dir="rtl" className="shadow-none border-2">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">
             {t("pages.forms.title")}
@@ -554,10 +554,8 @@ export function FormsPage() {
                 <Card
                   dir="rtl"
                   key={field.id}
-                  className={`shadow-none ${
-                    invalidFields.has(field.id)
-                      ? "border-1 border-destructive"
-                      : ""
+                  className={`shadow-none border-2 ${
+                    invalidFields.has(field.id) ? "border-destructive" : ""
                   } ${
                     isSubQuestion
                       ? "mr-6 border-r-4 border-r-blue-200 bg-blue-50/30 dark:border-r-blue-500/40 dark:bg-blue-900/20"
