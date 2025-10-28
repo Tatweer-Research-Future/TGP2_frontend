@@ -217,7 +217,11 @@ export function getNavigationItems(groupId: number | undefined): Array<{
   };
 
   return permissions.allowedPages
-    .filter((page) => page !== "/candidates/:id") // Don't show dynamic routes in nav
+    .filter(
+      (page) =>
+        // Don't show dynamic routes in nav
+        page !== "/candidates/:id" && page !== "/track/sessions/:id/edit"
+    )
     .map((page) => ({
       title: navigationMap[page as PageRoute]?.title || page,
       url: page,
@@ -248,7 +252,11 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
   };
 
   return permissions.allowedPages
-    .filter((page) => page !== "/candidates/:id") // Don't show dynamic routes in nav
+    .filter(
+      (page) =>
+        // Don't show dynamic routes in nav
+        page !== "/candidates/:id" && page !== "/track/sessions/:id/edit"
+    )
     .map((page) => ({
       title: navigationMap[page as PageRoute]?.title || page,
       url: page,

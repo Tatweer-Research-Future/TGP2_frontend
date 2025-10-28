@@ -3,13 +3,43 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ChevronDown as ChevronDownIcon,
+  ChevronLeft as ChevronLeftIcon,
+} from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader } from "@/components/ui/loader";
 import { toast } from "sonner";
-import { Pencil, UploadCloud } from "lucide-react";
+import {
+  Pencil,
+  UploadCloud,
+  ExternalLink,
+  FileText,
+  Plus,
+  MoreVertical,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   getPortalSession,
   updatePortalSession,
@@ -17,6 +47,8 @@ import {
   type PortalSession,
   type PortalAssignment,
   createPortalAssignment,
+  updatePortalAssignment,
+  deletePortalAssignment,
 } from "@/lib/api";
 import {
   Field,
@@ -56,7 +88,17 @@ export default function SessionEditPage() {
   const [assignmentTitle, setAssignmentTitle] = useState("");
   const [assignmentDescription, setAssignmentDescription] = useState("");
   const [assignmentDue, setAssignmentDue] = useState("");
+  const [assignmentDueDate, setAssignmentDueDate] = useState<Date | undefined>(
+    undefined
+  );
+  const [assignmentDueTime, setAssignmentDueTime] =
+    useState<string>("10:30:00");
+  const [assignmentLink, setAssignmentLink] = useState<string>("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [creatingAssignment, setCreatingAssignment] = useState(false);
+  const [assignmentType, setAssignmentType] = useState<string>("Individual");
+  const [editingAssignment, setEditingAssignment] =
+    useState<PortalAssignment | null>(null);
 
   const sessionId = useMemo(() => (id ? Number(id) : null), [id]);
 
@@ -70,9 +112,8 @@ export default function SessionEditPage() {
           setSession(data);
           setTitle("");
           setDescription(data.description ?? "");
-          setShowDescriptionEditor(
-            Boolean(data.description && data.description.length > 0)
-          );
+          // Start in view mode; editor opens via pencil or + add description
+          setShowDescriptionEditor(false);
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Failed to load session");
@@ -100,7 +141,9 @@ export default function SessionEditPage() {
         description: description?.trim() || null,
         // Intentionally omit start_time and end_time so dates remain unchanged
       } as any);
-      setSession(updated);
+      // Ensure we keep full session fields (like start/end) after save
+      const refreshed = await getPortalSession(String(sessionId));
+      setSession(refreshed ?? updated);
       toast.success("Session saved");
       if (!title) {
         // keep placeholder behavior
@@ -152,6 +195,16 @@ export default function SessionEditPage() {
     return "";
   }, [session?.start_time, session?.end_time]);
 
+  const sortedContent = useMemo(() => {
+    const items = session?.content ? [...session.content] : [];
+    items.sort((a, b) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return tb - ta; // newest first
+    });
+    return items;
+  }, [session?.content]);
+
   function handleBrowseFiles() {
     fileInputRef.current?.click();
   }
@@ -168,47 +221,168 @@ export default function SessionEditPage() {
     e.stopPropagation();
   }
 
-  async function onCreateAssignment(e: React.FormEvent) {
-    e.preventDefault();
+  async function onCreateAssignment(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!sessionId || !assignmentTitle.trim()) return;
     try {
       setCreatingAssignment(true);
+      // Build ISO from date + time if provided
+      let dueIso: string | null = null;
+      if (assignmentDueDate || assignmentDueTime) {
+        const date = assignmentDueDate ?? new Date();
+        const [hh = "00", mm = "00", ss = "00"] = (
+          assignmentDueTime || "00:00:00"
+        ).split(":");
+        const composed = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          Number(hh),
+          Number(mm),
+          Number(ss)
+        );
+        dueIso = composed.toISOString();
+      }
+
       const payload = {
         title: assignmentTitle.trim(),
         description: assignmentDescription.trim() || null,
-        due_date: assignmentDue ? new Date(assignmentDue).toISOString() : null,
-      };
-      await createPortalAssignment(sessionId, payload);
+        due_date: dueIso,
+        link: assignmentLink.trim() ? assignmentLink.trim() : null,
+        ...(sessionId === 5 ? { type: assignmentType } : {}),
+      } as const;
+      if (editingAssignment) {
+        await updatePortalAssignment(editingAssignment.id, payload as any);
+      } else {
+        await createPortalAssignment(sessionId, payload as any);
+      }
       const refreshed = await getPortalSession(String(sessionId));
       setSession(refreshed);
       setShowAssignmentForm(false);
       setAssignmentTitle("");
       setAssignmentDescription("");
       setAssignmentDue("");
-      toast.success("Assignment added");
+      setAssignmentDueDate(undefined);
+      setAssignmentDueTime("10:30:00");
+      setAssignmentLink("");
+      setAssignmentType("Individual");
+      setEditingAssignment(null);
+      toast.success(
+        editingAssignment ? "Assignment updated" : "Assignment added"
+      );
     } catch (e: any) {
-      toast.error(e?.message || "Failed to add assignment");
+      toast.error(
+        e?.message ||
+          (editingAssignment
+            ? "Failed to update assignment"
+            : "Failed to add assignment")
+      );
     } finally {
       setCreatingAssignment(false);
     }
   }
 
+  function onCancelAssignment() {
+    // Hide and reset without submitting anything
+    setShowAssignmentForm(false);
+    setAssignmentTitle("");
+    setAssignmentDescription("");
+    setAssignmentDue("");
+    setAssignmentDueDate(undefined);
+    setAssignmentDueTime("10:30:00");
+    setAssignmentLink("");
+    setAssignmentType("Individual");
+    setEditingAssignment(null);
+  }
+
+  function onEditAssignment(a: PortalAssignment) {
+    setEditingAssignment(a);
+    setShowAssignmentForm(true);
+    setAssignmentTitle(a.title || "");
+    setAssignmentDescription(a.description || "");
+    if (a.due_date) {
+      const d = new Date(a.due_date);
+      setAssignmentDueDate(d);
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      setAssignmentDueTime(`${hh}:${mm}:${ss}`);
+    } else {
+      setAssignmentDueDate(undefined);
+      setAssignmentDueTime("10:30:00");
+    }
+    if (sessionId === 5 && a.type) {
+      setAssignmentType(a.type);
+    }
+  }
+
+  async function onDeleteAssignment(a: PortalAssignment) {
+    if (!window.confirm("Delete this assignment?")) return;
+    try {
+      await deletePortalAssignment(a.id);
+      if (sessionId) {
+        const refreshed = await getPortalSession(String(sessionId));
+        setSession(refreshed);
+      }
+      toast.success("Assignment deleted");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete assignment");
+    }
+  }
+
   return (
     <div className="">
+      <div className="px-8 pt-0">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/track")}
+          className="h-8 px-2 text-sm inline-flex items-center gap-1"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+          Back to track
+        </Button>
+      </div>
       <form onSubmit={onSaveSession}>
-        <div className="flex items-start justify-between mb-6">
-          <div className="w-full px-8">
+        <div className="my-6">
+          <div className="w-full px-12">
             {isEditingTitle ? (
-              <Input
-                placeholder={session?.title}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-3xl md:text-4xl font-bold h-auto py-2 shadow-none outline-none focus:outline-none focus:ring-0 px-3 border-b"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder={session?.title}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="text-3xl md:text-4xl font-bold h-auto w-auto py-2 shadow-none outline-none focus:outline-none focus:ring-0 px-3 border-b bg-muted/30"
+                />
+              </div>
             ) : (
-              <h1 className="text-3xl md:text-4xl font-bold">
-                {title.trim() || session?.title || "Session"}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl md:text-4xl font-bold">
+                  {title.trim() || session?.title || "Session"}
+                </h1>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsEditingTitle((v) => {
+                      const next = !v;
+                      if (next) {
+                        setTitle((prev) =>
+                          prev && prev.trim().length > 0
+                            ? prev
+                            : session?.title ?? ""
+                        );
+                      }
+                      return next;
+                    });
+                  }}
+                  className="rounded-full -mt-1"
+                  aria-label="Edit title"
+                >
+                  <Pencil className="h-5 w-5" />
+                </Button>
+              </div>
             )}
             {dateRange && (
               <div className="text-sm text-muted-foreground mt-1">
@@ -216,26 +390,6 @@ export default function SessionEditPage() {
               </div>
             )}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setIsEditingTitle((v) => {
-                const next = !v;
-                if (next) {
-                  setTitle((prev) =>
-                    prev && prev.trim().length > 0 ? prev : session?.title ?? ""
-                  );
-                }
-                return next;
-              });
-            }}
-            className="rounded-full"
-            aria-label="Edit title"
-          >
-            <Pencil className="h-5 w-5" />
-          </Button>
         </div>
 
         {isLoading && (
@@ -247,97 +401,130 @@ export default function SessionEditPage() {
 
         {!isLoading && !error && session && (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList>
+            <TabsList className="pl-8">
               <TabsTrigger value="details">Session details</TabsTrigger>
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details">
               <div className="grid grid-cols-1 gap-6">
-                <Card className="overflow-hidden gap-0 border-none shadow-none">
+                <Card className="overflow-hidden gap-0 border-none shadow-none p-6 pt-0">
                   <CardContent className="pt-2 space-y-6">
                     <FieldSet>
                       <FieldGroup>
                         <Field>
-                          <FieldTitle>Description</FieldTitle>
                           <FieldContent>
+                            <div className="mb-1 flex justify-end">
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="text-primary px-0 py-0 h-auto text-xs inline-flex items-center gap-1"
+                                onClick={() =>
+                                  setShowDescriptionEditor((v) => !v)
+                                }
+                              >
+                                <Pencil className="h-3 w-3" />
+                                <span>Edit description</span>
+                              </Button>
+                            </div>
                             {showDescriptionEditor ? (
                               <Textarea
                                 placeholder="description for what will be covered this session"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={4}
+                                className="bg-muted/30"
                               />
+                            ) : description?.trim() ? (
+                              <p className="text-sm text-foreground/90 whitespace-pre-wrap">
+                                {description}
+                              </p>
                             ) : (
-                              <Button
-                                type="button"
-                                variant="link"
-                                className="text-primary px-0 h-auto"
-                                onClick={() => setShowDescriptionEditor(true)}
-                              >
-                                + add description
-                              </Button>
+                              <div className="text-sm text-muted-foreground">
+                                No description yet.
+                              </div>
                             )}
                           </FieldContent>
                         </Field>
 
-                        <FieldSeparator>
-                          Upload lecture documents
-                        </FieldSeparator>
                         <Field>
-                          <FieldTitle>Upload lecture documents</FieldTitle>
                           <FieldContent>
-                            <div
-                              onDrop={handleDrop}
-                              onDragOver={handleDragOver}
-                              className="flex flex-col items-center justify-center border border-dashed rounded-md py-10 px-4 text-center bg-muted/30"
-                            >
-                              <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                              <div className="mt-3 font-medium">
-                                Choose a file or drag & drop it here.
-                              </div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                txt, docx, pdf, jpeg, xlsx - Up to 50MB
-                              </div>
-                              <div className="mt-4">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={handleBrowseFiles}
-                                >
-                                  Browse files
-                                </Button>
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  className="hidden"
-                                  onChange={(e) =>
-                                    setSelectedFile(e.target.files?.[0] || null)
-                                  }
-                                />
-                              </div>
-                              {selectedFile && (
-                                <div className="text-sm mt-3">
-                                  Selected: {selectedFile.name}
-                                </div>
-                              )}
+                            <div className="text-base font-semibold mb-2">
+                              Upload session documents
                             </div>
-
-                            <Input
-                              placeholder="Optional title"
-                              className="mt-3"
-                              value={fileTitle}
-                              onChange={(e) => setFileTitle(e.target.value)}
-                            />
-
-                            <div className="mt-3">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.txt,.jpeg,.jpg,.png,.xlsx,.xls"
+                                onChange={(e) =>
+                                  setSelectedFile(e.target.files?.[0] || null)
+                                }
+                                className="bg-muted/30 w-auto file:mr-3 file:bg-primary/10 file:text-primary px-0 file:px-2 file:h-full p-0 file:font-medium file:hover:bg-primary/15 file:cursor-pointer"
+                              />
                               <Button
                                 type="button"
                                 disabled={!selectedFile || uploading}
                                 onClick={onUploadContent}
+                                className="shrink-0"
                               >
                                 {uploading ? "Uploading..." : "Upload"}
                               </Button>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0 mb-6">
+                              You can upload PDF, DOCX, TXT, JPEG, XLSX (max
+                              50MB).
+                            </div>
+                            <div className="text-base font-semibold mb-2">
+                              Uploaded documents
+                            </div>
+                            {/* Uploaded content list */}
+                            <div className="mt-2">
+                              {sortedContent.length === 0 ? (
+                                <div className="text-sm text-muted-foreground">
+                                  No uploaded documents yet.
+                                </div>
+                              ) : (
+                                <div className="divide-y rounded-md border bg-muted/30">
+                                  {sortedContent.map((c) => {
+                                    const href = c.link || c.file || undefined;
+                                    return (
+                                      <div
+                                        key={c.id}
+                                        className="flex items-center justify-between gap-3 p-3"
+                                      >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                          <div className="min-w-0">
+                                            <div className="truncate font-medium text-sm">
+                                              {c.title ||
+                                                (c.file
+                                                  ? c.file.split("/").pop()
+                                                  : "Untitled")}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              Uploaded{" "}
+                                              {new Date(
+                                                c.created_at
+                                              ).toLocaleString()}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        {href && (
+                                          <a
+                                            href={href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
+                                          >
+                                            View
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                          </a>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </FieldContent>
                         </Field>
@@ -350,96 +537,273 @@ export default function SessionEditPage() {
 
             <TabsContent value="assignments">
               <div className="grid grid-cols-1 gap-6">
-                <Card className="overflow-hidden gap-0 border-none shadow-none">
-                  <CardHeader className="pb-0">
+                <Card className="overflow-hidden gap-0 border-none shadow-none p-6">
+                  <CardHeader className="pb-0 flex items-center justify-between">
                     <CardTitle className="text-lg">Assignments</CardTitle>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        showAssignmentForm
+                          ? onCancelAssignment()
+                          : setShowAssignmentForm(true)
+                      }
+                      className={
+                        showAssignmentForm ? "" : "border-primary text-primary"
+                      }
+                    >
+                      {showAssignmentForm ? (
+                        "Cancel"
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Plus className="h-4 w-4" />
+                          <span>Add assignment</span>
+                        </span>
+                      )}
+                    </Button>
                   </CardHeader>
-                  <CardContent className="pt-4 space-y-6">
-                    <div>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowAssignmentForm((v) => !v)}
+                  <CardContent className="pt-3 space-y-4">
+                    <div
+                      className={
+                        "overflow-hidden transition-all duration-300 ease-in-out " +
+                        (showAssignmentForm ? "max-h-[700px]" : "max-h-0")
+                      }
+                    >
+                      <div
+                        className={
+                          "transition-all duration-300 " +
+                          (showAssignmentForm
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 -translate-y-1")
+                        }
                       >
-                        {showAssignmentForm ? "Cancel" : "Add assignment"}
-                      </Button>
+                        <div className="space-y-3 pt-2">
+                          <FieldSet>
+                            <FieldGroup>
+                              <Field>
+                                <FieldTitle>Title</FieldTitle>
+                                <FieldContent>
+                                  <Input
+                                    value={assignmentTitle}
+                                    onChange={(e) =>
+                                      setAssignmentTitle(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") e.preventDefault();
+                                    }}
+                                    placeholder="Assignment title"
+                                    className="w-auto"
+                                  />
+                                </FieldContent>
+                              </Field>
+                              <Field>
+                                <FieldTitle>Description</FieldTitle>
+                                <FieldContent>
+                                  <Textarea
+                                    value={assignmentDescription}
+                                    onChange={(e) =>
+                                      setAssignmentDescription(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") e.preventDefault();
+                                    }}
+                                    placeholder="Optional description"
+                                    rows={3}
+                                  />
+                                </FieldContent>
+                              </Field>
+                              {sessionId === 5 && (
+                                <Field>
+                                  <FieldTitle>Type</FieldTitle>
+                                  <FieldContent>
+                                    <Select
+                                      value={assignmentType}
+                                      onValueChange={setAssignmentType}
+                                    >
+                                      <SelectTrigger className="w-40">
+                                        <SelectValue placeholder="Select type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Individual">
+                                          Individual
+                                        </SelectItem>
+                                        <SelectItem value="Group">
+                                          Group
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </FieldContent>
+                                </Field>
+                              )}
+                              <Field>
+                                <FieldTitle>Due date</FieldTitle>
+                                <FieldContent>
+                                  <div className="flex gap-4">
+                                    <div className="flex flex-col gap-2">
+                                      <Label
+                                        htmlFor="assignment-date"
+                                        className="px-1 text-xs"
+                                      >
+                                        Date
+                                      </Label>
+                                      <Popover
+                                        open={calendarOpen}
+                                        onOpenChange={setCalendarOpen}
+                                      >
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            id="assignment-date"
+                                            className="w-32 justify-between font-normal"
+                                            type="button"
+                                          >
+                                            {assignmentDueDate
+                                              ? assignmentDueDate.toLocaleDateString()
+                                              : "Select date"}
+                                            <ChevronDownIcon className="h-4 w-4" />
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                          className="w-auto overflow-hidden p-0"
+                                          align="start"
+                                        >
+                                          <Calendar
+                                            mode="single"
+                                            selected={assignmentDueDate}
+                                            captionLayout="dropdown"
+                                            onSelect={(d) => {
+                                              setAssignmentDueDate(
+                                                d ?? undefined
+                                              );
+                                              setCalendarOpen(false);
+                                            }}
+                                          />
+                                        </PopoverContent>
+                                      </Popover>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                      <Label
+                                        htmlFor="assignment-time"
+                                        className="px-1 text-xs"
+                                      >
+                                        Time
+                                      </Label>
+                                      <Input
+                                        type="time"
+                                        id="assignment-time"
+                                        step="1"
+                                        value={assignmentDueTime}
+                                        onChange={(e) =>
+                                          setAssignmentDueTime(e.target.value)
+                                        }
+                                        className="bg-background w-auto appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                                      />
+                                    </div>
+                                  </div>
+                                </FieldContent>
+                              </Field>
+                              <Field>
+                                <FieldTitle>Link</FieldTitle>
+                                <FieldContent>
+                                  <Input
+                                    type="url"
+                                    className="w-auto"
+                                    placeholder="https://..."
+                                    value={assignmentLink}
+                                    onChange={(e) =>
+                                      setAssignmentLink(e.target.value)
+                                    }
+                                  />
+                                </FieldContent>
+                              </Field>
+                            </FieldGroup>
+                          </FieldSet>
+                          <div className="flex gap-3">
+                            <Button
+                              type="button"
+                              onClick={() => onCreateAssignment()}
+                              disabled={creatingAssignment}
+                            >
+                              {creatingAssignment ? "Adding..." : "Add"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={onCancelAssignment}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                          <Separator />
+                        </div>
+                      </div>
                     </div>
 
-                    {showAssignmentForm && (
-                      <form onSubmit={onCreateAssignment} className="space-y-4">
-                        <FieldSet>
-                          <FieldGroup>
-                            <Field>
-                              <FieldTitle>Title</FieldTitle>
-                              <FieldContent>
-                                <Input
-                                  value={assignmentTitle}
-                                  onChange={(e) =>
-                                    setAssignmentTitle(e.target.value)
-                                  }
-                                  placeholder="Assignment title"
-                                />
-                              </FieldContent>
-                            </Field>
-                            <Field>
-                              <FieldTitle>Description</FieldTitle>
-                              <FieldContent>
-                                <Textarea
-                                  value={assignmentDescription}
-                                  onChange={(e) =>
-                                    setAssignmentDescription(e.target.value)
-                                  }
-                                  placeholder="Optional description"
-                                  rows={3}
-                                />
-                              </FieldContent>
-                            </Field>
-                            <Field>
-                              <FieldTitle>Due date</FieldTitle>
-                              <FieldContent>
-                                <Input
-                                  type="datetime-local"
-                                  value={assignmentDue}
-                                  onChange={(e) =>
-                                    setAssignmentDue(e.target.value)
-                                  }
-                                />
-                              </FieldContent>
-                            </Field>
-                          </FieldGroup>
-                        </FieldSet>
-                        <div className="flex gap-3">
-                          <Button type="submit" disabled={creatingAssignment}>
-                            {creatingAssignment ? "Adding..." : "Add"}
-                          </Button>
-                        </div>
-                      </form>
-                    )}
-
-                    <Separator />
-
-                    <div className="space-y-3">
-                      {(session.assignments?.length ?? 0) === 0 && (
+                    <div>
+                      {(session.assignments?.length ?? 0) === 0 ? (
                         <div className="text-sm text-muted-foreground">
                           No assignments yet.
                         </div>
-                      )}
-                      {(session.assignments ?? []).map(
-                        (a: PortalAssignment) => (
-                          <div
-                            key={a.id}
-                            className="flex items-center justify-between py-2"
-                          >
-                            <div className="text-sm">
-                              <div className="font-medium">{a.title}</div>
-                              <div className="text-muted-foreground">
-                                {a.due_date
-                                  ? new Date(a.due_date).toLocaleString()
-                                  : "No due"}
-                              </div>
-                            </div>
-                            {/* Future: add edit/delete */}
-                          </div>
-                        )
+                      ) : (
+                        <table className="w-full border-collapse text-sm md:text-base">
+                          <tbody>
+                            {(session.assignments ?? [])
+                              .slice()
+                              .sort((a, b) => {
+                                const at = a.due_date
+                                  ? new Date(a.due_date).getTime()
+                                  : 0;
+                                const bt = b.due_date
+                                  ? new Date(b.due_date).getTime()
+                                  : 0;
+                                return at - bt;
+                              })
+                              .map((a) => (
+                                <tr
+                                  key={a.id}
+                                  className="group border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
+                                >
+                                  <td className="px-2 md:px-4 py-3 whitespace-nowrap">
+                                    <div className="font-medium">{a.title}</div>
+                                  </td>
+                                  <td className="px-2 md:px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                    {a.due_date
+                                      ? new Date(a.due_date).toLocaleString()
+                                      : "No due"}
+                                  </td>
+                                  <td className="px-2 md:px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                    {a.type || "NOT_GRADED"}
+                                  </td>
+                                  <td className="px-2 md:px-4 py-3 text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => onEditAssignment(a)}
+                                        >
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          variant="destructive"
+                                          onClick={() => onDeleteAssignment(a)}
+                                        >
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       )}
                     </div>
                   </CardContent>

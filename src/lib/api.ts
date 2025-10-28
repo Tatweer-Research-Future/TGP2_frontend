@@ -795,6 +795,7 @@ export type CreatePortalAssignmentPayload = {
   due_date?: string | null; // ISO string
   type?: string; // default NOT_GRADED
   is_gradable?: boolean;
+  link?: string | null;
 };
 
 export async function createPortalAssignment(
@@ -804,13 +805,70 @@ export async function createPortalAssignment(
   const body = {
     type: "NOT_GRADED",
     is_gradable: false,
+    session: sessionId,
     ...payload,
-  };
-  return apiFetch<PortalAssignment>(
-    `/portal/sessions/${sessionId}/assignments/`,
+  } as Record<string, unknown>;
+  return apiFetch<PortalAssignment>(`/portal/assignments/`, {
+    method: "POST",
+    body,
+    requireCsrf: true,
+  });
+}
+
+export type UpdatePortalAssignmentPayload = Partial<{
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  type: string;
+  is_gradable: boolean;
+  link: string | null;
+}>;
+
+export async function updatePortalAssignment(
+  assignmentId: number | string,
+  payload: UpdatePortalAssignmentPayload
+): Promise<PortalAssignment> {
+  return apiFetch<PortalAssignment>(`/portal/assignments/${assignmentId}/`, {
+    method: "PUT",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function deletePortalAssignment(
+  assignmentId: number | string
+): Promise<void> {
+  return apiFetch<void>(`/portal/assignments/${assignmentId}/`, {
+    method: "DELETE",
+    requireCsrf: true,
+  });
+}
+
+// --- Assignment submission (trainee) ---
+export type SubmitAssignmentPayload = {
+  submitted_link: string;
+  note?: string | null;
+};
+
+export type SubmitAssignmentResponse = {
+  id: number;
+  assignment: number;
+  trainee: number;
+  is_gradable: boolean;
+  submitted_link: string;
+  note: string | null;
+  submitted_at: string;
+};
+
+export async function submitAssignment(
+  assignmentId: number | string,
+  payload: SubmitAssignmentPayload
+): Promise<SubmitAssignmentResponse> {
+  return apiFetch<SubmitAssignmentResponse>(
+    `/portal/assignments/${assignmentId}/submit/`,
     {
       method: "POST",
-      body,
+      body: payload,
       requireCsrf: true,
     }
   );
