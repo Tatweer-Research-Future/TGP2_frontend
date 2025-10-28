@@ -60,9 +60,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Get navigation items based on user permissions
   const permissionBasedItems = getNavigationItems();
+  
+  // Debug logging
+  console.log("Permission based items:", permissionBasedItems);
+
+  // Always include /home for everyone
+  const homeItem = { url: "/home" };
+  const allItems = [homeItem, ...permissionBasedItems.filter(item => item.url !== "/home")];
 
   // Transform permission-based items to include icons and proper titles
-  const navItems = permissionBasedItems.map((item) => {
+  const navItems = allItems.map((item) => {
     const details = getNavItemDetails(item.url, t);
     return {
       title: details.title,

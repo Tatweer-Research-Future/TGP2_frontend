@@ -149,6 +149,16 @@
     "created": "Created successfully"
   },
   "pages": {
+    "home": {
+      "title": "Home",
+      "subtitle": "Stay updated with announcements and polls",
+      "announcements": "Announcements",
+      "polls": "Polls",
+      "noContent": "No announcements or polls available",
+      "loadError": "Failed to load content",
+      "pollVoted": "Vote submitted!",
+      "pollVoteError": "Failed to submit vote"
+    },
     "login": {
       "title": "Sign In",
       "subtitle": "Enter your credentials to access your account"

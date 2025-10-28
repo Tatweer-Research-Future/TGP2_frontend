@@ -24,18 +24,19 @@ export type GroupPermissions = {
 
 // Map group_id to permissions
 export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
-  3: {
-    allowedPages: ["/candidates", "/candidates/:id"],
+ 3: {
+    allowedPages: ["/home", "/candidates", "/candidates/:id"],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "HR/TECH/PRESENTATION",
   },
-  4: {
-    allowedPages: ["/candidates", "/candidates/:id"],
+ 4: {
+    allowedPages: ["/home", "/candidates", "/candidates/:id"],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "PRESENTATION",
   },
-  5: {
+ 5: {
     allowedPages: [
+      "/home",
       "/candidates",
       "/candidates/:id",
       "/forms",
@@ -51,7 +52,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
     groupName: "TRAINEE",
   },
   9: {
-    allowedPages: ["/attendance"],
+    allowedPages: ["/home", "/attendance"],
     homePage: "/attendance",
     groupName: "SUPPORT",
   },
