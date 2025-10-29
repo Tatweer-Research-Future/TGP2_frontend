@@ -41,9 +41,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   getPortalSession,
   updatePortalSession,
   uploadPortalSessionContentFile,
+  deletePortalSessionContent,
   type PortalSession,
   type PortalAssignment,
   createPortalAssignment,
@@ -99,6 +108,15 @@ export default function SessionEditPage() {
   const [assignmentType, setAssignmentType] = useState<string>("Individual");
   const [editingAssignment, setEditingAssignment] =
     useState<PortalAssignment | null>(null);
+
+  // Delete confirmations
+  const [confirmDeleteContentId, setConfirmDeleteContentId] = useState<
+    number | null
+  >(null);
+  const [confirmDeleteAssignment, setConfirmDeleteAssignment] =
+    useState<PortalAssignment | null>(null);
+  const [deletingContent, setDeletingContent] = useState(false);
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
 
   const sessionId = useMemo(() => (id ? Number(id) : null), [id]);
 
@@ -249,10 +267,14 @@ export default function SessionEditPage() {
         description: assignmentDescription.trim() || null,
         due_date: dueIso,
         link: assignmentLink.trim() ? assignmentLink.trim() : null,
+        is_gradable: sessionId === 5,
         ...(sessionId === 5 ? { type: assignmentType } : {}),
       } as const;
       if (editingAssignment) {
-        await updatePortalAssignment(editingAssignment.id, payload as any);
+        await updatePortalAssignment(editingAssignment.id, {
+          ...payload,
+          session: sessionId,
+        } as any);
       } else {
         await createPortalAssignment(sessionId, payload as any);
       }
@@ -317,7 +339,6 @@ export default function SessionEditPage() {
   }
 
   async function onDeleteAssignment(a: PortalAssignment) {
-    if (!window.confirm("Delete this assignment?")) return;
     try {
       await deletePortalAssignment(a.id);
       if (sessionId) {
@@ -327,6 +348,52 @@ export default function SessionEditPage() {
       toast.success("Assignment deleted");
     } catch (e: any) {
       toast.error(e?.message || "Failed to delete assignment");
+    }
+  }
+
+  async function onDeleteContent(contentId: number) {
+    if (!sessionId) return;
+    try {
+      await deletePortalSessionContent(sessionId, contentId);
+      const refreshed = await getPortalSession(String(sessionId));
+      setSession(refreshed);
+      toast.success("Document deleted");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete document");
+    }
+  }
+
+  async function handleConfirmDeleteContent() {
+    if (!sessionId || confirmDeleteContentId == null) return;
+    try {
+      setDeletingContent(true);
+      await deletePortalSessionContent(sessionId, confirmDeleteContentId);
+      const refreshed = await getPortalSession(String(sessionId));
+      setSession(refreshed);
+      toast.success("Document deleted");
+      setConfirmDeleteContentId(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete document");
+    } finally {
+      setDeletingContent(false);
+    }
+  }
+
+  async function handleConfirmDeleteAssignment() {
+    if (!confirmDeleteAssignment) return;
+    try {
+      setDeletingAssignment(true);
+      await deletePortalAssignment(confirmDeleteAssignment.id);
+      if (sessionId) {
+        const refreshed = await getPortalSession(String(sessionId));
+        setSession(refreshed);
+      }
+      toast.success("Assignment deleted");
+      setConfirmDeleteAssignment(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete assignment");
+    } finally {
+      setDeletingAssignment(false);
     }
   }
 
@@ -509,17 +576,45 @@ export default function SessionEditPage() {
                                             </div>
                                           </div>
                                         </div>
-                                        {href && (
-                                          <a
-                                            href={href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
-                                          >
-                                            View
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                          </a>
-                                        )}
+                                        <div className="inline-flex items-center gap-1 shrink-0">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                aria-label="More options"
+                                              >
+                                                <MoreVertical className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              {href && (
+                                                <DropdownMenuItem
+                                                  onClick={() =>
+                                                    window.open(
+                                                      href,
+                                                      "_blank",
+                                                      "noopener,noreferrer"
+                                                    )
+                                                  }
+                                                >
+                                                  View
+                                                </DropdownMenuItem>
+                                              )}
+                                              <DropdownMenuItem
+                                                variant="destructive"
+                                                onClick={() =>
+                                                  setConfirmDeleteContentId(
+                                                    c.id
+                                                  )
+                                                }
+                                              >
+                                                Delete
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
                                       </div>
                                     );
                                   })}
@@ -577,9 +672,9 @@ export default function SessionEditPage() {
                             : "opacity-0 -translate-y-1")
                         }
                       >
-                        <div className="space-y-3 pt-2">
+                        <div>
                           <FieldSet>
-                            <FieldGroup>
+                            <FieldGroup className="flex flex-col gap-6 pb-3">
                               <Field>
                                 <FieldTitle>Title</FieldTitle>
                                 <FieldContent>
@@ -718,13 +813,19 @@ export default function SessionEditPage() {
                               </Field>
                             </FieldGroup>
                           </FieldSet>
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 pb-3">
                             <Button
                               type="button"
                               onClick={() => onCreateAssignment()}
                               disabled={creatingAssignment}
                             >
-                              {creatingAssignment ? "Adding..." : "Add"}
+                              {creatingAssignment
+                                ? editingAssignment
+                                  ? "Updating..."
+                                  : "Adding..."
+                                : editingAssignment
+                                ? "Update"
+                                : "Add"}
                             </Button>
                             <Button
                               type="button"
@@ -793,7 +894,9 @@ export default function SessionEditPage() {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           variant="destructive"
-                                          onClick={() => onDeleteAssignment(a)}
+                                          onClick={() =>
+                                            setConfirmDeleteAssignment(a)
+                                          }
                                         >
                                           Delete
                                         </DropdownMenuItem>
@@ -819,6 +922,76 @@ export default function SessionEditPage() {
           </Button>
         </div>
       </form>
+
+      {/* Confirm delete document dialog */}
+      <Dialog
+        open={confirmDeleteContentId != null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteContentId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete document?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The document will be permanently
+              removed from this session.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDeleteContentId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingContent}
+              onClick={handleConfirmDeleteContent}
+            >
+              {deletingContent ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete assignment dialog */}
+      <Dialog
+        open={confirmDeleteAssignment != null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteAssignment(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete assignment?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The assignment and its details will
+              be removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDeleteAssignment(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletingAssignment}
+              onClick={handleConfirmDeleteAssignment}
+            >
+              {deletingAssignment ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

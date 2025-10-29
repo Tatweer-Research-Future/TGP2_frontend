@@ -788,6 +788,17 @@ export async function uploadPortalSessionContentFile(
   );
 }
 
+// Delete a session content item
+export async function deletePortalSessionContent(
+  sessionId: number | string,
+  contentId: number | string
+): Promise<void> {
+  return apiFetch<void>(`/portal/sessions/${sessionId}/content/${contentId}/`, {
+    method: "DELETE",
+    requireCsrf: true,
+  });
+}
+
 // --- Portal Assignments ---
 export type CreatePortalAssignmentPayload = {
   title: string;
