@@ -1,4 +1,5 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { IconX } from "@tabler/icons-react";
@@ -50,7 +51,7 @@ function DialogContent({ className, children, ...props }: DialogContentProps) {
 
   if (!open) return null;
 
-  return (
+  const content = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
@@ -61,7 +62,7 @@ function DialogContent({ className, children, ...props }: DialogContentProps) {
       {/* Content */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg mx-4 bg-background border rounded-lg shadow-lg p-6",
+          "relative z-50 w-full max-w-lg mx-4 bg-background border rounded-lg shadow-lg p-6 max-h-[90vh] overflow-y-auto",
           className
         )}
         {...props}
@@ -78,6 +79,8 @@ function DialogContent({ className, children, ...props }: DialogContentProps) {
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
 
 function DialogHeader({ className, ...props }: DialogHeaderProps) {

@@ -954,7 +954,9 @@ export async function getPolls(params?: {
   if (params?.include_inactive) searchParams.append("include_inactive", "1");
 
   const query = searchParams.toString();
-  const response = await apiFetch<PollsResponse>(`/portal/polls/${query ? `?${query}` : ""}`);
+  const response = await apiFetch<PollsResponse>(
+    `/portal/polls/${query ? `?${query}` : ""}`
+  );
   return response.results;
 }
 
@@ -966,7 +968,10 @@ export type VotePayload = {
   choice: number;
 };
 
-export async function voteOnPoll(pollId: number, payload: VotePayload): Promise<Poll> {
+export async function voteOnPoll(
+  pollId: number,
+  payload: VotePayload
+): Promise<Poll> {
   return apiFetch<Poll>(`/portal/polls/${pollId}/vote/`, {
     method: "POST",
     body: payload,

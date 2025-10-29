@@ -477,7 +477,7 @@ export function FormsPage() {
                         {isSubmitted && (
                           <Badge
                             variant="outline"
-                            className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500/40"
+                            className="text-xs bg-primary/10 text-primary border-primary/30 dark:bg-primary/20 dark:text-primary dark:border-primary/40"
                           >
                             Submitted
                           </Badge>
@@ -504,12 +504,12 @@ export function FormsPage() {
           {selectedFormHasSubmitted && (
             <Card
               dir="rtl"
-              className="shadow-none border-green-200 bg-green-50 dark:border-green-500/40 dark:bg-green-900/30"
+              className="shadow-none border-primary/30 bg-primary/10 dark:border-primary/40 dark:bg-primary/15"
             >
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
                   <svg
-                    className="w-5 h-5 text-green-600 dark:text-green-300"
+                    className="w-5 h-5 text-primary"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -520,10 +520,10 @@ export function FormsPage() {
                     />
                   </svg>
                   <div>
-                    <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">
+                    <h3 className="text-sm font-semibold text-primary">
                       Form Already Submitted
                     </h3>
-                    <p className="text-xs text-green-600 dark:text-green-400">
+                    <p className="text-xs text-primary">
                       This form has been completed and cannot be modified.
                     </p>
                   </div>
@@ -558,7 +558,7 @@ export function FormsPage() {
                     invalidFields.has(field.id) ? "border-destructive" : ""
                   } ${
                     isSubQuestion
-                      ? "mr-6 border-r-4 border-r-blue-200 bg-blue-50/30 dark:border-r-blue-500/40 dark:bg-blue-900/20"
+                      ? "mr-6 border-r-4 border-r-primary/30 bg-primary/10 dark:border-r-primary/40 dark:bg-primary/15"
                       : ""
                   }`}
                 >
@@ -567,7 +567,7 @@ export function FormsPage() {
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold flex items-center gap-2">
                           {isSubQuestion && (
-                            <span className="text-blue-600 dark:text-blue-400 text-sm font-normal">
+                            <span className="text-primary text-sm font-normal">
                               ↳
                             </span>
                           )}
@@ -594,7 +594,7 @@ export function FormsPage() {
                           handleAnswerChange(field.id, value)
                         }
                         disabled={selectedFormHasSubmitted}
-                        className={`flex flex-wrap gap-6 w-full justify-around ${
+                        className={`flex flex-wrap gap-2 lg:gap-6 w-full justify-around ${
                           selectedFormHasSubmitted ? "opacity-60" : ""
                         }`}
                       >
@@ -668,7 +668,7 @@ export function FormsPage() {
               <Button
                 onClick={handleSubmitClick}
                 disabled={isSubmitting || !form}
-                className="h-11 text-lg bg-[#1EDE9E] text-white hover:bg-[#19c98c] disabled:opacity-50"
+                className="h-10 text-md bg-primary/80 text-white hover:bg-primary disabled:opacity-50"
                 size="sm"
               >
                 {isSubmitting
@@ -682,7 +682,7 @@ export function FormsPage() {
 
       {/* Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
               Confirm Form Submission
@@ -703,7 +703,7 @@ export function FormsPage() {
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-[#1EDE9E] text-white hover:bg-[#19c98c]"
+              className="bg-primary text-white"
             >
               {isSubmitting ? "Submitting..." : "Submit Form"}
             </Button>
