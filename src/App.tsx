@@ -9,6 +9,7 @@ import { AccountPage } from "./pages/AccountPage";
 import { AttendancePage } from "./pages/AttendancePage";
 import { TrackPage } from "./pages/TrackPage";
 import SessionEditPage from "./pages/SessionEditPage";
+import SessionViewPage from "./pages/SessionViewPage";
 import { HomePage } from "./pages/HomePage";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -92,6 +93,15 @@ export default function App() {
                         element={
                           <PermissionProtectedRoute requiredPage="/track">
                             <TrackPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/track/sessions/:id"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/track/sessions/:id">
+                            <SessionViewPage />
                           </PermissionProtectedRoute>
                         }
                       />

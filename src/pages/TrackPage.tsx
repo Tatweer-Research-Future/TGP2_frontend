@@ -1,17 +1,57 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { IconChevronRight, IconPencil } from "@tabler/icons-react";
+import {
+  IconChevronRight,
+  IconPencil,
+  IconCode,
+  IconNetwork,
+} from "@tabler/icons-react";
+import { RiBardFill } from "react-icons/ri";
 import { Loader } from "@/components/ui/loader";
 import { getPortalTracks, type PortalTrack } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
+import { useUserGroups } from "@/hooks/useUserGroups";
 
 export function TrackPage() {
   const navigate = useNavigate();
+  const { groupId, groups } = useUserGroups();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tracks, setTracks] = useState<PortalTrack[] | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Record<number, boolean>>({});
+
+  // Map track names to a visual theme (gradient + background icon)
+  function getTrackTheme(trackName?: string) {
+    const name = (trackName || "").toLowerCase();
+    if (name.includes("ai") || name.includes("data")) {
+      return {
+        gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
+        icon: "star4" as const,
+      };
+    }
+    if (
+      name.includes("software") ||
+      name.includes("app") ||
+      name.includes("development")
+    ) {
+      return {
+        gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
+        icon: "code" as const,
+      };
+    }
+    if (name.includes("network") || name.includes("communication")) {
+      return {
+        gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
+        icon: "network" as const,
+      };
+    }
+    // Fallback theme
+    return {
+      gradient:
+        "bg-gradient-to-br from-primary/20 via-primary/10 to-background",
+      icon: "code" as const,
+    };
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -37,21 +77,63 @@ export function TrackPage() {
     [tracks]
   );
 
+  const isInstructor = useMemo(() => {
+    const g = groups || [];
+    const hasInstructor = g.some((x) => x.toLowerCase().includes("instructor"));
+    return groupId === 5 || hasInstructor;
+  }, [groupId, groups]);
+
   // removed unused toggleWeek helper; we toggle inline on the header button
 
   return (
     <div className="px-4 lg:px-6">
-      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-8 mb-6">
-        <div className="text-sm uppercase tracking-wider text-primary/80 mb-1">
-          {firstTrack?.name ?? "Data & AI Track"}
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold">
-          Track Title (Data & AI Track)
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Plan, organize, and edit weekly learning modules.
-        </p>
-      </div>
+      {(() => {
+        const theme = getTrackTheme(firstTrack?.name);
+        return (
+          <div
+            className={
+              "relative overflow-hidden rounded-2xl border border-border/40 p-8 mb-6 text-white " +
+              theme.gradient
+            }
+          >
+            {/* Background icon (cropped, faded) */}
+            <div
+              className="pointer-events-none absolute -left-10 -top-12 opacity-20"
+              aria-hidden="true"
+            >
+              {theme.icon === "star4" && (
+                <RiBardFill className="size-[280px] md:size-[250px]" />
+              )}
+              {theme.icon === "code" && (
+                <IconCode
+                  className="size-[280px] md:size-[340px]"
+                  stroke={1.25}
+                />
+              )}
+              {theme.icon === "network" && (
+                <IconNetwork
+                  className="size-[280px] md:size-[340px]"
+                  stroke={1.25}
+                />
+              )}
+            </div>
+
+            {/* Right-aligned title/content */}
+            <div className="relative">
+              <div className="ml-auto text-right max-w-[48rem]">
+                <h1 className="text-3xl md:text-5xl font-extrabold leading-tight">
+                  {firstTrack?.name ?? "Track"}
+                </h1>
+                <p className="mt-2 text-white/80">
+                  {isInstructor
+                    ? "Plan, organize, and edit weekly learning modules."
+                    : "View content, assignments, and track your learning progress."}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {isLoading && (
         <div className="flex items-center justify-center py-16">
@@ -111,7 +193,9 @@ export function TrackPage() {
                                     className="group cursor-pointer border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
                                     onClick={() =>
                                       navigate(
-                                        `/track/sessions/${session.id}/edit`
+                                        isInstructor
+                                          ? `/track/sessions/${session.id}/edit`
+                                          : `/track/sessions/${session.id}`
                                       )
                                     }
                                   >

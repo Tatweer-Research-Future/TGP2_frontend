@@ -705,6 +705,7 @@ export type PortalAssignment = {
   due_date: string | null;
   type: string;
   is_gradable: boolean;
+  link?: string | null;
 };
 
 export type PortalSession = {

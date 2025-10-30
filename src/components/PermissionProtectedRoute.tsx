@@ -14,7 +14,8 @@ export function PermissionProtectedRoute({
   const location = useLocation();
 
   // Check if user can access the current page
-  if (!canAccessPage(requiredPage)) {
+  const currentPath = location.pathname;
+  if (!canAccessPage(currentPath)) {
     // Redirect to user's home page
     const homePage = getHomePage();
     return <Navigate to={homePage} replace />;

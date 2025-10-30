@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader } from "@/components/ui/loader";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import {
   Pencil,
@@ -494,23 +495,58 @@ export default function SessionEditPage() {
                                 <span>Edit description</span>
                               </Button>
                             </div>
-                            {showDescriptionEditor ? (
-                              <Textarea
-                                placeholder="description for what will be covered this session"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={4}
-                                className="bg-muted/30"
-                              />
-                            ) : description?.trim() ? (
-                              <p className="text-sm text-foreground/90 whitespace-pre-wrap">
-                                {description}
-                              </p>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">
-                                No description yet.
-                              </div>
-                            )}
+                            <div className="rounded-md border px-4 py-3">
+                              {showDescriptionEditor ? (
+                                <Textarea
+                                  placeholder="description for what will be covered this session"
+                                  value={description}
+                                  onChange={(e) => setDescription(e.target.value)}
+                                  rows={4}
+                                  className="bg-muted/30"
+                                />
+                              ) : description?.trim() ? (
+                                <div className="max-w-none text-foreground/90">
+                                  <ReactMarkdown
+                                    components={{
+                                      ul: ({ node, ...props }) => (
+                                        <ul className="list-disc ml-6 my-2 space-y-1" {...props} />
+                                      ),
+                                      ol: ({ node, ...props }) => (
+                                        <ol className="list-decimal ml-6 my-2 space-y-1" {...props} />
+                                      ),
+                                      li: ({ node, ...props }) => (
+                                        <li className="leading-6" {...props} />
+                                      ),
+                                      a: ({ node, ...props }) => (
+                                        <a
+                                          className="text-primary underline underline-offset-2 hover:opacity-80"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          {...props}
+                                        />
+                                      ),
+                                      code: ({ node, className, children, ...props }) => (
+                                        <code
+                                          className={`bg-muted px-1.5 py-0.5 rounded text-[0.9em] ${className || ""}`}
+                                          {...props}
+                                        >
+                                          {children}
+                                        </code>
+                                      ),
+                                      p: ({ node, ...props }) => (
+                                        <p className="mb-3" {...props} />
+                                      ),
+                                    }}
+                                  >
+                                    {description}
+                                  </ReactMarkdown>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground">
+                                  No description yet.
+                                </div>
+                              )}
+                            </div>
                           </FieldContent>
                         </Field>
 
