@@ -35,6 +35,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": IconClock,
     "/overview": IconChartBar,
     "/track": IconBook,
+    "/pre-post-exams": IconBook,
   };
 
   const titleMap: Record<string, string> = {
@@ -44,6 +45,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
     "/track": t("navigation.track"),
+    "/pre-post-exams": t("navigation.pre_post_exams"),
   };
 
   return {
@@ -60,13 +62,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Get navigation items based on user permissions
   const permissionBasedItems = getNavigationItems();
-  
+
   // Debug logging
   console.log("Permission based items:", permissionBasedItems);
 
   // Always include /home for everyone
   const homeItem = { url: "/home" };
-  const allItems = [homeItem, ...permissionBasedItems.filter(item => item.url !== "/home")];
+  const allItems = [
+    homeItem,
+    ...permissionBasedItems.filter((item) => item.url !== "/home"),
+  ];
 
   // Transform permission-based items to include icons and proper titles
   const navItems = allItems.map((item) => {

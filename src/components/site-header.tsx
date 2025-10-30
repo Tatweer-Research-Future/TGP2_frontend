@@ -19,7 +19,7 @@ export function SiteHeader() {
     const path = location.pathname;
     const items: { label: string; to?: string }[] = [];
     if (path === "/" || path === "/dashboard") {
-      items.push({ label: "Dashboard" });
+      items.push({ label: "Home" });
     } else if (path === "/candidates") {
       items.push({ label: "Candidates" });
     } else if (path.startsWith("/candidates/")) {
@@ -31,8 +31,13 @@ export function SiteHeader() {
       }
     } else if (path.startsWith("/forms")) {
       items.push({ label: "Forms" });
+    } else if (path === "/pre-post-exams") {
+      items.push({ label: "Pre/Post Exams" });
+    } else if (path.startsWith("/pre-post-exams/new")) {
+      items.push({ label: "Pre/Post Exams", to: "/pre-post-exams" });
+      items.push({ label: "Create" });
     } else {
-      items.push({ label: "Dashboard" });
+      items.push({ label: "Home" });
     }
     return items;
   }, [location.pathname, getCandidateById]);

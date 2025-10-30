@@ -989,3 +989,129 @@ export async function voteOnPoll(
     requireCsrf: true,
   });
 }
+
+// --- Portal Tests (Pre/Post) ---
+export type ModuleTestKind = "PRE" | "POST";
+
+export type ModuleTestListItem = {
+  id: number;
+  module: number;
+  kind: ModuleTestKind;
+  title: string;
+  description: string;
+  publish_at: string | null;
+  expire_at: string | null;
+  is_disabled: boolean;
+  is_active: boolean;
+  total_points: number;
+};
+
+export type ModuleTestChoicePublic = { id: number; text: string };
+
+export type ModuleTestQuestion = {
+  id: number;
+  title: string;
+  text: string | null;
+  image: string | null;
+  order: number;
+  choices: ModuleTestChoicePublic[];
+};
+
+export type ModuleTestDetail = {
+  id: number;
+  module: number;
+  kind: ModuleTestKind;
+  title: string;
+  description: string;
+  publish_at: string | null;
+  expire_at: string | null;
+  is_disabled: boolean;
+  is_active: boolean;
+  total_points: number;
+  has_submitted?: boolean;
+  questions: ModuleTestQuestion[];
+};
+
+export type GetModuleTestsParams = {
+  module?: number | string;
+  kind?: ModuleTestKind;
+};
+
+export async function getModuleTests(
+  params?: GetModuleTestsParams
+): Promise<ModuleTestListItem[]> {
+  const search = new URLSearchParams();
+  if (params?.module) search.append("module", String(params.module));
+  if (params?.kind) search.append("kind", params.kind);
+  const query = search.toString();
+  return apiFetch<ModuleTestListItem[]>(
+    `/portal/tests/${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getModuleTestById(
+  id: number | string
+): Promise<ModuleTestDetail> {
+  return apiFetch<ModuleTestDetail>(`/portal/tests/${id}/`);
+}
+
+export type CreateModuleTestPayload = {
+  module: number;
+  kind: ModuleTestKind;
+  title: string;
+  description?: string;
+  publish_at?: string | null;
+  expire_at?: string | null;
+  is_disabled?: boolean;
+  questions?: Array<{
+    title: string;
+    text?: string | null;
+    order: number;
+    choices: Array<{ text: string; is_correct: boolean }>; // 2+, exactly one true
+    // Optional image file for this question; when present we send multipart/form-data
+    image_file?: File | null;
+  }>;
+};
+
+export async function createModuleTest(payload: CreateModuleTestPayload) {
+  const hasFiles = payload.questions?.some((q) => q.image_file) ?? false;
+  if (!hasFiles) {
+    return apiFetch(`/portal/tests/`, {
+      method: "POST",
+      body: payload,
+      requireCsrf: true,
+    });
+  }
+
+  const form = new FormData();
+  form.append("module", String(payload.module));
+  form.append("kind", payload.kind);
+  form.append("title", payload.title);
+  if (payload.description != null)
+    form.append("description", payload.description);
+  if (payload.publish_at !== undefined && payload.publish_at !== null)
+    form.append("publish_at", payload.publish_at);
+  if (payload.expire_at !== undefined && payload.expire_at !== null)
+    form.append("expire_at", payload.expire_at);
+  if (payload.is_disabled !== undefined)
+    form.append("is_disabled", String(payload.is_disabled));
+
+  (payload.questions ?? []).forEach((q, qi) => {
+    form.append(`questions[${qi}][title]`, q.title);
+    if (q.text !== undefined && q.text !== null)
+      form.append(`questions[${qi}][text]`, String(q.text));
+    form.append(`questions[${qi}][order]`, String(q.order));
+    q.choices.forEach((c, ci) => {
+      form.append(`questions[${qi}][choices][${ci}][text]`, c.text);
+      form.append(
+        `questions[${qi}][choices][${ci}][is_correct]`,
+        String(Boolean(c.is_correct))
+      );
+    });
+    if (q.image_file) {
+      form.append(`questions[${qi}][image]`, q.image_file);
+    }
+  });
+
+  return apiFetchFormData(`/portal/tests/`, form, { method: "POST" });
+}

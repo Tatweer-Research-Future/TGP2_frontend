@@ -88,7 +88,8 @@
     "forms": "Forms",
     "account": "Account",
     "track": "Track",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "pre_post_exams": "Pre/Post Exams"
   },
   "auth": {
     "login": "Sign In",

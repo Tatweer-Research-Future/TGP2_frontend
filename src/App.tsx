@@ -19,6 +19,9 @@ import {
   PermissionProtectedRoute,
   HomeRedirect,
 } from "@/components/PermissionProtectedRoute";
+import { StaffOrInstructorRoute } from "@/components/StaffOrInstructorRoute";
+import PrePostExamsPage from "@/pages/PrePostExamsPage";
+import PrePostExamCreatePage from "@/pages/PrePostExamCreatePage";
 
 export default function App() {
   return (
@@ -41,7 +44,7 @@ export default function App() {
 
                       {/* Home page - accessible to all authenticated users */}
                       <Route path="/home" element={<HomePage />} />
-                      
+
                       {/* Permission-protected routes */}
                       <Route
                         path="/overview"
@@ -99,6 +102,24 @@ export default function App() {
                           <PermissionProtectedRoute requiredPage="/track/sessions/:id/edit">
                             <SessionEditPage />
                           </PermissionProtectedRoute>
+                        }
+                      />
+
+                      {/* Pre/Post Exams */}
+                      <Route
+                        path="/pre-post-exams"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <PrePostExamsPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
+                      <Route
+                        path="/pre-post-exams/new"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <PrePostExamCreatePage />
+                          </StaffOrInstructorRoute>
                         }
                       />
 

@@ -14,7 +14,8 @@ export type PageRoute =
   | "/attendance" // AttendancePage
   | "/overview" // DashboardPage
   | "/track" // TrackPage
-  | "/track/sessions/:id/edit"; // SessionEditPage
+  | "/track/sessions/:id/edit" // SessionEditPage
+  | "/pre-post-exams"; // Pre/Post Exams (staff/instructor)
 
 export type GroupPermissions = {
   allowedPages: PageRoute[];
@@ -25,7 +26,12 @@ export type GroupPermissions = {
 // Map group_id to permissions
 export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
   3: {
-    allowedPages: ["/home", "/candidates", "/candidates/:id"],
+    allowedPages: [
+      "/home",
+      "/candidates",
+      "/candidates/:id",
+      "/pre-post-exams",
+    ],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "HR/TECH/PRESENTATION",
   },
@@ -42,6 +48,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/forms",
       "/track",
       "/track/sessions/:id/edit",
+      "/pre-post-exams",
     ],
     homePage: "/forms",
     groupName: "INSTRUCTOR/DATA",
@@ -81,6 +88,7 @@ export function getUserPermissionsFromGroups(
   const groupMappings: Record<string, number> = {
     hr: 3,
     tech: 3,
+    staff: 3,
     presentation: 4,
     instructor: 5,
     data: 5,
@@ -110,6 +118,7 @@ export function getUserPermissionsFromGroups(
         "/forms",
         "/attendance",
         "/track",
+        "/pre-post-exams",
       ],
       homePage: "/forms", // Default to forms as home for instructor
       groupName: "INSTRUCTOR + ATTENDANCE_TRACKER",
@@ -215,6 +224,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
     "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/pre-post-exams": { title: "navigation.pre_post_exams" },
   };
 
   return permissions.allowedPages
@@ -250,6 +260,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
     "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/pre-post-exams": { title: "navigation.pre_post_exams" },
   };
 
   return permissions.allowedPages
