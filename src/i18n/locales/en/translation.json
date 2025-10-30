@@ -86,6 +86,8 @@
     "attendance": "Attendance",
     "overview": "Overview",
     "forms": "Forms",
+    "forms_results": "Forms Results",
+    "forms_summary": "Forms Summary",
     "account": "Account",
     "track": "Track",
     "dashboard": "Dashboard",
@@ -205,6 +207,14 @@
       "subtitle": "Complete required forms",
       "submitForm": "Submit Form",
       "formSubmitted": "Form submitted successfully"
+    },
+    "forms_results": {
+      "title": "Forms Results",
+      "subtitle": "This page is coming soon."
+    },
+    "forms_summary": {
+      "title": "Forms Summary",
+      "subtitle": "This page is coming soon."
     }
   },
   "table": {

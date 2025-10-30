@@ -21,6 +21,7 @@ export type AuthUser = {
   id: number;
   email: string;
   name: string;
+  is_staff?: boolean;
   groups?: string[]; // e.g., ["instructor -> Data"], ["Trainee"]
   group_id?: number; // Numeric group ID for permission system
 };
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: profile.user_id,
             email: profile.user_email,
             name: profile.user_name || resp.user?.name || resp.user?.email,
+            is_staff: (profile as any).is_staff === true,
             groups: Array.isArray(profile.groups) ? profile.groups : [],
             group_id:
               profile.group_id ||

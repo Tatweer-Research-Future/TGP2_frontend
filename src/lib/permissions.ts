@@ -11,6 +11,7 @@ export type PageRoute =
   | "/candidates" // UsersPage
   | "/candidates/:id" // UserDetailPage
   | "/forms" // FormsPage
+  | "/forms-results" // FormsResultsPage
   | "/attendance" // AttendancePage
   | "/overview" // DashboardPage
   | "/track" // TrackPage
@@ -238,6 +239,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
     "/forms": { title: "navigation.forms" },
+    "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
@@ -275,6 +277,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
     "/forms": { title: "navigation.forms" },
+    "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/track": { title: "navigation.track" },
