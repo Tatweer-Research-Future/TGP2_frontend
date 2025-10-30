@@ -86,6 +86,8 @@
     "attendance": "الحضور",
     "overview": "نظرة عامة",
     "forms": "النماذج",
+    "forms_results": "نتائج النماذج",
+    "forms_summary": "ملخص النماذج",
     "account": "الحساب",
     "track": "التتبع",
     "dashboard": "لوحة التحكم",
@@ -205,6 +207,14 @@
       "subtitle": "أكمل النماذج المطلوبة",
       "submitForm": "إرسال النموذج",
       "formSubmitted": "تم إرسال النموذج بنجاح"
+    },
+    "forms_results": {
+      "title": "نتائج النماذج",
+      "subtitle": "هذه الصفحة قيد الإعداد."
+    },
+    "forms_summary": {
+      "title": "ملخص النماذج",
+      "subtitle": "هذه الصفحة قيد الإعداد."
     }
   },
   "table": {

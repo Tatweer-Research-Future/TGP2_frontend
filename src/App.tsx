@@ -20,8 +20,10 @@ import {
   HomeRedirect,
 } from "@/components/PermissionProtectedRoute";
 import { StaffOrInstructorRoute } from "@/components/StaffOrInstructorRoute";
+import { StaffOnlyRoute } from "@/components/StaffOnlyRoute";
 import PrePostExamsPage from "@/pages/PrePostExamsPage";
 import PrePostExamCreatePage from "@/pages/PrePostExamCreatePage";
+import FormsResultsPage from "@/pages/FormsResultsPage";
 
 export default function App() {
   return (
@@ -76,6 +78,14 @@ export default function App() {
                           <PermissionProtectedRoute requiredPage="/forms">
                             <FormsPage />
                           </PermissionProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/forms-results"
+                        element={
+                          <StaffOnlyRoute>
+                            <FormsResultsPage />
+                          </StaffOnlyRoute>
                         }
                       />
                       <Route

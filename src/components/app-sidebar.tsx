@@ -32,6 +32,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/home": IconHome,
     "/candidates": IconUsers,
     "/forms": IconPresentation,
+    "/forms-results": IconPresentation,
     "/attendance": IconClock,
     "/overview": IconChartBar,
     "/track": IconBook,
@@ -42,6 +43,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/home": t("navigation.home"),
     "/candidates": t("navigation.candidates"),
     "/forms": t("navigation.forms"),
+    "/forms-results": t("navigation.forms_summary"),
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
     "/track": t("navigation.track"),
@@ -72,6 +74,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     homeItem,
     ...permissionBasedItems.filter((item) => item.url !== "/home"),
   ];
+
+  // If user is staff, ensure Forms Summary appears in nav
+  if ((user as any)?.is_staff) {
+    const exists = allItems.some((it) => it.url === "/forms-results");
+    if (!exists) {
+      allItems.push({ url: "/forms-results" } as any);
+    }
+  }
 
   // Transform permission-based items to include icons and proper titles
   const navItems = allItems.map((item) => {

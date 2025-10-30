@@ -229,6 +229,7 @@ export type CurrentUserResponse = {
   user_id: number;
   user_name: string;
   user_email: string;
+  is_staff?: boolean;
   groups: string[];
   group_id?: number; // Add group_id field for permission system
 };
@@ -407,6 +408,47 @@ export async function getForms(): Promise<BackendFormsList> {
 
 export async function getFormById(id: number | string): Promise<BackendForm> {
   return apiFetch<BackendForm>(`/forms/${id}`);
+}
+
+// Forms submissions summary API
+export type FormSubmissionsSummary = {
+  form: { id: number; title: string };
+  totals: {
+    entries_count: number;
+    sum_final_scores: string; // decimal as string
+    max_total_overall: string; // decimal as string
+    max_total_per_entry: string; // decimal as string
+  };
+  fields: Array<
+    | {
+        id: number;
+        label: string;
+        type: "question";
+        required: boolean;
+        order: number;
+        weight: string;
+        responses_count: number;
+        sum_weighted_score: string;
+        max_possible: string;
+        options: Array<{ id: number; label: string; count: number }>;
+      }
+    | {
+        id: number;
+        label: string;
+        type: "text" | "email";
+        required: boolean;
+        order: number;
+        weight: string;
+        responses_count: number;
+        texts: string[];
+      }
+  >;
+};
+
+export async function getFormSubmissionsSummary(
+  id: number | string
+): Promise<FormSubmissionsSummary> {
+  return apiFetch<FormSubmissionsSummary>(`/forms/${id}/submissions-summary/`);
 }
 
 // Submit completed form
