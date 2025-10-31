@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   IconChevronRight,
   IconPencil,
@@ -8,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { RiBardFill } from "react-icons/ri";
 import { Loader } from "@/components/ui/loader";
-import { getPortalTracks, type PortalTrack } from "@/lib/api";
+import { getPortalModules, type PortalModule } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useUserGroups } from "@/hooks/useUserGroups";
 
@@ -17,7 +18,7 @@ export function TrackPage() {
   const { groupId, groups } = useUserGroups();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tracks, setTracks] = useState<PortalTrack[] | null>(null);
+  const [modules, setModules] = useState<PortalModule[] | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Record<number, boolean>>({});
 
   // Map track names to a visual theme (gradient + background icon)
@@ -58,8 +59,8 @@ export function TrackPage() {
     async function load() {
       try {
         setIsLoading(true);
-        const data = await getPortalTracks();
-        if (!cancelled) setTracks(data.results ?? []);
+        const data = await getPortalModules();
+        if (!cancelled) setModules(data.results ?? []);
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Failed to load tracks");
       } finally {
@@ -72,10 +73,26 @@ export function TrackPage() {
     };
   }, []);
 
-  const firstTrack = useMemo(
-    () => (tracks && tracks.length > 0 ? tracks[0] : null),
-    [tracks]
-  );
+  // Derive user-facing track title from /me groups
+  const trackTitle = useMemo(() => {
+    const g = (groups || []).map((x) => x.trim());
+    // Prefer patterns like "instructor -> X"
+    const arrow = g.find((x) => x.includes("->"));
+    if (arrow) return arrow.split("->").pop()!.trim();
+    // Prefer domain-like group names over generic ones
+    const generic = [
+      "trainee",
+      "candidate",
+      "instructor",
+      "staff",
+      "support",
+      "attendance_tracker",
+    ];
+    const domain = g.find(
+      (x) => !generic.some((k) => x.toLowerCase().includes(k))
+    );
+    return domain || "My Track";
+  }, [groups]);
 
   const isInstructor = useMemo(() => {
     const g = groups || [];
@@ -88,7 +105,7 @@ export function TrackPage() {
   return (
     <div className="px-4 lg:px-6">
       {(() => {
-        const theme = getTrackTheme(firstTrack?.name);
+        const theme = getTrackTheme(trackTitle);
         return (
           <div
             className={
@@ -122,7 +139,7 @@ export function TrackPage() {
             <div className="relative">
               <div className="ml-auto text-right max-w-[48rem]">
                 <h1 className="text-3xl md:text-5xl font-extrabold leading-tight">
-                  {firstTrack?.name ?? "Track"}
+                  {trackTitle || "My Track"}
                 </h1>
                 <p className="mt-2 text-white/80">
                   {isInstructor
@@ -142,9 +159,9 @@ export function TrackPage() {
       )}
       {error && <div className="text-destructive">{error}</div>}
 
-      {!isLoading && !error && firstTrack && (
+      {!isLoading && !error && (modules?.length ?? 0) > 0 && (
         <div className="grid grid-cols-1 gap-4">
-          {firstTrack.modules
+          {modules!
             .sort((a, b) => a.order - b.order)
             .map((mod) => {
               const isOpen = openWeeks[mod.id] ?? true;
@@ -193,9 +210,12 @@ export function TrackPage() {
                                     className="group cursor-pointer border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
                                     onClick={() =>
                                       navigate(
-                                        isInstructor
-                                          ? `/track/sessions/${session.id}/edit`
-                                          : `/track/sessions/${session.id}`
+                                        `/modules/session/${session.id}`,
+                                        {
+                                          state: {
+                                            sessionTitle: session.title,
+                                          },
+                                        }
                                       )
                                     }
                                   >
@@ -212,6 +232,48 @@ export function TrackPage() {
                                     </td>
                                   </tr>
                                 ))}
+                              {isInstructor && !mod.test && (
+                                <tr className="border-b-0">
+                                  <td
+                                    colSpan={3}
+                                    className="px-4 py-3 text-right"
+                                  >
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(
+                                          `/modules/${mod.id}/pre-post-exams/new`
+                                        );
+                                      }}
+                                    >
+                                      Create Exam
+                                    </Button>
+                                  </td>
+                                </tr>
+                              )}
+                              {isInstructor && mod.test && (
+                                <tr className="border-b-0">
+                                  <td
+                                    colSpan={3}
+                                    className="px-4 py-3 text-right"
+                                  >
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(
+                                          `/modules/${mod.id}/pre-post-exams/view`,
+                                          { state: { testId: mod.test?.id } }
+                                        );
+                                      }}
+                                    >
+                                      View Exam
+                                    </Button>
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>

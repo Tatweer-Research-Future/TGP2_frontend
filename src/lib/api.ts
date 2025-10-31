@@ -768,6 +768,8 @@ export type PortalModule = {
   order: number;
   type: string; // "WEEK"
   sessions: PortalSession[];
+  // Optional embedded test summary for this module (single test per module)
+  test?: ModuleTestSummary;
 };
 
 export type PortalTrack = {
@@ -788,6 +790,21 @@ export type PortalTracksResponse = {
 
 export async function getPortalTracks(): Promise<PortalTracksResponse> {
   return apiFetch<PortalTracksResponse>(`/portal/tracks/`);
+}
+
+// Modules list (for My Track)
+export type PortalModulesResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: PortalModule[];
+};
+
+export async function getPortalModules(): Promise<PortalModulesResponse> {
+  // Prefer portal-scoped modules endpoint
+  return apiFetch<PortalModulesResponse>(`/portal/modules/`);
 }
 
 // --- Portal Sessions ---
@@ -928,6 +945,64 @@ export async function submitAssignment(
   );
 }
 
+export type PortalSubmission = {
+  id: number;
+  assignment: number;
+  trainee: number;
+  is_gradable: boolean;
+  submitted_link: string;
+  note: string | null;
+  submitted_at: string;
+};
+
+export type CreatePortalSubmissionPayload = {
+  assignment: number;
+  submitted_link: string;
+  note?: string | null;
+};
+
+export type UpdatePortalSubmissionPayload = Partial<{
+  assignment: number;
+  submitted_link: string;
+  note: string | null;
+}>;
+
+export async function createOrUpdatePortalSubmission(
+  payload: CreatePortalSubmissionPayload
+): Promise<PortalSubmission> {
+  return apiFetch<PortalSubmission>(`/portal/submissions/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function getPortalSubmission(
+  submissionId: number | string
+): Promise<PortalSubmission> {
+  return apiFetch<PortalSubmission>(`/portal/submissions/${submissionId}/`);
+}
+
+export async function updatePortalSubmission(
+  submissionId: number | string,
+  payload: UpdatePortalSubmissionPayload
+): Promise<PortalSubmission> {
+  return apiFetch<PortalSubmission>(`/portal/submissions/${submissionId}/`, {
+    method: "PATCH",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function deletePortalSubmission(
+  submissionId: number | string
+): Promise<void> {
+  return apiFetch<void>(`/portal/submissions/${submissionId}/`, {
+    method: "DELETE",
+    requireCsrf: true,
+  });
+}
+
 // --- Announcements API ---
 export type Announcement = {
   id: number;
@@ -1034,18 +1109,30 @@ export async function voteOnPoll(
 }
 
 // --- Portal Tests (Pre/Post) ---
-export type ModuleTestKind = "PRE" | "POST";
+// New schema: single test per module, with separate PRE/POST schedules
+
+export type ModuleTestSummary = {
+  id: number;
+  title: string;
+  is_active_pre: boolean;
+  is_active_post: boolean;
+  has_submitted_pre: boolean;
+  has_submitted_post: boolean;
+  total_points: number;
+};
 
 export type ModuleTestListItem = {
   id: number;
   module: number;
-  kind: ModuleTestKind;
   title: string;
   description: string;
-  publish_at: string | null;
-  expire_at: string | null;
+  publish_at_pre: string | null;
+  expire_at_pre: string | null;
+  publish_at_post: string | null;
+  expire_at_post: string | null;
   is_disabled: boolean;
-  is_active: boolean;
+  is_active_pre: boolean;
+  is_active_post: boolean;
   total_points: number;
 };
 
@@ -1063,21 +1150,23 @@ export type ModuleTestQuestion = {
 export type ModuleTestDetail = {
   id: number;
   module: number;
-  kind: ModuleTestKind;
   title: string;
   description: string;
-  publish_at: string | null;
-  expire_at: string | null;
+  publish_at_pre: string | null;
+  expire_at_pre: string | null;
+  publish_at_post: string | null;
+  expire_at_post: string | null;
   is_disabled: boolean;
-  is_active: boolean;
+  is_active_pre: boolean;
+  is_active_post: boolean;
   total_points: number;
-  has_submitted?: boolean;
+  has_submitted_pre?: boolean;
+  has_submitted_post?: boolean;
   questions: ModuleTestQuestion[];
 };
 
 export type GetModuleTestsParams = {
   module?: number | string;
-  kind?: ModuleTestKind;
 };
 
 export async function getModuleTests(
@@ -1085,7 +1174,6 @@ export async function getModuleTests(
 ): Promise<ModuleTestListItem[]> {
   const search = new URLSearchParams();
   if (params?.module) search.append("module", String(params.module));
-  if (params?.kind) search.append("kind", params.kind);
   const query = search.toString();
   return apiFetch<ModuleTestListItem[]>(
     `/portal/tests/${query ? `?${query}` : ""}`
@@ -1100,11 +1188,12 @@ export async function getModuleTestById(
 
 export type CreateModuleTestPayload = {
   module: number;
-  kind: ModuleTestKind;
   title: string;
   description?: string;
-  publish_at?: string | null;
-  expire_at?: string | null;
+  publish_at_pre?: string | null;
+  expire_at_pre?: string | null;
+  publish_at_post?: string | null;
+  expire_at_post?: string | null;
   is_disabled?: boolean;
   questions?: Array<{
     title: string;
@@ -1128,14 +1217,17 @@ export async function createModuleTest(payload: CreateModuleTestPayload) {
 
   const form = new FormData();
   form.append("module", String(payload.module));
-  form.append("kind", payload.kind);
   form.append("title", payload.title);
   if (payload.description != null)
     form.append("description", payload.description);
-  if (payload.publish_at !== undefined && payload.publish_at !== null)
-    form.append("publish_at", payload.publish_at);
-  if (payload.expire_at !== undefined && payload.expire_at !== null)
-    form.append("expire_at", payload.expire_at);
+  if (payload.publish_at_pre !== undefined && payload.publish_at_pre !== null)
+    form.append("publish_at_pre", payload.publish_at_pre);
+  if (payload.expire_at_pre !== undefined && payload.expire_at_pre !== null)
+    form.append("expire_at_pre", payload.expire_at_pre);
+  if (payload.publish_at_post !== undefined && payload.publish_at_post !== null)
+    form.append("publish_at_post", payload.publish_at_post);
+  if (payload.expire_at_post !== undefined && payload.expire_at_post !== null)
+    form.append("expire_at_post", payload.expire_at_post);
   if (payload.is_disabled !== undefined)
     form.append("is_disabled", String(payload.is_disabled));
 

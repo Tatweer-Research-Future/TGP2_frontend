@@ -35,7 +35,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/forms-results": IconPresentation,
     "/attendance": IconClock,
     "/overview": IconChartBar,
-    "/track": IconBook,
+    "/modules": IconBook,
     "/pre-post-exams": IconBook,
   };
 
@@ -46,7 +46,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/forms-results": t("navigation.forms_summary"),
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
-    "/track": t("navigation.track"),
+    "/modules": t("navigation.my_track"),
     "/pre-post-exams": t("navigation.pre_post_exams"),
   };
 

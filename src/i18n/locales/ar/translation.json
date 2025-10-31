@@ -90,6 +90,9 @@
     "forms_summary": "ملخص النماذج",
     "account": "الحساب",
     "track": "التتبع",
+    "my_track": "مساري",
+    "exam": "الاختبار",
+    "sessions": "الجلسات",
     "dashboard": "لوحة التحكم",
     "pre_post_exams": "اختبارات قبل/بعد"
   },

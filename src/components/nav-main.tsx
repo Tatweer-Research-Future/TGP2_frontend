@@ -27,6 +27,7 @@ export function NavMain({
           {items.map((item) => {
             const isActive =
               location.pathname === item.url ||
+              location.pathname.startsWith(item.url + "/") ||
               (location.pathname === "/" && item.url === "/overview");
 
             return (

@@ -22,9 +22,13 @@ import {
 } from "@/components/PermissionProtectedRoute";
 import { StaffOrInstructorRoute } from "@/components/StaffOrInstructorRoute";
 import { StaffOnlyRoute } from "@/components/StaffOnlyRoute";
-import PrePostExamsPage from "@/pages/PrePostExamsPage";
+// Removed PrePostExamsPage
 import PrePostExamCreatePage from "@/pages/PrePostExamCreatePage";
 import FormsResultsPage from "@/pages/FormsResultsPage";
+import ModuleExamEditPage from "@/pages/ModuleExamEditPage";
+import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
+import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
+import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
 
 export default function App() {
   return (
@@ -99,49 +103,75 @@ export default function App() {
                       />
 
                       <Route
-                        path="/track"
+                        path="/modules"
                         element={
-                          <PermissionProtectedRoute requiredPage="/track">
+                          <PermissionProtectedRoute requiredPage="/modules">
                             <TrackPage />
                           </PermissionProtectedRoute>
                         }
                       />
 
                       <Route
-                        path="/track/sessions/:id"
+                        path="/modules/session/:id"
                         element={
-                          <PermissionProtectedRoute requiredPage="/track/sessions/:id">
+                          <PermissionProtectedRoute requiredPage="/modules/session/:id">
                             <SessionViewPage />
                           </PermissionProtectedRoute>
                         }
                       />
 
                       <Route
-                        path="/track/sessions/:id/edit"
+                        path="/modules/session/:id/edit"
                         element={
-                          <PermissionProtectedRoute requiredPage="/track/sessions/:id/edit">
+                          <PermissionProtectedRoute requiredPage="/modules/session/:id/edit">
                             <SessionEditPage />
                           </PermissionProtectedRoute>
                         }
                       />
 
-                      {/* Pre/Post Exams */}
+                      {/* Pre/Post Exam creation for a specific module */}
                       <Route
-                        path="/pre-post-exams"
-                        element={
-                          <StaffOrInstructorRoute>
-                            <PrePostExamsPage />
-                          </StaffOrInstructorRoute>
-                        }
-                      />
-                      <Route
-                        path="/pre-post-exams/new"
+                        path="/modules/:moduleId/pre-post-exams/new"
                         element={
                           <StaffOrInstructorRoute>
                             <PrePostExamCreatePage />
                           </StaffOrInstructorRoute>
                         }
                       />
+                      {/* Pre/Post Exam read-only view for a specific module */}
+                      <Route
+                        path="/modules/:moduleId/pre-post-exams/view"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <ModulePrePostExamViewPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
+                      <Route
+                        path="/modules/:id/exam/edit"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <ModuleExamEditPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
+                      <Route
+                        path="/modules/:id/exam/results"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <ModuleExamResultsPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
+                      <Route
+                        path="/modules/:id/exam/take"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/modules/:id/exam/take">
+                            <ModuleExamTakePage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+                      {/* Legacy global create route removed in favor of module-scoped */}
 
                       {/* Account page - accessible to all authenticated users */}
                       <Route path="/account" element={<AccountPage />} />

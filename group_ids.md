@@ -6,9 +6,9 @@ id | name
 4 | Presentation Evaluator
 5 | instructor -> Data
 8 | Trainee
-9 | attendance_tracker
+9 | attendance*tracker
 10 | instructor -> Software
 11 | instructor -> Network
-12 | AI & Data Analysis
-13 | Networking & Telecommunications
-14 | Software & App Development
+12 | trainee - > AI & Data Analysis
+13 | trainee -> Networking & Telecommunications
+14 | trainee *> Software & App Development

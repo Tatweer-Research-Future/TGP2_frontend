@@ -146,18 +146,38 @@ export default function SessionEditPage() {
     };
   }, [sessionId]);
 
+  // Track unsaved changes for better UX and clearer save affordance
+  const effectiveTitle = useMemo(() => {
+    if (!session) return (title || "").trim();
+    return title && title.trim().length > 0
+      ? title.trim()
+      : session.title ?? "";
+  }, [title, session]);
+
+  const effectiveDescription = useMemo(() => {
+    const trimmed = (description || "").trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }, [description]);
+
+  const hasUnsaved = useMemo(() => {
+    if (!session) return false;
+    const currentTitle = session.title ?? "";
+    const currentDesc = session.description ?? null;
+    return (
+      effectiveTitle !== currentTitle || effectiveDescription !== currentDesc
+    );
+  }, [session, effectiveTitle, effectiveDescription]);
+
   async function onSaveSession(e: React.FormEvent) {
     e.preventDefault();
     if (!sessionId) return;
+    if (!hasUnsaved) return;
     try {
       setIsSaving(true);
       // Backend allows PUT; send full minimal shape to be safe
       const updated = await updatePortalSession(sessionId, {
-        title:
-          title && title.trim().length > 0
-            ? title.trim()
-            : session?.title ?? "",
-        description: description?.trim() || null,
+        title: effectiveTitle,
+        description: effectiveDescription,
         // Intentionally omit start_time and end_time so dates remain unchanged
       } as any);
       // Ensure we keep full session fields (like start/end) after save
@@ -208,7 +228,7 @@ export default function SessionEditPage() {
     };
     const start = formatDate(session?.start_time ?? null);
     const end = formatDate(session?.end_time ?? null);
-    if (start && end) return `${start} - ${end}`;
+    if (start && end) return `${start}`;
     if (start) return start;
     if (end) return end;
     return "";
@@ -404,7 +424,7 @@ export default function SessionEditPage() {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => navigate("/track")}
+          onClick={() => navigate("/modules")}
           className="h-8 px-2 text-sm inline-flex items-center gap-1"
         >
           <ChevronLeftIcon className="h-4 w-4" />
@@ -414,12 +434,36 @@ export default function SessionEditPage() {
       <form onSubmit={onSaveSession}>
         <div className="my-6">
           <div className="w-full px-12">
+            {session && (
+              <div className="text-xs mt-1">
+                {isSaving ? (
+                  <span className="text-muted-foreground">Saving…</span>
+                ) : hasUnsaved ? (
+                  <span className="text-amber-600">Unsaved changes</span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    All changes saved
+                  </span>
+                )}
+              </div>
+            )}
             {isEditingTitle ? (
               <div className="flex items-center gap-2">
                 <Input
                   placeholder={session?.title}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setIsEditingTitle(false);
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setTitle("");
+                      setIsEditingTitle(false);
+                    }
+                  }}
                   className="text-3xl md:text-4xl font-bold h-auto w-auto py-2 shadow-none outline-none focus:outline-none focus:ring-0 px-3 border-b bg-muted/30"
                 />
               </div>
@@ -497,22 +541,44 @@ export default function SessionEditPage() {
                             </div>
                             <div className="rounded-md border px-4 py-3">
                               {showDescriptionEditor ? (
-                                <Textarea
-                                  placeholder="description for what will be covered this session"
-                                  value={description}
-                                  onChange={(e) => setDescription(e.target.value)}
-                                  rows={4}
-                                  className="bg-muted/30"
-                                />
+                                <>
+                                  <Textarea
+                                    placeholder="description for what will be covered this session"
+                                    value={description}
+                                    onChange={(e) =>
+                                      setDescription(e.target.value)
+                                    }
+                                    rows={4}
+                                    className="bg-muted/30"
+                                  />
+                                  <div className="mt-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      className="h-8 px-2 text-xs"
+                                      onClick={() =>
+                                        setShowDescriptionEditor(false)
+                                      }
+                                    >
+                                      Done
+                                    </Button>
+                                  </div>
+                                </>
                               ) : description?.trim() ? (
                                 <div className="max-w-none text-foreground/90">
                                   <ReactMarkdown
                                     components={{
                                       ul: ({ node, ...props }) => (
-                                        <ul className="list-disc ml-6 my-2 space-y-1" {...props} />
+                                        <ul
+                                          className="list-disc ml-6 my-2 space-y-1"
+                                          {...props}
+                                        />
                                       ),
                                       ol: ({ node, ...props }) => (
-                                        <ol className="list-decimal ml-6 my-2 space-y-1" {...props} />
+                                        <ol
+                                          className="list-decimal ml-6 my-2 space-y-1"
+                                          {...props}
+                                        />
                                       ),
                                       li: ({ node, ...props }) => (
                                         <li className="leading-6" {...props} />
@@ -525,9 +591,16 @@ export default function SessionEditPage() {
                                           {...props}
                                         />
                                       ),
-                                      code: ({ node, className, children, ...props }) => (
+                                      code: ({
+                                        node,
+                                        className,
+                                        children,
+                                        ...props
+                                      }) => (
                                         <code
-                                          className={`bg-muted px-1.5 py-0.5 rounded text-[0.9em] ${className || ""}`}
+                                          className={`bg-muted px-1.5 py-0.5 rounded text-[0.9em] ${
+                                            className || ""
+                                          }`}
                                           {...props}
                                         >
                                           {children}
@@ -555,23 +628,96 @@ export default function SessionEditPage() {
                             <div className="text-base font-semibold mb-2">
                               Upload session documents
                             </div>
-                            <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex flex-col gap-3">
                               <Input
+                                ref={fileInputRef}
                                 type="file"
                                 accept=".pdf,.doc,.docx,.txt,.jpeg,.jpg,.png,.xlsx,.xls"
                                 onChange={(e) =>
                                   setSelectedFile(e.target.files?.[0] || null)
                                 }
-                                className="bg-muted/30 w-auto file:mr-3 file:bg-primary/10 file:text-primary px-0 file:px-2 file:h-full p-0 file:font-medium file:hover:bg-primary/15 file:cursor-pointer"
+                                className="hidden"
                               />
-                              <Button
-                                type="button"
-                                disabled={!selectedFile || uploading}
-                                onClick={onUploadContent}
-                                className="shrink-0"
+                              <div
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                className="border-2 border-dashed rounded-md p-4 bg-muted/30 hover:bg-muted/40 transition-colors text-sm flex flex-col gap-3"
                               >
-                                {uploading ? "Uploading..." : "Upload"}
-                              </Button>
+                                {selectedFile ? (
+                                  <>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="truncate">
+                                        <span className="font-medium">
+                                          {selectedFile.name}
+                                        </span>
+                                        <span className="ml-2 text-muted-foreground">
+                                          (
+                                          {Math.round(selectedFile.size / 1024)}{" "}
+                                          KB)
+                                        </span>
+                                      </div>
+                                      <div className="inline-flex gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          onClick={handleBrowseFiles}
+                                        >
+                                          Change file
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setSelectedFile(null);
+                                            setFileTitle("");
+                                          }}
+                                        >
+                                          Clear
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <Input
+                                        placeholder="Document title (optional)"
+                                        value={fileTitle}
+                                        onChange={(e) =>
+                                          setFileTitle(e.target.value)
+                                        }
+                                        className="bg-background"
+                                      />
+                                      <Button
+                                        type="button"
+                                        disabled={uploading}
+                                        onClick={onUploadContent}
+                                        className="shrink-0"
+                                      >
+                                        {uploading ? "Uploading..." : "Upload"}
+                                      </Button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 text-muted-foreground">
+                                      <UploadCloud className="h-5 w-5" />
+                                      <div>
+                                        <div className="font-medium text-foreground">
+                                          Drag & drop a file here
+                                        </div>
+                                        <div className="text-xs">
+                                          or click Browse to select
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={handleBrowseFiles}
+                                    >
+                                      Browse
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0 mb-6">
                               You can upload PDF, DOCX, TXT, JPEG, XLSX (max
@@ -661,6 +807,15 @@ export default function SessionEditPage() {
                         </Field>
                       </FieldGroup>
                     </FieldSet>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={isSaving || !hasUnsaved}>
+                        {isSaving
+                          ? "Saving..."
+                          : hasUnsaved
+                          ? "Save changes"
+                          : "Saved"}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -831,6 +986,30 @@ export default function SessionEditPage() {
                                       />
                                     </div>
                                   </div>
+                                  <div className="flex gap-2 pt-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      className="h-8 px-2 text-xs"
+                                      onClick={() =>
+                                        setAssignmentDueDate(new Date())
+                                      }
+                                    >
+                                      Today
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      className="h-8 px-2 text-xs"
+                                      onClick={() => {
+                                        const d = new Date();
+                                        d.setDate(d.getDate() + 1);
+                                        setAssignmentDueDate(d);
+                                      }}
+                                    >
+                                      Tomorrow
+                                    </Button>
+                                  </div>
                                 </FieldContent>
                               </Field>
                               <Field>
@@ -951,12 +1130,6 @@ export default function SessionEditPage() {
             </TabsContent>
           </Tabs>
         )}
-        {/* Sticky save button bottom-right */}
-        <div className="fixed bottom-6 right-6">
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save changes"}
-          </Button>
-        </div>
       </form>
 
       {/* Confirm delete document dialog */}

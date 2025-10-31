@@ -90,6 +90,9 @@
     "forms_summary": "Forms Summary",
     "account": "Account",
     "track": "Track",
+    "my_track": "My Track",
+    "exam": "Exam",
+    "sessions": "Sessions",
     "dashboard": "Dashboard",
     "pre_post_exams": "Pre/Post Exams"
   },

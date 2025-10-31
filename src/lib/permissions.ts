@@ -14,10 +14,14 @@ export type PageRoute =
   | "/forms-results" // FormsResultsPage
   | "/attendance" // AttendancePage
   | "/overview" // DashboardPage
-  | "/track" // TrackPage
-  | "/track/sessions/:id" // SessionViewPage (read-only)
-  | "/track/sessions/:id/edit" // SessionEditPage
-  | "/pre-post-exams"; // Pre/Post Exams (staff/instructor)
+  | "/modules" // My Track (modules list)
+  | "/modules/session/:id" // SessionViewPage (read-only)
+  | "/modules/session/:id/edit" // SessionEditPage
+  | "/modules/:id/exam/create"
+  | "/modules/:id/exam/edit"
+  | "/modules/:id/exam/results"
+  | "/modules/:id/exam/take"
+  ; // Pre/Post Exams routes are module-scoped
 
 export type GroupPermissions = {
   allowedPages: PageRoute[];
@@ -32,7 +36,6 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/candidates",
       "/candidates/:id",
-      "/pre-post-exams",
     ],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "HR/TECH/PRESENTATION",
@@ -48,31 +51,57 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/candidates",
       "/candidates/:id",
       "/forms",
-      "/track",
-      "/track/sessions/:id",
-      "/track/sessions/:id/edit",
-      "/pre-post-exams",
+      "/modules",
+      "/modules/session/:id",
+      "/modules/session/:id/edit",
+      "/modules/:id/exam/create",
+      "/modules/:id/exam/edit",
+      "/modules/:id/exam/results",
     ],
     homePage: "/forms",
     groupName: "INSTRUCTOR/DATA",
   },
   8: {
-    allowedPages: ["/home", "/forms", "/track", "/track/sessions/:id"],
+    allowedPages: [
+      "/home",
+      "/forms",
+      "/modules",
+      "/modules/session/:id",
+      "/modules/:id/exam/take",
+    ],
     homePage: "/home",
     groupName: "TRAINEE",
   },
   12: {
-    allowedPages: ["/home", "/forms", "/track", "/track/sessions/:id"],
+    allowedPages: [
+      "/home",
+      "/forms",
+      "/modules",
+      "/modules/session/:id",
+      "/modules/:id/exam/take",
+    ],
     homePage: "/home",
     groupName: "TRAINEE",
   },
   13: {
-    allowedPages: ["/home", "/forms", "/track", "/track/sessions/:id"],
+    allowedPages: [
+      "/home",
+      "/forms",
+      "/modules",
+      "/modules/session/:id",
+      "/modules/:id/exam/take",
+    ],
     homePage: "/home",
     groupName: "TRAINEE",
   },
   14: {
-    allowedPages: ["/home", "/forms", "/track", "/track/sessions/:id"],
+    allowedPages: [
+      "/home",
+      "/forms",
+      "/modules",
+      "/modules/session/:id",
+      "/modules/:id/exam/take",
+    ],
     homePage: "/home",
     groupName: "TRAINEE",
   },
@@ -135,9 +164,10 @@ export function getUserPermissionsFromGroups(
         "/candidates/:id",
         "/forms",
         "/attendance",
-        "/track",
-        "/track/sessions/:id",
-        "/pre-post-exams",
+        "/modules",
+        "/modules/session/:id",
+        "/modules/:id/exam/create",
+        "/modules/:id/exam/results",
       ],
       homePage: "/forms", // Default to forms as home for instructor
       groupName: "INSTRUCTOR + ATTENDANCE_TRACKER",
@@ -242,9 +272,13 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
-    "/track": { title: "navigation.track" },
-    "/track/sessions/:id": { title: "navigation.track_session_view" }, // Not shown in nav
-    "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/modules": { title: "navigation.my_track" },
+    "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
+    "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/edit": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
     "/pre-post-exams": { title: "navigation.pre_post_exams" },
   };
 
@@ -252,7 +286,10 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     .filter(
       (page) =>
         // Don't show dynamic routes in nav
-        page !== "/candidates/:id" && page !== "/track/sessions/:id" && page !== "/track/sessions/:id/edit"
+        page !== "/candidates/:id" &&
+        page !== "/modules/session/:id" &&
+        page !== "/modules/session/:id/edit" &&
+        !page.startsWith("/modules/") // hide nested exam routes
     )
     .map((page) => ({
       title: navigationMap[page as PageRoute]?.title || page,
@@ -280,9 +317,13 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
-    "/track": { title: "navigation.track" },
-    "/track/sessions/:id": { title: "navigation.track_session_view" }, // Not shown in nav
-    "/track/sessions/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/modules": { title: "navigation.my_track" },
+    "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
+    "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
+    "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/edit": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
     "/pre-post-exams": { title: "navigation.pre_post_exams" },
   };
 
@@ -290,7 +331,10 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     .filter(
       (page) =>
         // Don't show dynamic routes in nav
-        page !== "/candidates/:id" && page !== "/track/sessions/:id" && page !== "/track/sessions/:id/edit"
+        page !== "/candidates/:id" &&
+        page !== "/modules/session/:id" &&
+        page !== "/modules/session/:id/edit" &&
+        !page.startsWith("/modules/") // hide nested exam routes
     )
     .map((page) => ({
       title: navigationMap[page as PageRoute]?.title || page,

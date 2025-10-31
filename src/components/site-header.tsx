@@ -8,12 +8,40 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Link, useLocation } from "react-router-dom";
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useCandidates } from "@/context/CandidatesContext";
+import { getPortalSession } from "@/lib/api";
 
 export function SiteHeader() {
   const location = useLocation();
   const { getCandidateById } = useCandidates();
+  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
+
+  // Load session title for breadcrumb when on a session route
+  useEffect(() => {
+    setSessionTitle(null);
+    const path = location.pathname;
+    const m = path.match(/^\/modules\/session\/([^/]+)/);
+    if (!m) return;
+    const id = m[1];
+    const stateTitle = (location as any).state?.sessionTitle as string | undefined;
+    if (stateTitle) {
+      setSessionTitle(stateTitle);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await getPortalSession(id);
+        if (!cancelled) setSessionTitle(s.title || null);
+      } catch (_) {
+        if (!cancelled) setSessionTitle(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
 
   const crumbs = useMemo(() => {
     const path = location.pathname;
@@ -31,6 +59,26 @@ export function SiteHeader() {
       }
     } else if (path.startsWith("/forms")) {
       items.push({ label: "Forms" });
+    } else if (path === "/modules") {
+      items.push({ label: "My Track" });
+    } else if (/^\/modules\/session\/.+/.test(path)) {
+      items.push({ label: "My Track", to: "/modules" });
+      items.push({ label: "Sessions" });
+      items.push({ label: sessionTitle ?? "Session" });
+    } else if (/^\/modules\/\d+\/pre-post-exams\/new$/.test(path)) {
+      items.push({ label: "My Track", to: "/modules" });
+      items.push({ label: "Create Pre/Post Exam" });
+    } else if (/^\/modules\/\d+\/pre-post-exams\/view$/.test(path)) {
+      items.push({ label: "My Track", to: "/modules" });
+      items.push({ label: "Pre/Post Exam" });
+      items.push({ label: "View" });
+    } else if (/^\/modules\/\d+\/exam\/(create|edit|results|take)$/.test(path)) {
+      items.push({ label: "My Track", to: "/modules" });
+      items.push({ label: "Exam" });
+      if (path.endsWith("/create")) items.push({ label: "Create" });
+      else if (path.endsWith("/edit")) items.push({ label: "Edit" });
+      else if (path.endsWith("/results")) items.push({ label: "Results" });
+      else if (path.endsWith("/take")) items.push({ label: "Take" });
     } else if (path === "/pre-post-exams") {
       items.push({ label: "Pre/Post Exams" });
     } else if (path.startsWith("/pre-post-exams/new")) {
@@ -40,7 +88,7 @@ export function SiteHeader() {
       items.push({ label: "Home" });
     }
     return items;
-  }, [location.pathname, getCandidateById]);
+  }, [location.pathname, getCandidateById, sessionTitle]);
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">

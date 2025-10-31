@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,22 +12,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   getPortalTracks,
   type PortalTrack,
   createModuleTest,
   type CreateModuleTestPayload,
-  type ModuleTestKind,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { CalendarDays, FileQuestion, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type ModuleOption = {
   id: number;
@@ -49,12 +44,14 @@ export default function PrePostExamCreatePage() {
   const [tracks, setTracks] = useState<PortalTrack[] | null>(null);
   const [modules, setModules] = useState<ModuleOption[]>([]);
 
+  const params = useParams();
   const [moduleId, setModuleId] = useState<string>("");
-  const [kind, setKind] = useState<ModuleTestKind>("PRE");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [publishAt, setPublishAt] = useState<string>(""); // datetime-local
-  const [expireAt, setExpireAt] = useState<string>(""); // datetime-local
+  const [publishAtPre, setPublishAtPre] = useState<string>(""); // datetime-local
+  const [expireAtPre, setExpireAtPre] = useState<string>(""); // datetime-local
+  const [publishAtPost, setPublishAtPost] = useState<string>(""); // datetime-local
+  const [expireAtPost, setExpireAtPost] = useState<string>(""); // datetime-local
   const [isDisabled, setIsDisabled] = useState(false);
 
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
@@ -70,6 +67,14 @@ export default function PrePostExamCreatePage() {
       mounted = false;
     };
   }, []);
+
+  // Prefill module if route param provided
+  useEffect(() => {
+    const idFromRoute = params.moduleId;
+    if (idFromRoute) {
+      setModuleId(String(idFromRoute));
+    }
+  }, [params.moduleId]);
 
   useEffect(() => {
     if (!tracks) return;
@@ -87,6 +92,41 @@ export default function PrePostExamCreatePage() {
     );
     setModules(opts);
   }, [tracks]);
+
+  // Auto-prefill publish times to 08:30 for PRE (first session day) and POST (last session day)
+  useEffect(() => {
+    if (!tracks || !moduleId) return;
+    const idNum = Number(moduleId);
+    for (const t of tracks) {
+      const mod = t.modules.find((m) => m.id === idNum);
+      if (!mod) continue;
+      const sessionTimes = (mod.sessions || [])
+        .map((s) => s.start_time)
+        .filter(Boolean) as string[];
+      if (sessionTimes.length === 0) return;
+      const dates = sessionTimes
+        .map((iso) => new Date(iso))
+        .sort((a, b) => a.getTime() - b.getTime());
+      const first = new Date(dates[0]);
+      const last = new Date(dates[dates.length - 1]);
+      const set0830 = (d: Date) => {
+        const copy = new Date(d);
+        copy.setHours(8, 30, 0, 0);
+        // Convert to yyyy-MM-ddTHH:mm for datetime-local
+        const pad = (n: number) => `${n}`.padStart(2, "0");
+        const yyyy = copy.getFullYear();
+        const mm = pad(copy.getMonth() + 1);
+        const dd = pad(copy.getDate());
+        const hh = pad(copy.getHours());
+        const min = pad(copy.getMinutes());
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      };
+      // Only prefill if empty so user edits are preserved
+      if (!publishAtPre) setPublishAtPre(set0830(first));
+      if (!publishAtPost) setPublishAtPost(set0830(last));
+      break;
+    }
+  }, [tracks, moduleId]);
 
   const moduleLabel = useMemo(() => {
     const idNum = Number(moduleId);
@@ -154,8 +194,19 @@ export default function PrePostExamCreatePage() {
   function validate(): string | null {
     if (!moduleId) return "Please select a week.";
     if (!title.trim()) return "Please enter a title.";
-    if (publishAt && expireAt && new Date(publishAt) >= new Date(expireAt)) {
-      return "Publish time must be before expire time.";
+    if (
+      publishAtPre &&
+      expireAtPre &&
+      new Date(publishAtPre) >= new Date(expireAtPre)
+    ) {
+      return "Pre: publish time must be before expire time.";
+    }
+    if (
+      publishAtPost &&
+      expireAtPost &&
+      new Date(publishAtPost) >= new Date(expireAtPost)
+    ) {
+      return "Post: publish time must be before expire time.";
     }
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -182,11 +233,12 @@ export default function PrePostExamCreatePage() {
     }
     const payload: CreateModuleTestPayload = {
       module: Number(moduleId),
-      kind,
       title: title.trim(),
       description: description || undefined,
-      publish_at: publishAt ? new Date(publishAt).toISOString() : null,
-      expire_at: expireAt ? new Date(expireAt).toISOString() : null,
+      publish_at_pre: publishAtPre ? new Date(publishAtPre).toISOString() : null,
+      expire_at_pre: expireAtPre ? new Date(expireAtPre).toISOString() : null,
+      publish_at_post: publishAtPost ? new Date(publishAtPost).toISOString() : null,
+      expire_at_post: expireAtPost ? new Date(expireAtPost).toISOString() : null,
       is_disabled: isDisabled || undefined,
       questions: questions.length
         ? questions.map((q, idx) => ({
@@ -218,144 +270,234 @@ export default function PrePostExamCreatePage() {
   }
 
   return (
-    <div className="container mx-auto px-4">
-      <div className="flex items-center justify-between" />
+    <div className="container mx-auto px-4 py-6">
+      {/* Page Header */}
+      <div className="mb-8 mx-3">
+        <div className="flex items-center gap-0 mb-2 ">
+   
+          <h1 className="text-2xl font-bold">Create Pre/Post Exam</h1>
+        </div>
+        {moduleLabel && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">for</span>
+            <Badge variant="secondary" className="text-sm">
+              {moduleLabel}
+            </Badge>
+          </div>
+        )}
+        <p className="text-muted-foreground mt-2">
+          Create a comprehensive exam with separate PRE and POST schedules for your module.
+        </p>
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-6">
+      <form onSubmit={onSubmit} className="space-y-8">
+        {/* Test Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Test Details</CardTitle>
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>Test Details</CardTitle>
+            </div>
             <CardDescription>
               Fill in the basic information for the test.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+          <CardContent className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="module-display">
+                  Week <span className="text-destructive">*</span>
+                </Label>
+                <div
+                  id="module-display"
+                  className="px-3 py-2 rounded-md border bg-muted/30 text-sm"
+                >
+                  {moduleLabel || "No week selected"}
+                </div>
+                {moduleId && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {moduleLabel}
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="title-input">
+                  Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="title-input"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Week 1 Assessment"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Week</Label>
-              <Select value={moduleId} onValueChange={setModuleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modules.map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {moduleId && (
-                <p className="text-xs text-muted-foreground">
-                  Selected: {moduleLabel}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Kind</Label>
-              <Select
-                value={kind}
-                onValueChange={(v) => setKind(v as ModuleTestKind)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PRE">PRE</SelectItem>
-                  <SelectItem value="POST">POST</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Title</Label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Week 1 Pre-test"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Description</Label>
+              <Label htmlFor="description-input">Description</Label>
               <Textarea
+                id="description-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
+                placeholder="Optional description for the test"
+                rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Publish at</Label>
-              <Input
-                type="datetime-local"
-                value={publishAt}
-                onChange={(e) => setPublishAt(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Expire at</Label>
-              <Input
-                type="datetime-local"
-                value={expireAt}
-                onChange={(e) => setExpireAt(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 md:col-span-2">
+
+            <div className="flex items-center gap-2">
               <Checkbox
                 id="disabled"
                 checked={isDisabled}
                 onCheckedChange={(v) => setIsDisabled(Boolean(v))}
               />
-              <Label htmlFor="disabled">Disabled</Label>
+              <Label htmlFor="disabled">Disabled (test will not be active)</Label>
             </div>
           </CardContent>
         </Card>
 
+        {/* Schedule Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>Schedule Settings</CardTitle>
+            </div>
+            <CardDescription>
+              Configure when the PRE and POST tests will be available to students.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            {/* PRE Test Schedule */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  PRE Test
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Administered before the module content
+                </span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-blue-200">
+                <DateTimePicker
+                  label="Publish at"
+                  value={publishAtPre}
+                  onChange={setPublishAtPre}
+                  placeholder="When students can start the PRE test"
+                  description="Auto-filled to first session at 8:30 AM"
+                />
+                <DateTimePicker
+                  label="Expire at"
+                  value={expireAtPre}
+                  onChange={setExpireAtPre}
+                  placeholder="When PRE test becomes unavailable"
+                  description="Optional - leave empty for no expiration"
+                />
+              </div>
+            </div>
+
+            {/* POST Test Schedule */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  POST Test
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Administered after the module content
+                </span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-green-200">
+                <DateTimePicker
+                  label="Publish at"
+                  value={publishAtPost}
+                  onChange={setPublishAtPost}
+                  placeholder="When students can start the POST test"
+                  description="Auto-filled to last session at 8:30 AM"
+                />
+                <DateTimePicker
+                  label="Expire at"
+                  value={expireAtPost}
+                  onChange={setExpireAtPost}
+                  placeholder="When POST test becomes unavailable"
+                  description="Optional - leave empty for no expiration"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Questions Section */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Questions (optional)</CardTitle>
-                <CardDescription>
-                  Add multiple choice questions; each must have exactly one
-                  correct choice.
-                </CardDescription>
+              <div className="flex items-center gap-2">
+                <FileQuestion className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle>Questions (optional)</CardTitle>
+                  <CardDescription>
+                    Add multiple choice questions. Each question must have exactly one correct answer.
+                  </CardDescription>
+                </div>
               </div>
-              <Button type="button" onClick={addQuestion} variant="secondary">
-                + Add question
+              <Button type="button" onClick={addQuestion} variant="outline" size="sm">
+                + Add Question
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {questions.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No questions added yet.
-              </p>
+              <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground mb-2">No questions added yet</p>
+                
+              </div>
             )}
+            
             {questions.map((q, qi) => (
-              <Card key={qi}>
-                <CardContent className="pt-6 space-y-4">
+              <Card key={qi} className="border-l-4 gap-3 border-l-primary/20">
+                <CardHeader className="pb-0">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      <Label>Question {qi + 1} title</Label>
-                      <Input
-                        value={q.title}
-                        onChange={(e) =>
-                          updateQuestion(qi, (prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                      />
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        Q{qi + 1}
+                      </Badge>
+                      <span className="font-medium text-sm text-muted-foreground">
+                        Question {qi + 1}
+                      </span>
                     </div>
                     <Button
                       type="button"
                       onClick={() => removeQuestion(qi)}
                       variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
                     >
                       Remove
                     </Button>
                   </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label>Text (optional)</Label>
+                    <Label htmlFor={`question-${qi}-title`}>
+                      Question Title <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id={`question-${qi}-title`}
+                      value={q.title}
+                      onChange={(e) =>
+                        updateQuestion(qi, (prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      placeholder="Enter your question here..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`question-${qi}-text`}>Additional Text</Label>
                     <Textarea
+                      id={`question-${qi}-text`}
                       value={q.text}
                       onChange={(e) =>
                         updateQuestion(qi, (prev) => ({
@@ -363,10 +505,13 @@ export default function PrePostExamCreatePage() {
                           text: e.target.value,
                         }))
                       }
+                      placeholder="Optional additional context or instructions..."
+                      rows={2}
                     />
                   </div>
+
                   <div className="space-y-2">
-                    <Label>Image (optional)</Label>
+                    <Label>Image</Label>
                     <div className="flex items-center gap-3 flex-wrap">
                       <Input
                         type="file"
@@ -374,60 +519,93 @@ export default function PrePostExamCreatePage() {
                         onChange={(e) =>
                           setQuestionImage(qi, e.target.files?.[0] || null)
                         }
-                        className="bg-muted/30 w-auto file:mr-3 file:bg-primary/10 file:text-primary px-0 file:px-2 file:h-full p-0 file:font-medium file:hover:bg-primary/15 file:cursor-pointer"
+                        className="w-auto file:mr-3  file:bg-primary file:text-primary-foreground file:border-0 file:px-3 file:py-0 file:text-sm file:font-medium hover:file:bg-primary/90 file:h-full px-0 py-0"
                       />
                       {q.imageFile && (
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="outline"
+                          size="sm"
                           onClick={() => setQuestionImage(qi, null)}
                         >
-                          Remove image
+                          Remove
                         </Button>
                       )}
                     </div>
                     {q.imageFile && (
-                      <div className="text-xs text-muted-foreground">
-                        Selected: {q.imageFile.name}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-xs">
+                          {q.imageFile.name}
+                        </Badge>
                       </div>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Choices</Label>
+
+                  <div className="space-y-3">
+                    <Label>Answer Choices</Label>
                     <div className="space-y-3">
                       {q.choices.map((c, ci) => (
-                        <div key={ci} className="flex items-center gap-3">
-                          <input
-                            aria-label="Correct"
-                            type="radio"
-                            name={`q-${qi}-correct`}
-                            checked={c.is_correct}
-                            onChange={() => setChoiceCorrect(qi, ci)}
-                          />
-                          <Input
-                            value={c.text}
-                            onChange={(e) =>
-                              setChoiceText(qi, ci, e.target.value)
-                            }
-                            placeholder={`Choice ${ci + 1}`}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => removeChoice(qi, ci)}
-                          >
-                            Remove
-                          </Button>
+                        <div 
+                          key={ci} 
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            c.is_correct 
+                              ? 'bg-green-50 border-green-200 ring-1 ring-green-200' 
+                              : 'bg-muted/30 border-border hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <input
+                              aria-label={`Mark choice ${ci + 1} as correct`}
+                              type="radio"
+                              name={`q-${qi}-correct`}
+                              checked={c.is_correct}
+                              onChange={() => setChoiceCorrect(qi, ci)}
+                              className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Input
+                              value={c.text}
+                              onChange={(e) =>
+                                setChoiceText(qi, ci, e.target.value)
+                              }
+                              placeholder={`Choice ${ci + 1}`}
+                              className={`border-0 bg-transparent ${
+                                c.is_correct ? 'font-medium' : ''
+                              }`}
+                            />
+                          </div>
+                          {c.is_correct && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                              Correct Answer
+                            </Badge>
+                          )}
+                          {q.choices.length > 2 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeChoice(qi, ci)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              Remove
+                            </Button>
+                          )}
                         </div>
                       ))}
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
+                        size="sm"
                         onClick={() => addChoice(qi)}
+                        className="w-full"
                       >
-                        + Add choice
+                        + Add Choice
                       </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Click the radio button to mark the correct answer. Each question must have exactly one correct choice.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -435,18 +613,42 @@ export default function PrePostExamCreatePage() {
           </CardContent>
         </Card>
 
+        {/* Actions */}
         <Card>
-          <CardFooter className="flex items-center justify-end gap-3">
-            <Button type="button" variant="ghost" asChild>
-              <Link to="/pre-post-exams">Cancel</Link>
-            </Button>
-            <Button
-              type="submit"
-              disabled={submitting || !moduleId || !title.trim()}
-            >
-              {submitting ? "Creating…" : "Create Test"}
-            </Button>
-          </CardFooter>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Ready to create your test?</p>
+                <p className="text-xs text-muted-foreground">
+                  {!moduleId || !title.trim() 
+                    ? "Please fill in the required fields to continue"
+                    : questions.length === 0 
+                    ? "You can add questions later or create the test without questions"
+                    : `Test will be created with ${questions.length} question${questions.length === 1 ? '' : 's'}`
+                  }
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button type="button" variant="outline" asChild>
+                  <Link to="/pre-post-exams">Cancel</Link>
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting || !moduleId || !title.trim()}
+                  className="min-w-[120px]"
+                >
+                  {submitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Creating...
+                    </div>
+                  ) : (
+                    "Create Test"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </form>
     </div>
