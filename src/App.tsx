@@ -29,6 +29,7 @@ import ModuleExamEditPage from "@/pages/ModuleExamEditPage";
 import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
 import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
 import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -142,9 +143,9 @@ export default function App() {
                       <Route
                         path="/modules/:moduleId/pre-post-exams/view"
                         element={
-                          <StaffOrInstructorRoute>
+                          <PermissionProtectedRoute requiredPage="/modules/:moduleId/pre-post-exams/view">
                             <ModulePrePostExamViewPage />
-                          </StaffOrInstructorRoute>
+                          </PermissionProtectedRoute>
                         }
                       />
                       <Route
@@ -175,6 +176,9 @@ export default function App() {
 
                       {/* Account page - accessible to all authenticated users */}
                       <Route path="/account" element={<AccountPage />} />
+
+                      {/* 404 catch-all */}
+                      <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                   </AppLayout>
                 </ProtectedRoute>

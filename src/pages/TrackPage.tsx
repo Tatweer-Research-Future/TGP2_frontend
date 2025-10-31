@@ -274,6 +274,37 @@ export function TrackPage() {
                                   </td>
                                 </tr>
                               )}
+                              {!isInstructor &&
+                                mod.test &&
+                                (mod.test.is_active_pre ||
+                                  mod.test.is_active_post) && (
+                                  <tr className="border-b-0">
+                                    <td
+                                      colSpan={3}
+                                      className="px-4 py-3 text-right"
+                                    >
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const kind = mod.test!.is_active_pre
+                                            ? "PRE"
+                                            : "POST";
+                                          navigate(
+                                            `/modules/${mod.id}/exam/take`,
+                                            {
+                                              state: { kind },
+                                            }
+                                          );
+                                        }}
+                                      >
+                                        {mod.test.is_active_pre
+                                          ? "Take Pre-Exam"
+                                          : "Take Post-Exam"}
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                )}
                             </tbody>
                           </table>
                         </div>

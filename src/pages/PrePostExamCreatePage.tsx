@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +56,8 @@ export default function PrePostExamCreatePage() {
 
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [showFloatingAdd, setShowFloatingAdd] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -127,6 +129,20 @@ export default function PrePostExamCreatePage() {
       break;
     }
   }, [tracks, moduleId]);
+
+  // Show floating "Add Question" button when the original is out of view
+  useEffect(() => {
+    const target = addButtonRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingAdd(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [addButtonRef]);
 
   const moduleLabel = useMemo(() => {
     const idNum = Number(moduleId);
@@ -235,10 +251,16 @@ export default function PrePostExamCreatePage() {
       module: Number(moduleId),
       title: title.trim(),
       description: description || undefined,
-      publish_at_pre: publishAtPre ? new Date(publishAtPre).toISOString() : null,
+      publish_at_pre: publishAtPre
+        ? new Date(publishAtPre).toISOString()
+        : null,
       expire_at_pre: expireAtPre ? new Date(expireAtPre).toISOString() : null,
-      publish_at_post: publishAtPost ? new Date(publishAtPost).toISOString() : null,
-      expire_at_post: expireAtPost ? new Date(expireAtPost).toISOString() : null,
+      publish_at_post: publishAtPost
+        ? new Date(publishAtPost).toISOString()
+        : null,
+      expire_at_post: expireAtPost
+        ? new Date(expireAtPost).toISOString()
+        : null,
       is_disabled: isDisabled || undefined,
       questions: questions.length
         ? questions.map((q, idx) => ({
@@ -257,7 +279,7 @@ export default function PrePostExamCreatePage() {
     try {
       await createModuleTest(payload);
       toast.success("Test created successfully.");
-      navigate("/pre-post-exams");
+      navigate(`/modules/${moduleId}/pre-post-exams/view`);
     } catch (error: any) {
       const message =
         error?.data && typeof error.data === "object"
@@ -274,7 +296,6 @@ export default function PrePostExamCreatePage() {
       {/* Page Header */}
       <div className="mb-8 mx-3">
         <div className="flex items-center gap-0 mb-2 ">
-   
           <h1 className="text-2xl font-bold">Create Pre/Post Exam</h1>
         </div>
         {moduleLabel && (
@@ -286,7 +307,8 @@ export default function PrePostExamCreatePage() {
           </div>
         )}
         <p className="text-muted-foreground mt-2">
-          Create a comprehensive exam with separate PRE and POST schedules for your module.
+          Create a comprehensive exam with separate PRE and POST schedules for
+          your module.
         </p>
       </div>
 
@@ -320,7 +342,7 @@ export default function PrePostExamCreatePage() {
                   </p>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="title-input">
                   Title <span className="text-destructive">*</span>
@@ -351,7 +373,9 @@ export default function PrePostExamCreatePage() {
                 checked={isDisabled}
                 onCheckedChange={(v) => setIsDisabled(Boolean(v))}
               />
-              <Label htmlFor="disabled">Disabled (test will not be active)</Label>
+              <Label htmlFor="disabled">
+                Disabled (test will not be active)
+              </Label>
             </div>
           </CardContent>
         </Card>
@@ -364,14 +388,18 @@ export default function PrePostExamCreatePage() {
               <CardTitle>Schedule Settings</CardTitle>
             </div>
             <CardDescription>
-              Configure when the PRE and POST tests will be available to students.
+              Configure when the PRE and POST tests will be available to
+              students.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             {/* PRE Test Schedule */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 border-blue-200"
+                >
                   PRE Test
                 </Badge>
                 <span className="text-sm text-muted-foreground">
@@ -399,7 +427,10 @@ export default function PrePostExamCreatePage() {
             {/* POST Test Schedule */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 border-green-200"
+                >
                   POST Test
                 </Badge>
                 <span className="text-sm text-muted-foreground">
@@ -435,11 +466,18 @@ export default function PrePostExamCreatePage() {
                 <div>
                   <CardTitle>Questions (optional)</CardTitle>
                   <CardDescription>
-                    Add multiple choice questions. Each question must have exactly one correct answer.
+                    Add multiple choice questions. Each question must have
+                    exactly one correct answer.
                   </CardDescription>
                 </div>
               </div>
-              <Button type="button" onClick={addQuestion} variant="outline" size="sm">
+              <Button
+                type="button"
+                onClick={addQuestion}
+                ref={addButtonRef}
+                variant="outline"
+                size="sm"
+              >
                 + Add Question
               </Button>
             </div>
@@ -448,11 +486,12 @@ export default function PrePostExamCreatePage() {
             {questions.length === 0 && (
               <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
                 <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground mb-2">No questions added yet</p>
-                
+                <p className="text-muted-foreground mb-2">
+                  No questions added yet
+                </p>
               </div>
             )}
-            
+
             {questions.map((q, qi) => (
               <Card key={qi} className="border-l-4 gap-3 border-l-primary/20">
                 <CardHeader className="pb-0">
@@ -495,7 +534,9 @@ export default function PrePostExamCreatePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`question-${qi}-text`}>Additional Text</Label>
+                    <Label htmlFor={`question-${qi}-text`}>
+                      Additional Text
+                    </Label>
                     <Textarea
                       id={`question-${qi}-text`}
                       value={q.text}
@@ -545,12 +586,12 @@ export default function PrePostExamCreatePage() {
                     <Label>Answer Choices</Label>
                     <div className="space-y-3">
                       {q.choices.map((c, ci) => (
-                        <div 
-                          key={ci} 
+                        <div
+                          key={ci}
                           className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                            c.is_correct 
-                              ? 'bg-green-50 border-green-200 ring-1 ring-green-200' 
-                              : 'bg-muted/30 border-border hover:bg-muted/50'
+                            c.is_correct
+                              ? "bg-green-50 border-green-200 ring-1 ring-green-200"
+                              : "bg-muted/30 border-border hover:bg-muted/50"
                           }`}
                         >
                           <div className="flex items-center">
@@ -571,12 +612,15 @@ export default function PrePostExamCreatePage() {
                               }
                               placeholder={`Choice ${ci + 1}`}
                               className={`border-0 bg-transparent ${
-                                c.is_correct ? 'font-medium' : ''
+                                c.is_correct ? "font-medium" : ""
                               }`}
                             />
                           </div>
                           {c.is_correct && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-800 text-xs"
+                            >
                               Correct Answer
                             </Badge>
                           )}
@@ -604,7 +648,8 @@ export default function PrePostExamCreatePage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Click the radio button to mark the correct answer. Each question must have exactly one correct choice.
+                      Click the radio button to mark the correct answer. Each
+                      question must have exactly one correct choice.
                     </p>
                   </div>
                 </CardContent>
@@ -613,44 +658,45 @@ export default function PrePostExamCreatePage() {
           </CardContent>
         </Card>
 
-        {/* Actions */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Ready to create your test?</p>
-                <p className="text-xs text-muted-foreground">
-                  {!moduleId || !title.trim() 
-                    ? "Please fill in the required fields to continue"
-                    : questions.length === 0 
-                    ? "You can add questions later or create the test without questions"
-                    : `Test will be created with ${questions.length} question${questions.length === 1 ? '' : 's'}`
-                  }
-                </p>
+        <div className="flex justify-end gap-3 mt-10">
+          <Button type="button" variant="outline" asChild>
+            <Link
+              to={
+                moduleId
+                  ? `/modules/${moduleId}/pre-post-exams/view`
+                  : "/modules"
+              }
+            >
+              Cancel
+            </Link>
+          </Button>
+          <Button
+            type="submit"
+            disabled={submitting || !moduleId || !title.trim()}
+            className="min-w-[120px]"
+          >
+            {submitting ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Creating...
               </div>
-              <div className="flex items-center gap-3">
-                <Button type="button" variant="outline" asChild>
-                  <Link to="/pre-post-exams">Cancel</Link>
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submitting || !moduleId || !title.trim()}
-                  className="min-w-[120px]"
-                >
-                  {submitting ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Creating...
-                    </div>
-                  ) : (
-                    "Create Test"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ) : (
+              "Create Test"
+            )}
+          </Button>
+        </div>
       </form>
+      {showFloatingAdd && (
+        <div className="fixed bottom-[5%] right-[40%] z-50">
+          <Button
+            type="button"
+            onClick={addQuestion}
+            className="bg-primary text-white shadow-lg hover:bg-primary/90"
+          >
+            + Add Question
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

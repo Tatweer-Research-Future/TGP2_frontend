@@ -79,11 +79,6 @@ export function SiteHeader() {
       else if (path.endsWith("/edit")) items.push({ label: "Edit" });
       else if (path.endsWith("/results")) items.push({ label: "Results" });
       else if (path.endsWith("/take")) items.push({ label: "Take" });
-    } else if (path === "/pre-post-exams") {
-      items.push({ label: "Pre/Post Exams" });
-    } else if (path.startsWith("/pre-post-exams/new")) {
-      items.push({ label: "Pre/Post Exams", to: "/pre-post-exams" });
-      items.push({ label: "Create" });
     } else {
       items.push({ label: "Home" });
     }

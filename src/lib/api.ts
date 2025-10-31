@@ -1186,6 +1186,15 @@ export async function getModuleTestById(
   return apiFetch<ModuleTestDetail>(`/portal/tests/${id}/`);
 }
 
+export async function deleteModuleTest(
+  id: number | string
+): Promise<void> {
+  return apiFetch<void>(`/portal/tests/${id}/`, {
+    method: "DELETE",
+    requireCsrf: true,
+  });
+}
+
 export type CreateModuleTestPayload = {
   module: number;
   title: string;
@@ -1249,4 +1258,21 @@ export async function createModuleTest(payload: CreateModuleTestPayload) {
   });
 
   return apiFetchFormData(`/portal/tests/`, form, { method: "POST" });
+}
+
+// Submit a test attempt (trainee)
+export type SubmitModuleTestPayload = {
+  kind: "PRE" | "POST";
+  choice_ids: number[];
+};
+
+export async function submitModuleTest(
+  id: number | string,
+  payload: SubmitModuleTestPayload
+) {
+  return apiFetch(`/portal/tests/${id}/submit/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
 }

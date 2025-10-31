@@ -36,7 +36,6 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": IconClock,
     "/overview": IconChartBar,
     "/modules": IconBook,
-    "/pre-post-exams": IconBook,
   };
 
   const titleMap: Record<string, string> = {
@@ -47,7 +46,6 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
     "/modules": t("navigation.my_track"),
-    "/pre-post-exams": t("navigation.pre_post_exams"),
   };
 
   return {

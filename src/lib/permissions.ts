@@ -21,6 +21,7 @@ export type PageRoute =
   | "/modules/:id/exam/edit"
   | "/modules/:id/exam/results"
   | "/modules/:id/exam/take"
+  | "/modules/:moduleId/pre-post-exams/view" // Pre/Post Exam view (module-scoped)
   ; // Pre/Post Exams routes are module-scoped
 
 export type GroupPermissions = {
@@ -57,6 +58,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/modules/:id/exam/create",
       "/modules/:id/exam/edit",
       "/modules/:id/exam/results",
+      "/modules/:moduleId/pre-post-exams/view",
     ],
     homePage: "/forms",
     groupName: "INSTRUCTOR/DATA",
@@ -197,13 +199,13 @@ export function canAccessPage(
   const permissions = getUserPermissions(groupId);
   if (!permissions) return false;
 
-  // Handle dynamic routes like /candidates/:id
+  // Handle dynamic routes like /candidates/:id or /modules/:moduleId/pre-post-exams/view
   return permissions.allowedPages.some((allowedPage) => {
     if (allowedPage === page) return true;
 
-    // Handle dynamic routes
-    if (allowedPage.includes(":id")) {
-      const pattern = allowedPage.replace(":id", "[^/]+");
+    // Handle dynamic routes with any parameter name (:id, :moduleId, etc.)
+    if (allowedPage.includes(":")) {
+      const pattern = allowedPage.replace(/:[^/]+/g, "[^/]+");
       const regex = new RegExp(`^${pattern}$`);
       return regex.test(page);
     }
@@ -222,13 +224,13 @@ export function canAccessPageFromGroups(
   const permissions = getUserPermissionsFromGroups(groups);
   if (!permissions) return false;
 
-  // Handle dynamic routes like /candidates/:id
+  // Handle dynamic routes like /candidates/:id or /modules/:moduleId/pre-post-exams/view
   return permissions.allowedPages.some((allowedPage) => {
     if (allowedPage === page) return true;
 
-    // Handle dynamic routes
-    if (allowedPage.includes(":id")) {
-      const pattern = allowedPage.replace(":id", "[^/]+");
+    // Handle dynamic routes with any parameter name (:id, :moduleId, etc.)
+    if (allowedPage.includes(":")) {
+      const pattern = allowedPage.replace(/:[^/]+/g, "[^/]+");
       const regex = new RegExp(`^${pattern}$`);
       return regex.test(page);
     }
