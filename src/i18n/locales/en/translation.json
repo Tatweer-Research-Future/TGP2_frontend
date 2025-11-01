@@ -91,10 +91,20 @@
     "account": "Account",
     "track": "Track",
     "my_track": "My Track",
+    "back_to_track": "Back to track",
     "exam": "Exam",
     "sessions": "Sessions",
     "dashboard": "Dashboard",
     "pre_post_exams": "Pre/Post Exams"
+  },
+  "sessions": {
+    "session_details": "Session details",
+    "assignments": "Assignments",
+    "uploaded_documents": "Uploaded documents"
+  },
+  "track": {
+    "instructor_description": "Plan, organize, and edit weekly learning modules.",
+    "student_description": "View content, assignments, and track your learning progress."
   },
   "auth": {
     "login": "Sign In",

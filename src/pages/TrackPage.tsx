@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   IconChevronRight,
+  IconChevronLeft,
   IconPencil,
   IconCode,
   IconNetwork,
@@ -17,10 +18,13 @@ import {
 } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useUserGroups } from "@/hooks/useUserGroups";
+import { useTranslation } from "react-i18next";
 
 export function TrackPage() {
   const navigate = useNavigate();
   const { groupId, groups } = useUserGroups();
+  const { t, i18n } = useTranslation();
+  const isRTL = (i18n.language || "en").startsWith("ar");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modules, setModules] = useState<PortalModule[] | null>(null);
@@ -255,8 +259,8 @@ export function TrackPage() {
                 </h1>
                 <p className="mt-2 text-white/80">
                   {isInstructor
-                    ? "Plan, organize, and edit weekly learning modules."
-                    : "View content, assignments, and track your learning progress."}
+                    ? t("track.instructor_description")
+                    : t("track.student_description")}
                 </p>
               </div>
             </div>
@@ -341,11 +345,19 @@ export function TrackPage() {
                           className="flex flex-1 items-center px-4 py-3 text-left outline-none focus-visible:outline-none focus-visible:ring-0"
                         >
                           <div className="flex flex-1 items-center">
-                            <IconChevronRight
-                              className={`mr-2 size-4 text-[#6d5cff] transition-transform ${
-                                isOpen ? "rotate-90" : "rotate-0"
-                              }`}
-                            />
+                            {isRTL ? (
+                              <IconChevronLeft
+                                className={`me-2 size-4 text-[#6d5cff] transition-transform ${
+                                  isOpen ? "-rotate-90" : "rotate-0"
+                                }`}
+                              />
+                            ) : (
+                              <IconChevronRight
+                                className={`me-2 size-4 text-[#6d5cff] transition-transform ${
+                                  isOpen ? "rotate-90" : "rotate-0"
+                                }`}
+                              />
+                            )}
                             <span className="mx-2 h-5 w-px bg-[#6d5cff]/30" />
                             <CardTitle className="m-0 p-0 text-base font-medium">
                               {mod.title}

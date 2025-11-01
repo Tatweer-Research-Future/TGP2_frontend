@@ -25,6 +25,7 @@ import {
   FileText,
   ExternalLink,
   ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import {
   createOrUpdatePortalSubmission,
@@ -36,11 +37,14 @@ import {
 import ReactMarkdown from "react-markdown";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export default function SessionViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { groupId, groups } = useUserGroups();
+  const { t, i18n } = useTranslation();
+  const isRTL = (i18n.language || "en").startsWith("ar");
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -176,29 +180,32 @@ export default function SessionViewPage() {
       }}
     >
       <div className="relative">
-        <div className="px-8 pt-0">
+        <div className="px-8 pt-0 flex items-center justify-between">
           <Button
             type="button"
             variant="ghost"
             onClick={() => navigate("/modules")}
             className="h-8 px-2 text-sm inline-flex items-center gap-1"
           >
-            <ChevronLeftIcon className="h-4 w-4" />
-            Back to track
+            {isRTL ? (
+              <ChevronRightIcon className="h-4 w-4" />
+            ) : (
+              <ChevronLeftIcon className="h-4 w-4" />
+            )}
+            {t("navigation.back_to_track")}
           </Button>
-        </div>
 
-        {isInstructor && id && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="absolute right-8 top-2"
-            onClick={() => navigate(`/modules/session/${id}/edit`)}
-          >
-            Edit
-          </Button>
-        )}
+          {isInstructor && id && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(`/modules/session/${id}/edit`)}
+            >
+              {t("common.buttons.edit")}
+            </Button>
+          )}
+        </div>
 
         <div className="my-6">
           <div className="w-full px-12">
@@ -224,9 +231,15 @@ export default function SessionViewPage() {
 
         {!isLoading && !error && session && (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="pl-8">
-              <TabsTrigger value="details">Session details</TabsTrigger>
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
+            <TabsList
+              className={`ps-8 ${isRTL ? "justify-end flex-row-reverse" : ""}`}
+            >
+              <TabsTrigger value="details">
+                {t("sessions.session_details")}
+              </TabsTrigger>
+              <TabsTrigger value="assignments">
+                {t("sessions.assignments")}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="details">
@@ -298,7 +311,7 @@ export default function SessionViewPage() {
 
                     <div>
                       <div className="text-base font-semibold my-4">
-                        Uploaded documents
+                        {t("sessions.uploaded_documents")}
                       </div>
                       <div className="mt-2">
                         {sortedContent.length === 0 ? (

@@ -57,8 +57,9 @@ const getNavItemDetails = (url: string, t: any) => {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { getNavigationItems } = useUserGroups();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
+  const isRTL = (i18n.language || "en").startsWith("ar");
 
   // Get navigation items based on user permissions
   const permissionBasedItems = getNavigationItems();
@@ -92,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="offcanvas" {...props} side={isRTL ? "right" : "left"}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

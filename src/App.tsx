@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -30,8 +31,26 @@ import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
 import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
 import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import i18n from "./i18n/config";
 
 export default function App() {
+  // Sync html lang/dir with current language (LTR/RTL)
+  useEffect(() => {
+    const updateDirAndLang = () => {
+      const lang = (i18n.language || "en").split("-")[0];
+      const dir = lang === "ar" ? "rtl" : "ltr";
+      const root = document.documentElement;
+      if (root.lang !== lang) root.lang = lang;
+      if (root.dir !== dir) root.dir = dir;
+    };
+
+    updateDirAndLang();
+    i18n.on("languageChanged", updateDirAndLang);
+    return () => {
+      i18n.off("languageChanged", updateDirAndLang);
+    };
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="rems-ui-theme">
       <AuthProvider>

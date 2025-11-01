@@ -195,7 +195,7 @@ export default function ModulePrePostExamViewPage() {
                               className={
                                 "flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm " +
                                 (isCorrect
-                                  ? "bg-green-50 border-green-200"
+                                  ? "bg-green-50 border-green-200 dark:bg-emerald-500/10 dark:border-emerald-500/40 dark:text-emerald-200"
                                   : "bg-background")
                               }
                             >
@@ -203,7 +203,7 @@ export default function ModulePrePostExamViewPage() {
                               {isCorrect && (
                                 <Badge
                                   variant="secondary"
-                                  className="bg-green-100 text-green-800"
+                                  className="bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40"
                                 >
                                   Correct
                                 </Badge>
