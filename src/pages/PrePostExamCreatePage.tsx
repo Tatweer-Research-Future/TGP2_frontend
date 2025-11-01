@@ -398,7 +398,7 @@ export default function PrePostExamCreatePage() {
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="bg-blue-50 text-blue-700 border-blue-200"
+                  className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-200 dark:border-blue-500/40"
                 >
                   PRE Test
                 </Badge>
@@ -406,7 +406,7 @@ export default function PrePostExamCreatePage() {
                   Administered before the module content
                 </span>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-blue-200">
+              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-blue-200 dark:border-blue-500/40">
                 <DateTimePicker
                   label="Publish at"
                   value={publishAtPre}
@@ -429,7 +429,7 @@ export default function PrePostExamCreatePage() {
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="bg-green-50 text-green-700 border-green-200"
+                  className="bg-green-50 text-green-700 border-green-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/40"
                 >
                   POST Test
                 </Badge>
@@ -437,7 +437,7 @@ export default function PrePostExamCreatePage() {
                   Administered after the module content
                 </span>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-green-200">
+              <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-green-200 dark:border-emerald-500/40">
                 <DateTimePicker
                   label="Publish at"
                   value={publishAtPost}
@@ -493,7 +493,10 @@ export default function PrePostExamCreatePage() {
             )}
 
             {questions.map((q, qi) => (
-              <Card key={qi} className="border-l-4 gap-3 border-l-primary/20">
+              <Card
+                key={qi}
+                className="border-l-4 gap-3 border-l-primary/20 dark:border-l-primary/40"
+              >
                 <CardHeader className="pb-0">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -590,8 +593,8 @@ export default function PrePostExamCreatePage() {
                           key={ci}
                           className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                             c.is_correct
-                              ? "bg-green-50 border-green-200 ring-1 ring-green-200"
-                              : "bg-muted/30 border-border hover:bg-muted/50"
+                              ? "bg-green-50 border-green-200 ring-1 ring-green-200 dark:bg-emerald-500/10 dark:border-emerald-500/40 dark:ring-emerald-500/30"
+                              : "bg-muted/30 border-border hover:bg-muted/50 dark:bg-muted/20 dark:border-border dark:hover:bg-muted/30"
                           }`}
                         >
                           <div className="flex items-center">
@@ -611,7 +614,7 @@ export default function PrePostExamCreatePage() {
                                 setChoiceText(qi, ci, e.target.value)
                               }
                               placeholder={`Choice ${ci + 1}`}
-                              className={`border-0 bg-transparent ${
+                              className={`border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
                                 c.is_correct ? "font-medium" : ""
                               }`}
                             />
@@ -619,7 +622,7 @@ export default function PrePostExamCreatePage() {
                           {c.is_correct && (
                             <Badge
                               variant="secondary"
-                              className="bg-green-100 text-green-800 text-xs"
+                              className="bg-green-100 text-green-800 text-xs dark:bg-emerald-500/20 dark:text-emerald-100"
                             >
                               Correct Answer
                             </Badge>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,10 +6,15 @@ import {
   IconPencil,
   IconCode,
   IconNetwork,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { RiBardFill } from "react-icons/ri";
 import { Loader } from "@/components/ui/loader";
-import { getPortalModules, type PortalModule } from "@/lib/api";
+import {
+  getPortalModules,
+  updatePortalModule,
+  type PortalModule,
+} from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { useUserGroups } from "@/hooks/useUserGroups";
 
@@ -20,6 +25,11 @@ export function TrackPage() {
   const [error, setError] = useState<string | null>(null);
   const [modules, setModules] = useState<PortalModule[] | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Record<number, boolean>>({});
+  const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
+  const [moduleTitleDraft, setModuleTitleDraft] = useState("");
+  const [savingModuleId, setSavingModuleId] = useState<number | null>(null);
+  const [moduleErrors, setModuleErrors] = useState<Record<number, string>>({});
+  const moduleTitleInputRef = useRef<HTMLInputElement | null>(null);
 
   // Map track names to a visual theme (gradient + background icon)
   function getTrackTheme(trackName?: string) {
@@ -72,6 +82,108 @@ export function TrackPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (editingModuleId !== null) {
+      moduleTitleInputRef.current?.focus();
+      moduleTitleInputRef.current?.select();
+    }
+  }, [editingModuleId]);
+
+  function clearModuleError(id: number) {
+    setModuleErrors((prev) => {
+      if (!(id in prev)) return prev;
+      const { [id]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }
+
+  function handleStartEditingModule(mod: PortalModule) {
+    clearModuleError(mod.id);
+    setEditingModuleId(mod.id);
+    setModuleTitleDraft(mod.title);
+  }
+
+  function handleCancelEditingModule(id?: number) {
+    if (typeof id === "number") {
+      clearModuleError(id);
+    }
+    setEditingModuleId(null);
+    setModuleTitleDraft("");
+  }
+
+  async function handleModuleTitleSubmit(mod: PortalModule) {
+    if (savingModuleId === mod.id) return;
+
+    const trimmed = moduleTitleDraft.trim();
+    if (!trimmed) {
+      setModuleErrors((prev) => ({
+        ...prev,
+        [mod.id]: "Title is required",
+      }));
+      return;
+    }
+
+    if (trimmed === mod.title) {
+      handleCancelEditingModule(mod.id);
+      return;
+    }
+
+    setSavingModuleId(mod.id);
+    try {
+      const updatedModule = await updatePortalModule(mod.id, {
+        title: trimmed,
+      });
+      setModules((prev) => {
+        if (!prev) return prev;
+        return prev.map((m) => {
+          if (m.id !== mod.id) return m;
+          const merged = updatedModule
+            ? {
+                ...m,
+                ...updatedModule,
+              }
+            : {
+                ...m,
+                title: trimmed,
+              };
+          return {
+            ...merged,
+            sessions: merged.sessions ?? m.sessions,
+            test: merged.test ?? m.test,
+          };
+        });
+      });
+      handleCancelEditingModule(mod.id);
+    } catch (err: any) {
+      let message = "Failed to update module title";
+      if (err?.data) {
+        if (typeof err.data === "string") {
+          message = err.data;
+        } else if (typeof err.data?.detail === "string") {
+          message = err.data.detail;
+        } else if (
+          Array.isArray(err.data?.title) &&
+          typeof err.data.title[0] === "string"
+        ) {
+          message = err.data.title[0];
+        } else if (typeof err.data?.title === "string") {
+          message = err.data.title;
+        } else if (typeof err.message === "string" && err.message.length) {
+          message = err.message;
+        }
+      } else if (typeof err?.message === "string" && err.message.length) {
+        message = err.message;
+      }
+
+      setModuleErrors((prev) => ({
+        ...prev,
+        [mod.id]: message,
+      }));
+    } finally {
+      setSavingModuleId((prev) => (prev === mod.id ? null : prev));
+    }
+  }
 
   // Derive user-facing track title from /me groups
   const trackTitle = useMemo(() => {
@@ -165,30 +277,101 @@ export function TrackPage() {
             .sort((a, b) => a.order - b.order)
             .map((mod) => {
               const isOpen = openWeeks[mod.id] ?? true;
+              const moduleError = moduleErrors[mod.id];
+              const isEditingModule =
+                isInstructor && editingModuleId === mod.id;
               return (
                 <Card
                   key={mod.id}
                   className="overflow-hidden gap-0 border-none shadow-none py-2"
                 >
                   <CardHeader className="p-0">
-                    <button
-                      type="button"
-                      aria-expanded={isOpen}
-                      onClick={() =>
-                        setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
-                      }
-                      className="w-full flex items-center rounded-md bg-[#6d5cff]/10 hover:bg-[#6d5cff]/15 px-4 py-3 transition-colors outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 active:outline-none"
-                    >
-                      <IconChevronRight
-                        className={`mr-2 size-4 text-[#6d5cff] transition-transform ${
-                          isOpen ? "rotate-90" : "rotate-0"
-                        }`}
-                      />
-                      <span className="mx-2 h-5 w-px bg-[#6d5cff]/30" />
-                      <CardTitle className="m-0 p-0 text-base font-medium">
-                        {mod.title}
-                      </CardTitle>
-                    </button>
+                    {isEditingModule ? (
+                      <form
+                        className="w-full"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleModuleTitleSubmit(mod);
+                        }}
+                      >
+                        <div className="flex items-center gap-3 rounded-md bg-[#6d5cff]/10 px-4 py-2 focus-within:bg-[#6d5cff]/15">
+                          <input
+                            ref={moduleTitleInputRef}
+                            className="flex-1 bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground"
+                            value={moduleTitleDraft}
+                            onChange={(event) => {
+                              setModuleTitleDraft(event.target.value);
+                              if (moduleError) clearModuleError(mod.id);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                event.preventDefault();
+                                handleCancelEditingModule(mod.id);
+                              }
+                            }}
+                            placeholder="Enter module title"
+                            disabled={savingModuleId === mod.id}
+                          />
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="hidden md:inline">
+                              Press Enter to save
+                            </span>
+                            {savingModuleId === mod.id && (
+                              <IconLoader2 className="size-4 animate-spin text-[#6d5cff]" />
+                            )}
+                          </div>
+                          <button type="submit" className="sr-only">
+                            Save
+                          </button>
+                        </div>
+                        {moduleError && (
+                          <p className="px-4 pt-2 text-sm text-destructive">
+                            {moduleError}
+                          </p>
+                        )}
+                      </form>
+                    ) : (
+                      <div className="group flex w-full items-center rounded-md bg-[#6d5cff]/10 transition-colors hover:bg-[#6d5cff]/15 focus-within:bg-[#6d5cff]/15">
+                        <button
+                          type="button"
+                          aria-expanded={isOpen}
+                          onClick={() =>
+                            setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
+                          }
+                          className="flex flex-1 items-center px-4 py-3 text-left outline-none focus-visible:outline-none focus-visible:ring-0"
+                        >
+                          <div className="flex flex-1 items-center">
+                            <IconChevronRight
+                              className={`mr-2 size-4 text-[#6d5cff] transition-transform ${
+                                isOpen ? "rotate-90" : "rotate-0"
+                              }`}
+                            />
+                            <span className="mx-2 h-5 w-px bg-[#6d5cff]/30" />
+                            <CardTitle className="m-0 p-0 text-base font-medium">
+                              {mod.title}
+                            </CardTitle>
+                          </div>
+                        </button>
+                        {isInstructor && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStartEditingModule(mod);
+                            }}
+                            className="px-4 py-3 text-[#6d5cff] opacity-0 transition-opacity duration-150 group-hover:opacity-80 focus-visible:opacity-100"
+                            aria-label={`Edit ${mod.title}`}
+                          >
+                            <IconPencil className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {!isEditingModule && moduleError && (
+                      <p className="px-4 pt-2 text-sm text-destructive">
+                        {moduleError}
+                      </p>
+                    )}
                   </CardHeader>
                   <div
                     className={`grid transition-[grid-template-rows,opacity,transform] duration-300 ease-out ${
@@ -228,7 +411,11 @@ export function TrackPage() {
                                       {session.title}
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                      <IconPencil className="inline size-4 opacity-0 transition-opacity group-hover:opacity-60 text-muted-foreground" />
+                                      {isInstructor ? (
+                                        <IconPencil className="inline size-4 opacity-0 transition-opacity group-hover:opacity-60 text-muted-foreground" />
+                                      ) : (
+                                        <IconChevronRight className="inline size-4 opacity-0 transition-opacity group-hover:opacity-60 text-muted-foreground" />
+                                      )}
                                     </td>
                                   </tr>
                                 ))}

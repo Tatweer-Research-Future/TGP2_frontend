@@ -147,23 +147,33 @@
   margin: 0;
 }
 .dark body {
-  /* Fallback color for older browsers */
-  /* Fallback color for older browsers */
-  background-color: #1a1a2e;
-
-  /* The Dark Mode Gradient */
-  background-image: linear-gradient(
-    170deg,
-    #1a1a2e 0%,
-    /* Very dark blue/purple */ #3e2352 50%,
-    /* A slightly richer dark purple */ #5c3a21 100%
-      /* Dark, desaturated amber/brown */
-  );
-
-  /* Ensure the gradient covers the full page */
-  min-height: 100vh;
   margin: 0;
+  min-height: 100vh;
+  background-repeat: no-repeat;
+  background: linear-gradient(to bottom, #171717 0%, #171717 70%, #241d33 100%);
 
   /* Set text color to be readable on a dark background */
   color: #eaeaea;
+}
+
+.dark main {
+  background-color: #0a0a0a !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Remove backdrop blur and transparency from overlay divs inside main */
+.dark main > div {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Make the backdrop overlay transparent so main's solid background shows through */
+.dark main > div[class*="backdrop-blur"],
+.dark main > div[class*="bg-background/"] {
+  background-color: transparent !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

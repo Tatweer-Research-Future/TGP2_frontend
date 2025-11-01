@@ -807,6 +807,19 @@ export async function getPortalModules(): Promise<PortalModulesResponse> {
   return apiFetch<PortalModulesResponse>(`/portal/modules/`);
 }
 
+export type UpdatePortalModulePayload = Partial<Pick<PortalModule, "title" | "description" | "order">>;
+
+export async function updatePortalModule(
+  id: number | string,
+  payload: UpdatePortalModulePayload
+): Promise<PortalModule> {
+  return apiFetch<PortalModule>(`/portal/modules/${id}/`, {
+    method: "PUT",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
 // --- Portal Sessions ---
 export async function getPortalSession(
   id: number | string

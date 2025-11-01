@@ -231,7 +231,10 @@ export default function SessionViewPage() {
 
             <TabsContent value="details">
               <div className="grid grid-cols-1 gap-6">
-                <Card className="overflow-hidden gap-0 border-none shadow-none p-6 pt-0">
+                <Card
+                  className="overflow-hidden gap-0 border-none shadow-none p-6 pt-0"
+                  style={{ background: "none" }}
+                >
                   <CardContent className="pt-2 space-y-6">
                     <div>
                       <div className="rounded-md border px-4 py-3">
@@ -360,10 +363,13 @@ export default function SessionViewPage() {
 
             <TabsContent value="assignments">
               <div className="grid grid-cols-1 gap-6">
-                <Card className="overflow-hidden gap-0 border-none shadow-none p-6">
-                  <CardHeader className="pb-0">
+                <Card
+                  className="overflow-hidden gap-0 border-none shadow-none p-6"
+                  style={{ background: "none" }}
+                >
+                  {/* <CardHeader className="pb-0">
                     <CardTitle className="text-lg">Assignments</CardTitle>
-                  </CardHeader>
+                  </CardHeader> */}
                   <CardContent className="pt-3">
                     {(session.assignments?.length ?? 0) === 0 ? (
                       <div className="text-sm text-muted-foreground">
