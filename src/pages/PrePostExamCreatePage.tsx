@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { CalendarDays, FileQuestion, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 type ModuleOption = {
   id: number;
@@ -40,6 +41,7 @@ type DraftQuestion = {
 };
 
 export default function PrePostExamCreatePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tracks, setTracks] = useState<PortalTrack[] | null>(null);
   const [modules, setModules] = useState<ModuleOption[]>([]);
@@ -278,13 +280,13 @@ export default function PrePostExamCreatePage() {
     setSubmitting(true);
     try {
       await createModuleTest(payload);
-      toast.success("Test created successfully.");
+      toast.success(t("exam.test_created_success"));
       navigate(`/modules/${moduleId}/pre-post-exams/view`);
     } catch (error: any) {
       const message =
         error?.data && typeof error.data === "object"
           ? error.data.detail || JSON.stringify(error.data)
-          : error?.message || "Failed to create test.";
+          : error?.message || t("exam.failed_to_create");
       toast.error(String(message));
     } finally {
       setSubmitting(false);
@@ -296,19 +298,18 @@ export default function PrePostExamCreatePage() {
       {/* Page Header */}
       <div className="mb-8 mx-3">
         <div className="flex items-center gap-0 mb-2 ">
-          <h1 className="text-2xl font-bold">Create Pre/Post Exam</h1>
+          <h1 className="text-2xl font-bold">{t("exam.create_title")}</h1>
         </div>
         {moduleLabel && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">for</span>
+            <span className="text-muted-foreground">{t("exam.for")}</span>
             <Badge variant="secondary" className="text-sm">
               {moduleLabel}
             </Badge>
           </div>
         )}
         <p className="text-muted-foreground mt-2">
-          Create a comprehensive exam with separate PRE and POST schedules for
-          your module.
+          {t("exam.create_description")}
         </p>
       </div>
 
@@ -318,51 +319,51 @@ export default function PrePostExamCreatePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Test Details</CardTitle>
+              <CardTitle>{t("exam.test_details")}</CardTitle>
             </div>
             <CardDescription>
-              Fill in the basic information for the test.
+              {t("exam.test_details_description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="module-display">
-                  Week <span className="text-destructive">*</span>
+                  {t("exam.week")} <span className="text-destructive">*</span>
                 </Label>
                 <div
                   id="module-display"
                   className="px-3 py-2 rounded-md border bg-muted/30 text-sm"
                 >
-                  {moduleLabel || "No week selected"}
+                  {moduleLabel || t("exam.no_week_selected")}
                 </div>
                 {moduleId && (
                   <p className="text-xs text-muted-foreground">
-                    Selected: {moduleLabel}
+                    {t("exam.selected")}: {moduleLabel}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="title-input">
-                  Title <span className="text-destructive">*</span>
+                  {t("exam.title")} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="title-input"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Week 1 Assessment"
+                  placeholder={t("exam.title_placeholder")}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description-input">Description</Label>
+              <Label htmlFor="description-input">{t("exam.description")}</Label>
               <Textarea
                 id="description-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description for the test"
+                placeholder={t("exam.description_placeholder")}
                 rows={3}
               />
             </div>
@@ -374,7 +375,7 @@ export default function PrePostExamCreatePage() {
                 onCheckedChange={(v) => setIsDisabled(Boolean(v))}
               />
               <Label htmlFor="disabled">
-                Disabled (test will not be active)
+                {t("exam.disabled_description")}
               </Label>
             </div>
           </CardContent>
@@ -385,11 +386,10 @@ export default function PrePostExamCreatePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Schedule Settings</CardTitle>
+              <CardTitle>{t("exam.schedule_settings")}</CardTitle>
             </div>
             <CardDescription>
-              Configure when the PRE and POST tests will be available to
-              students.
+              {t("exam.schedule_settings_description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -400,26 +400,26 @@ export default function PrePostExamCreatePage() {
                   variant="outline"
                   className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-200 dark:border-blue-500/40"
                 >
-                  PRE Test
+                  {t("exam.pre_test")}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  Administered before the module content
+                  {t("exam.pre_test_description")}
                 </span>
               </div>
               <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-blue-200 dark:border-blue-500/40">
                 <DateTimePicker
-                  label="Publish at"
+                  label={t("exam.publish_at")}
                   value={publishAtPre}
                   onChange={setPublishAtPre}
-                  placeholder="When students can start the PRE test"
-                  description="Auto-filled to first session at 8:30 AM"
+                  placeholder={t("exam.publish_at_pre_placeholder")}
+                  description={t("exam.publish_at_pre_description")}
                 />
                 <DateTimePicker
-                  label="Expire at"
+                  label={t("exam.expire_at")}
                   value={expireAtPre}
                   onChange={setExpireAtPre}
-                  placeholder="When PRE test becomes unavailable"
-                  description="Optional - leave empty for no expiration"
+                  placeholder={t("exam.expire_at_pre_placeholder")}
+                  description={t("exam.expire_description")}
                 />
               </div>
             </div>
@@ -431,26 +431,26 @@ export default function PrePostExamCreatePage() {
                   variant="outline"
                   className="bg-green-50 text-green-700 border-green-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:border-emerald-500/40"
                 >
-                  POST Test
+                  {t("exam.post_test")}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  Administered after the module content
+                  {t("exam.post_test_description")}
                 </span>
               </div>
               <div className="grid gap-4 md:grid-cols-2 pl-4 border-l-2 border-green-200 dark:border-emerald-500/40">
                 <DateTimePicker
-                  label="Publish at"
+                  label={t("exam.publish_at")}
                   value={publishAtPost}
                   onChange={setPublishAtPost}
-                  placeholder="When students can start the POST test"
-                  description="Auto-filled to last session at 8:30 AM"
+                  placeholder={t("exam.publish_at_post_placeholder")}
+                  description={t("exam.publish_at_post_description")}
                 />
                 <DateTimePicker
-                  label="Expire at"
+                  label={t("exam.expire_at")}
                   value={expireAtPost}
                   onChange={setExpireAtPost}
-                  placeholder="When POST test becomes unavailable"
-                  description="Optional - leave empty for no expiration"
+                  placeholder={t("exam.expire_at_post_placeholder")}
+                  description={t("exam.expire_description")}
                 />
               </div>
             </div>
@@ -464,10 +464,9 @@ export default function PrePostExamCreatePage() {
               <div className="flex items-center gap-2">
                 <FileQuestion className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle>Questions (optional)</CardTitle>
+                  <CardTitle>{t("exam.questions")}</CardTitle>
                   <CardDescription>
-                    Add multiple choice questions. Each question must have
-                    exactly one correct answer.
+                    {t("exam.questions_description")}
                   </CardDescription>
                 </div>
               </div>
@@ -478,7 +477,7 @@ export default function PrePostExamCreatePage() {
                 variant="outline"
                 size="sm"
               >
-                + Add Question
+                {t("exam.add_question")}
               </Button>
             </div>
           </CardHeader>
@@ -487,7 +486,7 @@ export default function PrePostExamCreatePage() {
               <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
                 <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                 <p className="text-muted-foreground mb-2">
-                  No questions added yet
+                  {t("exam.no_questions")}
                 </p>
               </div>
             )}
@@ -504,7 +503,7 @@ export default function PrePostExamCreatePage() {
                         Q{qi + 1}
                       </Badge>
                       <span className="font-medium text-sm text-muted-foreground">
-                        Question {qi + 1}
+                        {t("exam.question")} {qi + 1}
                       </span>
                     </div>
                     <Button
@@ -514,14 +513,14 @@ export default function PrePostExamCreatePage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                     >
-                      Remove
+                      {t("exam.remove")}
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor={`question-${qi}-title`}>
-                      Question Title <span className="text-destructive">*</span>
+                      {t("exam.question_title")} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id={`question-${qi}-title`}
@@ -532,13 +531,13 @@ export default function PrePostExamCreatePage() {
                           title: e.target.value,
                         }))
                       }
-                      placeholder="Enter your question here..."
+                      placeholder={t("exam.question_title_placeholder")}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`question-${qi}-text`}>
-                      Additional Text
+                      {t("exam.additional_text")}
                     </Label>
                     <Textarea
                       id={`question-${qi}-text`}
@@ -549,13 +548,13 @@ export default function PrePostExamCreatePage() {
                           text: e.target.value,
                         }))
                       }
-                      placeholder="Optional additional context or instructions..."
+                      placeholder={t("exam.additional_text_placeholder")}
                       rows={2}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Image</Label>
+                    <Label>{t("exam.image")}</Label>
                     <div className="flex items-center gap-3 flex-wrap">
                       <Input
                         type="file"
@@ -572,7 +571,7 @@ export default function PrePostExamCreatePage() {
                           size="sm"
                           onClick={() => setQuestionImage(qi, null)}
                         >
-                          Remove
+                          {t("exam.remove")}
                         </Button>
                       )}
                     </div>
@@ -586,7 +585,7 @@ export default function PrePostExamCreatePage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Answer Choices</Label>
+                    <Label>{t("exam.answer_choices")}</Label>
                     <div className="space-y-3">
                       {q.choices.map((c, ci) => (
                         <div
@@ -613,7 +612,7 @@ export default function PrePostExamCreatePage() {
                               onChange={(e) =>
                                 setChoiceText(qi, ci, e.target.value)
                               }
-                              placeholder={`Choice ${ci + 1}`}
+                              placeholder={`${t("exam.choice_placeholder")} ${ci + 1}`}
                               className={`border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
                                 c.is_correct ? "font-medium" : ""
                               }`}
@@ -624,7 +623,7 @@ export default function PrePostExamCreatePage() {
                               variant="secondary"
                               className="bg-green-100 text-green-800 text-xs dark:bg-emerald-500/20 dark:text-emerald-100"
                             >
-                              Correct Answer
+                              {t("exam.correct_answer")}
                             </Badge>
                           )}
                           {q.choices.length > 2 && (
@@ -635,7 +634,7 @@ export default function PrePostExamCreatePage() {
                               onClick={() => removeChoice(qi, ci)}
                               className="text-muted-foreground hover:text-destructive"
                             >
-                              Remove
+                              {t("exam.remove")}
                             </Button>
                           )}
                         </div>
@@ -647,12 +646,11 @@ export default function PrePostExamCreatePage() {
                         onClick={() => addChoice(qi)}
                         className="w-full"
                       >
-                        + Add Choice
+                        {t("exam.add_choice")}
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Click the radio button to mark the correct answer. Each
-                      question must have exactly one correct choice.
+                      {t("exam.correct_answer_hint")}
                     </p>
                   </div>
                 </CardContent>
@@ -670,7 +668,7 @@ export default function PrePostExamCreatePage() {
                   : "/modules"
               }
             >
-              Cancel
+              {t("exam.cancel")}
             </Link>
           </Button>
           <Button
@@ -681,10 +679,10 @@ export default function PrePostExamCreatePage() {
             {submitting ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Creating...
+                {t("exam.creating")}
               </div>
             ) : (
-              "Create Test"
+              t("exam.create_test")
             )}
           </Button>
         </div>
@@ -696,7 +694,7 @@ export default function PrePostExamCreatePage() {
             onClick={addQuestion}
             className="bg-primary text-white shadow-lg hover:bg-primary/90"
           >
-            + Add Question
+            {t("exam.add_question")}
           </Button>
         </div>
       )}
