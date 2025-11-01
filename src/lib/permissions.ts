@@ -281,6 +281,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/modules/:id/exam/edit": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
   };
 
   return permissions.allowedPages
@@ -325,6 +326,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/modules/:id/exam/edit": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
   };
 
   return permissions.allowedPages
