@@ -94,6 +94,77 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
   });
 
+  // Organize items into logical groups with labels
+  const organizeNavItems = (items: typeof navItems) => {
+    const groups: Array<{ label?: string; items: typeof navItems }> = [];
+
+    // Main/Home section
+    const mainItems = items.filter(
+      (item) => item.url === "/home" || item.url === "/overview"
+    );
+    if (mainItems.length > 0) {
+      groups.push({ items: mainItems });
+    }
+
+    // Candidates section
+    const candidatesItems = items.filter(
+      (item) =>
+        item.url === "/candidates" || item.url === "/trainee-monitoring"
+    );
+    if (candidatesItems.length > 0) {
+      groups.push({
+        label: t("navigation.groups.candidates", "Candidates"),
+        items: candidatesItems,
+      });
+    }
+
+    // Forms section
+    const formsItems = items.filter(
+      (item) => item.url === "/forms" || item.url === "/forms-results"
+    );
+    if (formsItems.length > 0) {
+      groups.push({
+        label: t("navigation.groups.forms", "Forms"),
+        items: formsItems,
+      });
+    }
+
+    // Learning/Track section
+    const learningItems = items.filter((item) => item.url === "/modules");
+    if (learningItems.length > 0) {
+      groups.push({
+        label: t("navigation.groups.learning", "Learning"),
+        items: learningItems,
+      });
+    }
+
+    // Analytics/Tracking section
+    const analyticsItems = items.filter((item) => item.url === "/attendance");
+    if (analyticsItems.length > 0) {
+      groups.push({
+        label: t("navigation.groups.analytics", "Analytics"),
+        items: analyticsItems,
+      });
+    }
+
+    // Any remaining items go to main (shouldn't happen, but fallback)
+    const remainingItems = items.filter(
+      (item) =>
+        !mainItems.includes(item) &&
+        !candidatesItems.includes(item) &&
+        !formsItems.includes(item) &&
+        !learningItems.includes(item) &&
+        !analyticsItems.includes(item)
+    );
+    if (remainingItems.length > 0) {
+      groups.push({ items: remainingItems });
+    }
+
+    return groups;
+  };
+
+  const organizedGroups = organizeNavItems(navItems);
+
   return (
     <Sidebar collapsible="offcanvas" {...props} side={isRTL ? "right" : "left"}>
       <SidebarHeader>
@@ -114,8 +185,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={navItems} />
+      <SidebarContent className="gap-0.5">
+        <NavMain groups={organizedGroups} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

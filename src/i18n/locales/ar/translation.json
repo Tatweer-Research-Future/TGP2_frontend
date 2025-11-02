@@ -93,6 +93,12 @@
     "track": "التتبع",
     "my_track": "مساري",
     "back_to_track": "العودة إلى المسار",
+    "groups": {
+      "candidates": "المرشحون",
+      "forms": "النماذج",
+      "learning": "التعلم",
+      "analytics": "التحليلات"
+    },
     "exam": "الاختبار",
     "sessions": "الجلسات",
     "dashboard": "لوحة التحكم",

@@ -93,6 +93,12 @@
     "track": "Track",
     "my_track": "My Track",
     "back_to_track": "Back to track",
+    "groups": {
+      "candidates": "Candidates",
+      "forms": "Forms",
+      "learning": "Learning",
+      "analytics": "Analytics"
+    },
     "exam": "Exam",
     "sessions": "Sessions",
     "dashboard": "Dashboard",
