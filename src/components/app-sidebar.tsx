@@ -31,6 +31,7 @@ const getNavItemDetails = (url: string, t: any) => {
   const iconMap: Record<string, any> = {
     "/home": IconHome,
     "/candidates": IconUsers,
+    "/trainee-monitoring": IconUsers,
     "/forms": IconPresentation,
     "/forms-results": IconPresentation,
     "/attendance": IconClock,
@@ -41,6 +42,7 @@ const getNavItemDetails = (url: string, t: any) => {
   const titleMap: Record<string, string> = {
     "/home": t("navigation.home"),
     "/candidates": t("navigation.candidates"),
+    "/trainee-monitoring": t("navigation.trainee_monitoring"),
     "/forms": t("navigation.forms"),
     "/forms-results": t("navigation.forms_summary"),
     "/attendance": t("navigation.attendance"),

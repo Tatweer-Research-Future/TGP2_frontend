@@ -272,6 +272,7 @@ export type BackendUserDetail = {
   id: number;
   email: string;
   name: string;
+  groups?: string[]; // User groups array
   ai_analysis?: string | null;
   forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
   forms_entries?: Array<{

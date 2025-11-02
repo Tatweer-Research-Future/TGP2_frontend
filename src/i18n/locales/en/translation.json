@@ -83,6 +83,7 @@
   "navigation": {
     "home": "Home",
     "candidates": "Candidates",
+    "trainee_monitoring": "Trainee Monitoring",
     "attendance": "Attendance",
     "overview": "Overview",
     "forms": "Forms",
@@ -238,6 +239,20 @@
       "searchCandidates": "Search candidates...",
       "noCandidates": "No candidates found",
       "totalCandidates": "Total candidates"
+    },
+    "trainee_monitoring": {
+      "title": "Trainee Monitoring",
+      "subtitle": "Manage trainee information",
+      "addCandidate": "Add Trainee",
+      "searchCandidates": "Search trainees...",
+      "noCandidates": "No trainees found",
+      "totalCandidates": "Total trainees",
+      "attendanceStats": "Attendance Statistics",
+      "present": "Present",
+      "absent": "Absent",
+      "totalDays": "Total Days",
+      "allTracks": "All Tracks",
+      "track": "Track"
     },
     "attendance": {
       "title": "Attendance",

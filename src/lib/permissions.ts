@@ -10,6 +10,7 @@ export type PageRoute =
   | "/home" // HomePage (trainee)
   | "/candidates" // UsersPage
   | "/candidates/:id" // UserDetailPage
+  | "/trainee-monitoring" // TraineeMonitoringPage
   | "/forms" // FormsPage
   | "/forms-results" // FormsResultsPage
   | "/attendance" // AttendancePage
@@ -37,12 +38,13 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/candidates",
       "/candidates/:id",
+      "/trainee-monitoring",
     ],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "HR/TECH/PRESENTATION",
   },
   4: {
-    allowedPages: ["/home", "/candidates", "/candidates/:id"],
+    allowedPages: ["/home", "/candidates", "/candidates/:id", "/trainee-monitoring"],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "PRESENTATION",
   },
@@ -51,6 +53,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/candidates",
       "/candidates/:id",
+      "/trainee-monitoring",
       "/forms",
       "/modules",
       "/modules/session/:id",
@@ -164,6 +167,7 @@ export function getUserPermissionsFromGroups(
       allowedPages: [
         "/candidates",
         "/candidates/:id",
+        "/trainee-monitoring",
         "/forms",
         "/attendance",
         "/modules",
@@ -270,6 +274,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/home": { title: "navigation.home" },
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
+    "/trainee-monitoring": { title: "navigation.trainee_monitoring" },
     "/forms": { title: "navigation.forms" },
     "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },
@@ -315,6 +320,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/home": { title: "navigation.home" },
     "/candidates": { title: "navigation.candidates" },
     "/candidates/:id": { title: "navigation.candidate_detail" }, // Not shown in nav
+    "/trainee-monitoring": { title: "navigation.trainee_monitoring" },
     "/forms": { title: "navigation.forms" },
     "/forms-results": { title: "navigation.forms_summary" },
     "/attendance": { title: "navigation.attendance" },

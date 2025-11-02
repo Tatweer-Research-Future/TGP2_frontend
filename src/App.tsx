@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { UsersPage } from "./pages/UsersPage";
+import { TraineeMonitoringPage } from "./pages/TraineeMonitoringPage";
 import { UserDetailPage } from "./pages/UserDetailPage";
 import { FormsPage } from "./pages/FormsPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -94,6 +95,14 @@ export default function App() {
                         element={
                           <PermissionProtectedRoute requiredPage="/candidates/:id">
                             <UserDetailPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/trainee-monitoring"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/trainee-monitoring">
+                            <TraineeMonitoringPage />
                           </PermissionProtectedRoute>
                         }
                       />

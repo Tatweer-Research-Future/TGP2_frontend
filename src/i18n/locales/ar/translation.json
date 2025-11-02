@@ -83,6 +83,7 @@
   "navigation": {
     "home": "الرئيسية",
     "candidates": "المرشحون",
+    "trainee_monitoring": "مراقبة المتدربين",
     "attendance": "الحضور",
     "overview": "نظرة عامة",
     "forms": "النماذج",
@@ -238,6 +239,20 @@
       "searchCandidates": "البحث في المرشحين...",
       "noCandidates": "لا يوجد مرشحون",
       "totalCandidates": "إجمالي المرشحين"
+    },
+    "trainee_monitoring": {
+      "title": "مراقبة المتدربين",
+      "subtitle": "إدارة معلومات المتدربين",
+      "addCandidate": "إضافة متدرب",
+      "searchCandidates": "البحث في المتدربين...",
+      "noCandidates": "لا يوجد متدربون",
+      "totalCandidates": "إجمالي المتدربين",
+      "attendanceStats": "إحصائيات الحضور",
+      "present": "حاضر",
+      "absent": "غائب",
+      "totalDays": "إجمالي الأيام",
+      "allTracks": "جميع المسارات",
+      "track": "المسار"
     },
     "attendance": {
       "title": "الحضور",
