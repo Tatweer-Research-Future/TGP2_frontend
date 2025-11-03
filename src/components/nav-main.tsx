@@ -76,12 +76,12 @@ export function NavMain({
                       tooltip={item.title}
                       asChild
                       className={cn(
-                        "relative transition-all duration-300 ease-out",
+                        "relative transition-[background-color,transform,box-shadow] duration-300 ease-out",
                         "hover:scale-[1.02] active:scale-[0.98]",
                         "group/item",
                         isActive
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8"
-                          : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                         isHome && isActive && "ring-2 ring-primary/30 ring-offset-2 ring-offset-sidebar"
                       )}
                     >
@@ -98,7 +98,10 @@ export function NavMain({
                             )} />
                           </span>
                         )}
-                        <span className="relative z-10 font-medium transition-all duration-300 flex-1">
+                        <span className={cn(
+                          "relative z-10 font-medium flex-1",
+                          isActive ? "text-primary-foreground" : "text-sidebar-foreground"
+                        )}>
                           {item.title}
                         </span>
                         {/* Notification bell icon at the end when there are new announcements */}

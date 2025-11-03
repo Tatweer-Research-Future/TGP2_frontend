@@ -11,4 +11,23 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Increase chunk size warning limit to reduce warnings
+    chunkSizeWarningLimit: 1000,
+    // Don't fail on warnings, only on actual errors
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress chunk size warnings - these are informational only
+        if (warning.code === 'CHUNK_SIZE_WARNING') {
+          return;
+        }
+        // Suppress dynamic import warnings - these are informational only
+        if (warning.message && warning.message.includes('dynamically imported')) {
+          return;
+        }
+        // Call the default warn function for other warnings
+        warn(warning);
+      },
+    },
+  },
 });

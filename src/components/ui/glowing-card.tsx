@@ -70,8 +70,9 @@ export const GlowingCard = React.forwardRef<HTMLDivElement, GlowingCardProps>(
         {asChild ? (
           React.Children.map(children, (child) => {
             if (React.isValidElement(child)) {
-              return React.cloneElement(child as React.ReactElement<any>, {
-                className: cn("relative overflow-hidden", child.props.className),
+              const typedChild = child as React.ReactElement<{ className?: string }>;
+              return React.cloneElement(typedChild, {
+                className: cn("relative overflow-hidden", typedChild.props.className),
               });
             }
             return child;
