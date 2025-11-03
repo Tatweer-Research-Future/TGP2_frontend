@@ -288,7 +288,7 @@ export function HomePage() {
       {announcements.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <IconBell className="w-5 h-5 text-blue-500" />
+            <IconBell className="w-5 h-5 text-purple-500" />
             {t("pages.home.announcements", { defaultValue: "Announcements" })}
           </h2>
           {announcements.map((announcement) => (
