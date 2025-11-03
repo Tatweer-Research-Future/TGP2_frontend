@@ -1290,3 +1290,70 @@ export async function submitModuleTest(
     requireCsrf: true,
   });
 }
+
+// --- Assignments ---
+export type AssignmentSubmission = {
+  id: number;
+  trainee: number;
+  trainee_name: string;
+  trainee_email: string;
+  assignment_id: number;
+  assignment_title: string;
+  week_id: number;
+  week_order: number;
+  week_title: string;
+  track_name: string;
+  is_gradable: boolean;
+  submitted_link: string | null;
+  note: string | null;
+  submitted_at: string;
+  grade?: number | null;
+  feedback?: string | null;
+};
+
+export type Assignment = {
+  id: number;
+  title: string;
+  description: string | null;
+  due_date: string;
+  file: string | null;
+  link: string | null;
+  type: "NOT_GRADED" | "INDIVIDUAL" | "GROUP";
+  is_gradable: boolean;
+};
+
+export type AssignmentDetail = Assignment & {
+  submissions: AssignmentSubmission[];
+};
+
+export type AssignmentsListResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: Assignment[];
+};
+
+export async function getAssignments(): Promise<AssignmentsListResponse> {
+  return apiFetch<AssignmentsListResponse>(`/portal/assignments/`);
+}
+
+export async function getAssignmentById(
+  id: number | string
+): Promise<AssignmentDetail> {
+  return apiFetch<AssignmentDetail>(`/portal/assignments/${id}/`);
+}
+
+export type SubmissionsListResponse = {
+  count: number;
+  from: number;
+  to: number;
+  next: string | null;
+  previous: string | null;
+  results: AssignmentSubmission[];
+};
+
+export async function getSubmissions(): Promise<SubmissionsListResponse> {
+  return apiFetch<SubmissionsListResponse>(`/portal/submissions/`);
+}

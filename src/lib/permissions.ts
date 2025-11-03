@@ -16,6 +16,7 @@ export type PageRoute =
   | "/attendance" // AttendancePage
   | "/overview" // DashboardPage
   | "/modules" // My Track (modules list)
+  | "/assignments" // AssignmentsPage
   | "/modules/session/:id" // SessionViewPage (read-only)
   | "/modules/session/:id/edit" // SessionEditPage
   | "/modules/:id/exam/create"
@@ -56,6 +57,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/trainee-monitoring",
       "/forms",
       "/modules",
+      "/assignments",
       "/modules/session/:id",
       "/modules/session/:id/edit",
       "/modules/:id/exam/create",
@@ -171,6 +173,7 @@ export function getUserPermissionsFromGroups(
         "/forms",
         "/attendance",
         "/modules",
+        "/assignments",
         "/modules/session/:id",
         "/modules/:id/exam/create",
         "/modules/:id/exam/results",
@@ -280,6 +283,7 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/modules": { title: "navigation.my_track" },
+    "/assignments": { title: "navigation.assignments" },
     "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
     "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
     "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav
@@ -326,6 +330,7 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/attendance": { title: "navigation.attendance" },
     "/overview": { title: "navigation.overview" },
     "/modules": { title: "navigation.my_track" },
+    "/assignments": { title: "navigation.assignments" },
     "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
     "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
     "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav

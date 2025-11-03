@@ -6,6 +6,7 @@ import {
   IconChartBar,
   IconBook,
   IconHome,
+  IconFileText,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import logoImage from "@/assets/logo.png";
@@ -37,6 +38,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": IconClock,
     "/overview": IconChartBar,
     "/modules": IconBook,
+    "/assignments": IconFileText,
   };
 
   const titleMap: Record<string, string> = {
@@ -48,6 +50,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/attendance": t("navigation.attendance"),
     "/overview": t("navigation.overview"),
     "/modules": t("navigation.my_track"),
+    "/assignments": t("navigation.assignments"),
   };
 
   return {
@@ -130,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     // Learning/Track section
-    const learningItems = items.filter((item) => item.url === "/modules");
+    const learningItems = items.filter((item) => item.url === "/modules" || item.url === "/assignments");
     if (learningItems.length > 0) {
       groups.push({
         label: t("navigation.groups.learning", "Learning"),

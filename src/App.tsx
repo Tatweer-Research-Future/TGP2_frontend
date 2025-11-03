@@ -32,6 +32,7 @@ import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
 import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
 import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import AssignmentsPage from "@/pages/AssignmentsPage";
 import i18n from "./i18n/config";
 
 export default function App() {
@@ -201,6 +202,15 @@ export default function App() {
                         }
                       />
                       {/* Legacy global create route removed in favor of module-scoped */}
+
+                      <Route
+                        path="/assignments"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <AssignmentsPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
 
                       {/* Account page - accessible to all authenticated users */}
                       <Route path="/account" element={<AccountPage />} />
