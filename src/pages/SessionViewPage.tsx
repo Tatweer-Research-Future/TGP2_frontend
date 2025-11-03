@@ -95,9 +95,15 @@ export default function SessionViewPage() {
 
   function openSubmissionDialog(assignment: PortalAssignment) {
     setSubmissionAssignment(assignment);
-    const existing = submissionRecords[assignment.id];
-    setSubmissionLink(existing?.submitted_link ?? "");
-    setSubmissionNote(existing?.note ?? "");
+    // Check my_submissions first, then fallback to submissionRecords
+    const mySubmissions = (assignment as any)?.my_submissions || [];
+    const latestSubmission = mySubmissions.length > 0
+      ? mySubmissions.sort((s1: any, s2: any) => 
+          new Date(s2.submitted_at).getTime() - new Date(s1.submitted_at).getTime()
+        )[0]
+      : submissionRecords[assignment.id];
+    setSubmissionLink(latestSubmission?.submitted_link ?? "");
+    setSubmissionNote(latestSubmission?.note ?? "");
     setSubmissionError(null);
   }
 
@@ -411,7 +417,13 @@ export default function SessionViewPage() {
                                     (a as any).created_at
                                   ).toLocaleString()
                                 : null;
-                              const submission = submissionRecords[a.id];
+                              // Use my_submissions from the assignment if available, otherwise fallback to submissionRecords
+                              const mySubmissions = (a as any)?.my_submissions || [];
+                              const latestSubmission = mySubmissions.length > 0
+                                ? mySubmissions.sort((s1: any, s2: any) => 
+                                    new Date(s2.submitted_at).getTime() - new Date(s1.submitted_at).getTime()
+                                  )[0]
+                                : submissionRecords[a.id];
                               return (
                                 <AccordionItem key={a.id} value={`a-${a.id}`}>
                                   <AccordionTrigger>
@@ -440,22 +452,76 @@ export default function SessionViewPage() {
                                           {a.description}
                                         </div>
                                       )}
-                                      {submission && (
+                                      {mySubmissions.length > 0 && (
+                                        <div className="space-y-2">
+                                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                            Your Submissions ({mySubmissions.length}):
+                                          </p>
+                                          {mySubmissions
+                                            .sort((s1: any, s2: any) => 
+                                              new Date(s2.submitted_at).getTime() - new Date(s1.submitted_at).getTime()
+                                            )
+                                            .map((submission: any, idx: number) => (
+                                            <div key={submission.id || idx} className="flex flex-col gap-1 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                                              <span>
+                                                Submitted{" "}
+                                                {new Date(
+                                                  submission.submitted_at
+                                                ).toLocaleString()}
+                                              </span>
+                                              {submission.submitted_link && (
+                                                <Button
+                                                  type="button"
+                                                  variant="link"
+                                                  className="h-auto px-0 text-xs"
+                                                  onClick={() =>
+                                                    window.open(
+                                                      submission.submitted_link,
+                                                      "_blank",
+                                                      "noopener,noreferrer"
+                                                    )
+                                                  }
+                                                >
+                                                  View submission
+                                                </Button>
+                                              )}
+                                              {submission.note &&
+                                                submission.note.trim() && (
+                                                  <span className="whitespace-pre-wrap">
+                                                    Note: {submission.note}
+                                                  </span>
+                                                )}
+                                              {submission.grade !== null && submission.grade !== undefined && (
+                                                <div className="flex items-center gap-2">
+                                                  <span className="font-medium">Grade:</span>
+                                                  <span>{submission.grade}</span>
+                                                </div>
+                                              )}
+                                              {submission.feedback && (
+                                                <span className="whitespace-pre-wrap">
+                                                  Feedback: {submission.feedback}
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {!mySubmissions.length && latestSubmission && (
                                         <div className="flex flex-col gap-1 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                                           <span>
                                             Submitted{" "}
                                             {new Date(
-                                              submission.submitted_at
+                                              latestSubmission.submitted_at
                                             ).toLocaleString()}
                                           </span>
-                                          {submission.submitted_link && (
+                                          {latestSubmission.submitted_link && (
                                             <Button
                                               type="button"
                                               variant="link"
                                               className="h-auto px-0 text-xs"
                                               onClick={() =>
                                                 window.open(
-                                                  submission.submitted_link,
+                                                  latestSubmission.submitted_link,
                                                   "_blank",
                                                   "noopener,noreferrer"
                                                 )
@@ -464,10 +530,10 @@ export default function SessionViewPage() {
                                               View submission
                                             </Button>
                                           )}
-                                          {submission.note &&
-                                            submission.note.trim() && (
+                                          {latestSubmission.note &&
+                                            latestSubmission.note.trim() && (
                                               <span className="whitespace-pre-wrap">
-                                                Note: {submission.note}
+                                                Note: {latestSubmission.note}
                                               </span>
                                             )}
                                         </div>
@@ -497,7 +563,7 @@ export default function SessionViewPage() {
                                             openSubmissionDialog(a)
                                           }
                                         >
-                                          {submission
+                                          {mySubmissions.length > 0 || latestSubmission
                                             ? "Update submission"
                                             : "Submit assignment"}
                                         </Button>

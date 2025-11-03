@@ -175,12 +175,18 @@ export function getUserPermissionsFromGroups(
         "/modules",
         "/assignments",
         "/modules/session/:id",
+        "/modules/session/:id/edit",
         "/modules/:id/exam/create",
         "/modules/:id/exam/results",
       ],
       homePage: "/forms", // Default to forms as home for instructor
       groupName: "INSTRUCTOR + ATTENDANCE_TRACKER",
     };
+  }
+
+  // If user has instructor roles (even if multiple), prioritize instructor permissions
+  if (hasInstructor) {
+    return GROUP_PERMISSIONS[5]; // Return instructor permissions which include edit route
   }
 
   // Otherwise, use the first matching group (existing behavior)

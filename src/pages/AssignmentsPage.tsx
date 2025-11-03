@@ -120,6 +120,27 @@ function organizeSubmissions(
   const assignmentMap = new Map<number, Assignment>();
   assignments.forEach((a) => assignmentMap.set(a.id, a));
 
+  // Also include assignments that have my_submissions but may not be in the submissions array
+  // This ensures assignments with submissions are displayed even if they're not in the submissions list
+  assignments.forEach((assignment) => {
+    if (assignment.my_submissions && assignment.my_submissions.length > 0) {
+      const firstSub = assignment.my_submissions[0];
+      const weekOrder = firstSub.week_order;
+      const weekTitle = firstSub.week_title || `Week ${weekOrder}`;
+      const assignmentId = assignment.id;
+
+      if (!byWeek[weekOrder]) {
+        byWeek[weekOrder] = { weekTitle, byAssignment: {} };
+      }
+
+      // Add the assignment to the week structure if not already present
+      // This ensures assignments with my_submissions are included
+      if (!byWeek[weekOrder].byAssignment[assignmentId]) {
+        byWeek[weekOrder].byAssignment[assignmentId] = assignment.my_submissions;
+      }
+    }
+  });
+
   // Now organize into sessions by parsing assignment titles
   const weeks: WeekData[] = Object.entries(byWeek)
     .map(([weekOrderStr, weekData]) => {
@@ -131,9 +152,15 @@ function organizeSubmissions(
       Object.entries(weekData.byAssignment).forEach(([assignmentIdStr, subs]) => {
         const assignmentId = parseInt(assignmentIdStr, 10);
         const assignment = assignmentMap.get(assignmentId);
+        
+        // Use my_submissions if available, otherwise use the subs array
+        const finalSubmissions = assignment?.my_submissions && assignment.my_submissions.length > 0
+          ? assignment.my_submissions
+          : subs;
+        
         const assignmentTitle =
           assignment?.title ||
-          subs[0]?.assignment_title ||
+          finalSubmissions[0]?.assignment_title ||
           `Assignment ${assignmentId}`;
 
         // Parse session from assignment title
@@ -147,7 +174,7 @@ function organizeSubmissions(
         bySession[sessionNum].push({
           assignmentId,
           assignmentTitle,
-          submissions: subs,
+          submissions: finalSubmissions,
           assignment,
         });
       });
@@ -367,76 +394,140 @@ export default function AssignmentsPage() {
                             </h3>
                             <table className="w-full border-collapse text-sm md:text-base">
                               <tbody>
-                                {session.assignments.map((assignmentGroup) => (
-                                  <tr
-                                    key={assignmentGroup.assignmentId}
-                                    className="group cursor-pointer border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
-                                    onClick={() =>
-                                      assignmentGroup.assignment &&
-                                      setSelectedAssignment(
-                                        assignmentGroup.assignment
-                                      )
-                                    }
-                                  >
-                                    <td className="px-4 py-3">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          {assignmentGroup.assignmentTitle}
-                                        </span>
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-xs"
-                                        >
-                                          {assignmentGroup.submissions.length}{" "}
-                                          {assignmentGroup.submissions.length ===
-                                          1
-                                            ? "submission"
-                                            : "submissions"}
-                                        </Badge>
-                                        {assignmentGroup.assignment
-                                          ?.is_gradable && (
-                                          <Badge
-                                            variant="default"
-                                            className="text-xs"
-                                          >
-                                            Graded
-                                          </Badge>
-                                        )}
-                                        {assignmentGroup.assignment?.type ===
-                                          "NOT_GRADED" && (
-                                          <Badge
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            Not Graded
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      {assignmentGroup.assignment
-                                        ?.description && (
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                          {
+                                {session.assignments.map((assignmentGroup) => {
+                                  // Check both assignment.my_submissions and use the assignment from the map
+                                  const assignmentFromMap = assignments.find(a => a.id === assignmentGroup.assignmentId);
+                                  const mySubmissions = assignmentFromMap?.my_submissions || assignmentGroup.assignment?.my_submissions || [];
+                                  return (
+                                    <>
+                                      <tr
+                                        key={assignmentGroup.assignmentId}
+                                        className="group cursor-pointer border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
+                                        onClick={() =>
+                                          assignmentGroup.assignment &&
+                                          setSelectedAssignment(
                                             assignmentGroup.assignment
-                                              .description
-                                          }
-                                        </p>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                                      {assignmentGroup.assignment && (
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                          <IconCalendar className="size-4" />
-                                          <span className="text-xs">
-                                            {formatDate(
-                                              assignmentGroup.assignment
-                                                .due_date
+                                          )
+                                        }
+                                      >
+                                        <td className="px-4 py-3">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium">
+                                              {assignmentGroup.assignmentTitle}
+                                            </span>
+                                            <Badge
+                                              variant="secondary"
+                                              className="text-xs"
+                                            >
+                                              {assignmentGroup.submissions.length}{" "}
+                                              {assignmentGroup.submissions.length ===
+                                              1
+                                                ? "submission"
+                                                : "submissions"}
+                                            </Badge>
+                                            {assignmentGroup.assignment
+                                              ?.is_gradable && (
+                                              <Badge
+                                                variant="default"
+                                                className="text-xs"
+                                              >
+                                                Graded
+                                              </Badge>
                                             )}
-                                          </span>
-                                        </div>
+                                            {assignmentGroup.assignment?.type ===
+                                              "NOT_GRADED" && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="text-xs"
+                                              >
+                                                Not Graded
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {assignmentGroup.assignment
+                                            ?.description && (
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                              {
+                                                assignmentGroup.assignment
+                                                  .description
+                                              }
+                                            </p>
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                                          {assignmentGroup.assignment && (
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                              <IconCalendar className="size-4" />
+                                              <span className="text-xs">
+                                                {formatDate(
+                                                  assignmentGroup.assignment
+                                                    .due_date
+                                                )}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </td>
+                                      </tr>
+                                      {mySubmissions.length > 0 && (
+                                        <tr key={`${assignmentGroup.assignmentId}-submissions`} className="border-b-1 border-border/60">
+                                          <td colSpan={2} className="px-4 py-2 bg-muted/20">
+                                            <div className="space-y-2 pl-4 border-l-2 border-primary/30">
+                                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                                Your Submissions:
+                                              </p>
+                                              {mySubmissions.map((submission) => (
+                                                <div key={submission.id} className="text-sm space-y-1">
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-muted-foreground text-xs">
+                                                      Submitted:
+                                                    </span>
+                                                    <span className="text-xs">
+                                                      {formatDate(submission.submitted_at)}
+                                                    </span>
+                                                  </div>
+                                                  {submission.submitted_link && (
+                                                    <div>
+                                                      <a
+                                                        href={submission.submitted_link}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="flex items-center gap-1 text-primary hover:underline text-xs"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                      >
+                                                        <IconExternalLink className="size-3" />
+                                                        View Submission
+                                                      </a>
+                                                    </div>
+                                                  )}
+                                                  {submission.note && (
+                                                    <div className="bg-muted/50 rounded px-2 py-1 text-xs">
+                                                      <span className="font-medium">Note: </span>
+                                                      {submission.note}
+                                                    </div>
+                                                  )}
+                                                  {submission.grade !== null && submission.grade !== undefined && (
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-xs font-medium">Grade:</span>
+                                                      <Badge variant="default" className="text-xs">
+                                                        {submission.grade}
+                                                      </Badge>
+                                                    </div>
+                                                  )}
+                                                  {submission.feedback && (
+                                                    <div className="bg-muted/50 rounded px-2 py-1 text-xs">
+                                                      <span className="font-medium">Feedback: </span>
+                                                      {submission.feedback}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </td>
+                                        </tr>
                                       )}
-                                    </td>
-                                  </tr>
-                                ))}
+                                    </>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>

@@ -16,14 +16,22 @@ export function useUserGroups() {
   // Get group_id from API response or infer from groups array
   const groupId = user?.group_id || inferGroupIdFromGroups(user?.groups || []);
   
-  // Check if user has both instructor and attendance_tracker roles
+  // Check if user has instructor roles
   const hasInstructor = user?.groups?.some(group => 
     group.toLowerCase().includes('instructor') || group.toLowerCase().includes('data')
   ) || false;
   const hasAttendanceTracker = user?.groups?.includes("attendance_tracker") || false;
   
-  // Use groups-based permissions if user has multiple roles, otherwise use group_id
-  const useGroupsBasedPermissions = hasInstructor && hasAttendanceTracker;
+  // Count instructor groups to detect multiple instructor roles
+  const instructorGroups = (user?.groups || []).filter(group => 
+    group.toLowerCase().includes('instructor') || group.toLowerCase().includes('data')
+  );
+  const hasMultipleInstructorRoles = instructorGroups.length > 1;
+  
+  // Use groups-based permissions if:
+  // 1. User has both instructor and attendance_tracker roles, OR
+  // 2. User has multiple instructor roles (admin with multiple tracks)
+  const useGroupsBasedPermissions = (hasInstructor && hasAttendanceTracker) || hasMultipleInstructorRoles;
   
   const permissions = useGroupsBasedPermissions 
     ? getUserPermissionsFromGroups(user?.groups || [])
@@ -40,7 +48,13 @@ export function useUserGroups() {
       useGroupsBasedPermissions 
         ? canAccessPageFromGroups(user?.groups || [], page)
         : canAccessPage(groupId || undefined, page),
-    getHomePage: () => getHomePage(groupId || undefined),
+    getHomePage: () => {
+      if (useGroupsBasedPermissions) {
+        const perms = getUserPermissionsFromGroups(user?.groups || []);
+        return perms?.homePage || getHomePage(groupId || undefined);
+      }
+      return getHomePage(groupId || undefined);
+    },
     getNavigationItems: () => 
       useGroupsBasedPermissions
         ? getNavigationItemsFromGroups(user?.groups || [])

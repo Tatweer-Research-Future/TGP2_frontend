@@ -749,6 +749,7 @@ export type PortalAssignment = {
   type: string;
   is_gradable: boolean;
   link?: string | null;
+  my_submissions?: AssignmentSubmission[];
 };
 
 export type PortalSession = {
@@ -1320,6 +1321,7 @@ export type Assignment = {
   link: string | null;
   type: "NOT_GRADED" | "INDIVIDUAL" | "GROUP";
   is_gradable: boolean;
+  my_submissions?: AssignmentSubmission[];
 };
 
 export type AssignmentDetail = Assignment & {

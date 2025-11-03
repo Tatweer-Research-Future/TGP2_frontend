@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { IconBell, IconChartBar } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useUserGroups } from "@/hooks/useUserGroups";
+import { cn } from "@/lib/utils";
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -28,9 +29,17 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString();
 }
 
+function isNewAnnouncement(publishDate: string): boolean {
+  const now = new Date();
+  const publish = new Date(publishDate);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  return publish >= twentyFourHoursAgo && publish <= now;
+}
+
 function AnnouncementCard({ announcement }: { announcement: Announcement }) {
   const { t } = useTranslation();
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const isNew = isNewAnnouncement(announcement.publish_at);
   
   const reactions: Array<{ emoji: string; label: string; count: number }> = [
     { emoji: "👍", label: "Like", count: 12 },
@@ -43,15 +52,34 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
   ];
   
   return (
-    <Card className="border-l-4 border-l-blue-500">
+    <Card className={cn(
+      "border-l-4",
+      isNew ? "border-l-green-500 bg-green-50/30 dark:bg-green-950/10" : "border-l-blue-500"
+    )}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="mt-1">
-            <IconBell className="w-5 h-5 text-blue-500" />
+          <div className="mt-1 relative">
+            <IconBell className={cn(
+              "w-5 h-5",
+              isNew ? "text-green-500" : "text-blue-500"
+            )} />
+            {isNew && (
+              <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex h-full w-full rounded-full bg-green-500" />
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="font-semibold text-base sm:text-lg">{announcement.title}</h3>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className="font-semibold text-base sm:text-lg">{announcement.title}</h3>
+                {isNew && (
+                  <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 shrink-0 animate-pulse">
+                    NEW
+                  </Badge>
+                )}
+              </div>
               <Badge variant="secondary" className="text-sm shrink-0">
                 {formatDate(announcement.publish_at)}
               </Badge>
@@ -60,8 +88,8 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
               {announcement.body}
             </p>
             
-            {/* Emoji Reaction Buttons */}
-            <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border/50">
+            {/* Emoji Reaction Buttons - Hidden for now */}
+            <div className="hidden flex items-center gap-1 mt-3 pt-3 border-t border-border/50">
               {reactions.map((reaction) => (
                 <button
                   key={reaction.emoji}

@@ -175,15 +175,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-1.5 animate-in fade-in slide-in-from-top-2 duration-500 pointer-events-none"
             >
-              <a href="#">
+              <div className="block transition-transform duration-300 hover:scale-105 active:scale-95">
                 <img
                   src={theme === "dark" ? logoWhiteImage : logoImage}
                   alt="TGP Logo"
-                  className="h-24 w-auto"
+                  className="h-24 w-auto drop-shadow-sm"
                 />
-              </a>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
