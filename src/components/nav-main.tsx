@@ -76,8 +76,7 @@ export function NavMain({
                       tooltip={item.title}
                       asChild
                       className={cn(
-                        "relative transition-[background-color,transform,box-shadow] duration-300 ease-out",
-                        "hover:scale-[1.02] active:scale-[0.98]",
+                        "relative",
                         "group/item",
                         isActive
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8"
@@ -85,7 +84,15 @@ export function NavMain({
                         isHome && isActive && "ring-2 ring-primary/30 ring-offset-2 ring-offset-sidebar"
                       )}
                     >
-                      <Link to={item.url} className="relative flex items-center gap-2 w-full">
+                      <Link 
+                        to={item.url} 
+                        className={cn(
+                          "relative flex items-center gap-2 w-full",
+                          "transition-all duration-300 ease-out",
+                          "scale-100 hover:scale-[1.02] active:scale-[0.98]",
+                          "transform-gpu will-change-transform"
+                        )}
+                      >
                         {item.icon && (
                           <span className={cn(
                             "relative z-10 transition-transform duration-300",
