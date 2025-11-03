@@ -37,6 +37,8 @@ export function useUserGroups() {
     ? getUserPermissionsFromGroups(user?.groups || [])
     : getUserPermissions(groupId || undefined);
 
+  const isStaff = user?.is_staff === true;
+
   return {
     groups: user?.groups || [],
     groupId,
@@ -46,8 +48,8 @@ export function useUserGroups() {
     isAttendanceTracker: hasAttendanceTracker,
     canAccessPage: (page: string) => 
       useGroupsBasedPermissions 
-        ? canAccessPageFromGroups(user?.groups || [], page)
-        : canAccessPage(groupId || undefined, page),
+        ? canAccessPageFromGroups(user?.groups || [], page, isStaff)
+        : canAccessPage(groupId || undefined, page, isStaff),
     getHomePage: () => {
       if (useGroupsBasedPermissions) {
         const perms = getUserPermissionsFromGroups(user?.groups || []);
@@ -57,7 +59,7 @@ export function useUserGroups() {
     },
     getNavigationItems: () => 
       useGroupsBasedPermissions
-        ? getNavigationItemsFromGroups(user?.groups || [])
-        : getNavigationItems(groupId || undefined),
+        ? getNavigationItemsFromGroups(user?.groups || [], isStaff)
+        : getNavigationItems(groupId || undefined, isStaff),
   };
 }

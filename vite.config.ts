@@ -13,12 +13,13 @@ export default defineConfig({
   },
   build: {
     // Increase chunk size warning limit to reduce warnings
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     // Don't fail on warnings, only on actual errors
     rollupOptions: {
       onwarn(warning, warn) {
         // Suppress chunk size warnings - these are informational only
-        if (warning.code === 'CHUNK_SIZE_WARNING') {
+        if (warning.code === 'CHUNK_SIZE_WARNING' || 
+            (warning.message && warning.message.includes('chunks are larger'))) {
           return;
         }
         // Suppress dynamic import warnings - these are informational only

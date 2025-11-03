@@ -39,13 +39,12 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/candidates",
       "/candidates/:id",
-      "/trainee-monitoring",
     ],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "HR/TECH/PRESENTATION",
   },
   4: {
-    allowedPages: ["/home", "/candidates", "/candidates/:id", "/trainee-monitoring"],
+    allowedPages: ["/home", "/candidates", "/candidates/:id"],
     homePage: "/candidates/:id", // Will redirect to first candidate or candidates page
     groupName: "PRESENTATION",
   },
@@ -54,7 +53,6 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/candidates",
       "/candidates/:id",
-      "/trainee-monitoring",
       "/forms",
       "/modules",
       "/assignments",
@@ -169,7 +167,6 @@ export function getUserPermissionsFromGroups(
       allowedPages: [
         "/candidates",
         "/candidates/:id",
-        "/trainee-monitoring",
         "/forms",
         "/attendance",
         "/modules",
@@ -204,11 +201,20 @@ export function getUserPermissionsFromGroups(
 
 /**
  * Check if user can access a specific page
+ * @param groupId - User's group ID
+ * @param page - Page route to check
+ * @param isStaff - Optional: user's is_staff status (required for /trainee-monitoring)
  */
 export function canAccessPage(
   groupId: number | undefined,
-  page: string
+  page: string,
+  isStaff?: boolean
 ): boolean {
+  // Trainee Monitoring page requires is_staff = true
+  if (page === "/trainee-monitoring") {
+    return isStaff === true;
+  }
+
   const permissions = getUserPermissions(groupId);
   if (!permissions) return false;
 
@@ -229,11 +235,20 @@ export function canAccessPage(
 
 /**
  * Check if user can access a specific page based on groups array
+ * @param groups - User's groups array
+ * @param page - Page route to check
+ * @param isStaff - Optional: user's is_staff status (required for /trainee-monitoring)
  */
 export function canAccessPageFromGroups(
   groups: string[],
-  page: string
+  page: string,
+  isStaff?: boolean
 ): boolean {
+  // Trainee Monitoring page requires is_staff = true
+  if (page === "/trainee-monitoring") {
+    return isStaff === true;
+  }
+
   const permissions = getUserPermissionsFromGroups(groups);
   if (!permissions) return false;
 
@@ -270,8 +285,13 @@ export function getHomePage(groupId: number | undefined): string {
 
 /**
  * Get navigation items based on user permissions
+ * @param groupId - User's group ID
+ * @param isStaff - Optional: user's is_staff status (required for /trainee-monitoring)
  */
-export function getNavigationItems(groupId: number | undefined): Array<{
+export function getNavigationItems(
+  groupId: number | undefined,
+  isStaff?: boolean
+): Array<{
   title: string;
   url: string;
   icon?: any;
@@ -299,7 +319,13 @@ export function getNavigationItems(groupId: number | undefined): Array<{
     "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
   };
 
-  return permissions.allowedPages
+  // Build allowed pages: include group permissions + trainee-monitoring if staff
+  const allowedPages = [...permissions.allowedPages];
+  if (isStaff === true) {
+    allowedPages.push("/trainee-monitoring");
+  }
+
+  return allowedPages
     .filter(
       (page) =>
         // Don't show dynamic routes in nav
@@ -317,8 +343,13 @@ export function getNavigationItems(groupId: number | undefined): Array<{
 
 /**
  * Get navigation items based on user groups (for multiple roles)
+ * @param groups - User's groups array
+ * @param isStaff - Optional: user's is_staff status (required for /trainee-monitoring)
  */
-export function getNavigationItemsFromGroups(groups: string[]): Array<{
+export function getNavigationItemsFromGroups(
+  groups: string[],
+  isStaff?: boolean
+): Array<{
   title: string;
   url: string;
   icon?: any;
@@ -346,7 +377,13 @@ export function getNavigationItemsFromGroups(groups: string[]): Array<{
     "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
   };
 
-  return permissions.allowedPages
+  // Build allowed pages: include group permissions + trainee-monitoring if staff
+  const allowedPages = [...permissions.allowedPages];
+  if (isStaff === true) {
+    allowedPages.push("/trainee-monitoring");
+  }
+
+  return allowedPages
     .filter(
       (page) =>
         // Don't show dynamic routes in nav
