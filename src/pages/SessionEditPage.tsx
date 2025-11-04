@@ -58,6 +58,8 @@ import {
   type PortalAssignment,
   createPortalAssignment,
   updatePortalAssignment,
+  createPortalAssignmentWithFile,
+  updatePortalAssignmentWithFile,
   deletePortalAssignment,
 } from "@/lib/api";
 import {
@@ -104,6 +106,8 @@ export default function SessionEditPage() {
   const [assignmentDueTime, setAssignmentDueTime] =
     useState<string>("10:30:00");
   const [assignmentLink, setAssignmentLink] = useState<string>("");
+  const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
+  const assignmentFileInputRef = useRef<HTMLInputElement | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [creatingAssignment, setCreatingAssignment] = useState(false);
   const [assignmentType, setAssignmentType] = useState<string>("Individual");
@@ -260,6 +264,33 @@ export default function SessionEditPage() {
     e.stopPropagation();
   }
 
+  function handleBrowseAssignmentFiles() {
+    // Don't allow browse if link is already set
+    if (assignmentLink.trim()) return;
+    assignmentFileInputRef.current?.click();
+  }
+
+  function handleAssignmentDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Don't allow drop if link is already set
+    if (assignmentLink.trim()) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setAssignmentFile(file);
+      setAssignmentLink(""); // Clear link when file is dropped
+    }
+  }
+
+  function handleAssignmentDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Don't allow drag over if link is already set
+    if (assignmentLink.trim()) {
+      e.dataTransfer.dropEffect = "none";
+    }
+  }
+
   async function onCreateAssignment(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!sessionId || !assignmentTitle.trim()) return;
@@ -283,21 +314,69 @@ export default function SessionEditPage() {
         dueIso = composed.toISOString();
       }
 
-      const payload = {
-        title: assignmentTitle.trim(),
-        description: assignmentDescription.trim() || null,
-        due_date: dueIso,
-        link: assignmentLink.trim() ? assignmentLink.trim() : null,
-        is_gradable: sessionId === 5,
-        ...(sessionId === 5 ? { type: assignmentType } : {}),
-      } as const;
-      if (editingAssignment) {
-        await updatePortalAssignment(editingAssignment.id, {
-          ...payload,
-          session: sessionId,
-        } as any);
+      const hasFile = assignmentFile !== null;
+      const hasLink = assignmentLink.trim() !== "";
+
+      // Ensure only one is provided (file takes precedence)
+      if (hasFile && hasLink) {
+        // If both are set, clear the link (file takes precedence)
+        setAssignmentLink("");
+      }
+
+      // Use file-aware API if file is provided, otherwise use JSON API
+      if (hasFile) {
+        const params = {
+          title: assignmentTitle.trim(),
+          description: assignmentDescription.trim() || null,
+          due_date: dueIso,
+          link: null, // Always null when file is provided
+          file: assignmentFile,
+          is_gradable: sessionId === 5,
+          ...(sessionId === 5 ? { type: assignmentType } : {}),
+        };
+        if (editingAssignment) {
+          await updatePortalAssignmentWithFile(editingAssignment.id, {
+            ...params,
+            session: sessionId,
+          });
+        } else {
+          await createPortalAssignmentWithFile(sessionId, params);
+        }
+      } else if (hasLink) {
+        const payload = {
+          title: assignmentTitle.trim(),
+          description: assignmentDescription.trim() || null,
+          due_date: dueIso,
+          link: assignmentLink.trim(),
+          is_gradable: sessionId === 5,
+          ...(sessionId === 5 ? { type: assignmentType } : {}),
+        } as const;
+        if (editingAssignment) {
+          await updatePortalAssignment(editingAssignment.id, {
+            ...payload,
+            session: sessionId,
+          } as any);
+        } else {
+          await createPortalAssignment(sessionId, payload as any);
+        }
       } else {
-        await createPortalAssignment(sessionId, payload as any);
+        // Neither link nor file - use JSON API with null link
+        const payload = {
+          title: assignmentTitle.trim(),
+          description: assignmentDescription.trim() || null,
+          due_date: dueIso,
+          link: null,
+          is_gradable: sessionId === 5,
+          ...(sessionId === 5 ? { type: assignmentType } : {}),
+        } as const;
+        if (editingAssignment) {
+          await updatePortalAssignment(editingAssignment.id, {
+            ...payload,
+            session: sessionId,
+          } as any);
+        } else {
+          await createPortalAssignment(sessionId, payload as any);
+        }
       }
       const refreshed = await getPortalSession(String(sessionId));
       setSession(refreshed);
@@ -308,6 +387,7 @@ export default function SessionEditPage() {
       setAssignmentDueDate(undefined);
       setAssignmentDueTime("10:30:00");
       setAssignmentLink("");
+      setAssignmentFile(null);
       setAssignmentType("Individual");
       setEditingAssignment(null);
       toast.success(
@@ -334,6 +414,7 @@ export default function SessionEditPage() {
     setAssignmentDueDate(undefined);
     setAssignmentDueTime("10:30:00");
     setAssignmentLink("");
+    setAssignmentFile(null);
     setAssignmentType("Individual");
     setEditingAssignment(null);
   }
@@ -343,6 +424,8 @@ export default function SessionEditPage() {
     setShowAssignmentForm(true);
     setAssignmentTitle(a.title || "");
     setAssignmentDescription(a.description || "");
+    setAssignmentLink(a.link || "");
+    setAssignmentFile(null); // Reset file when editing
     if (a.due_date) {
       const d = new Date(a.due_date);
       setAssignmentDueDate(d);
@@ -1013,17 +1096,135 @@ export default function SessionEditPage() {
                                 </FieldContent>
                               </Field>
                               <Field>
-                                <FieldTitle>Link</FieldTitle>
+                                <FieldTitle>Link or File</FieldTitle>
                                 <FieldContent>
-                                  <Input
-                                    type="url"
-                                    className="w-auto"
-                                    placeholder="https://..."
-                                    value={assignmentLink}
-                                    onChange={(e) =>
-                                      setAssignmentLink(e.target.value)
-                                    }
-                                  />
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2">
+                                      <Input
+                                        type="url"
+                                        className="w-auto"
+                                        placeholder="https://..."
+                                        value={assignmentLink}
+                                        onChange={(e) => {
+                                          setAssignmentLink(e.target.value);
+                                          // Clear file when link is entered
+                                          if (e.target.value.trim()) {
+                                            setAssignmentFile(null);
+                                            if (assignmentFileInputRef.current) {
+                                              assignmentFileInputRef.current.value = "";
+                                            }
+                                          }
+                                        }}
+                                        disabled={!!assignmentFile}
+                                      />
+                                      {assignmentFile && (
+                                        <div className="text-xs text-muted-foreground">
+                                          Clear the file below to add a link instead
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="relative">
+                                      <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t" />
+                                      </div>
+                                      <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-background px-2 text-muted-foreground">
+                                          Or
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <Input
+                                      ref={assignmentFileInputRef}
+                                      type="file"
+                                      accept=".pdf,.doc,.docx,.txt,.jpeg,.jpg,.png,.xlsx,.xls"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        setAssignmentFile(file);
+                                        // Clear link when file is selected
+                                        if (file) {
+                                          setAssignmentLink("");
+                                        }
+                                      }}
+                                      className="hidden"
+                                    />
+                                    <div
+                                      onDrop={handleAssignmentDrop}
+                                      onDragOver={handleAssignmentDragOver}
+                                      className={`border-2 border-dashed rounded-md p-4 bg-muted/30 transition-colors text-sm flex flex-col gap-3 ${
+                                        assignmentLink ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/40"
+                                      }`}
+                                    >
+                                      {assignmentFile ? (
+                                        <>
+                                          <div className="flex items-center justify-between gap-3">
+                                            <div className="truncate">
+                                              <span className="font-medium">
+                                                {assignmentFile.name}
+                                              </span>
+                                              <span className="ml-2 text-muted-foreground">
+                                                (
+                                                {Math.round(assignmentFile.size / 1024)}{" "}
+                                                KB)
+                                              </span>
+                                            </div>
+                                            <div className="inline-flex gap-2">
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={handleBrowseAssignmentFiles}
+                                                disabled={!!assignmentLink}
+                                              >
+                                                Change file
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                  setAssignmentFile(null);
+                                                  if (assignmentFileInputRef.current) {
+                                                    assignmentFileInputRef.current.value = "";
+                                                  }
+                                                }}
+                                              >
+                                                Clear
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center justify-between gap-3">
+                                          <div className="flex items-center gap-3 text-muted-foreground">
+                                            <UploadCloud className="h-5 w-5" />
+                                            <div>
+                                              <div className="font-medium text-foreground">
+                                                Drag & drop a file here
+                                              </div>
+                                              <div className="text-xs">
+                                                or click Browse to select
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleBrowseAssignmentFiles}
+                                            disabled={!!assignmentLink}
+                                          >
+                                            Browse
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {assignmentLink && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Clear the link above to upload a file instead
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-muted-foreground">
+                                      You can upload PDF, DOCX, TXT, JPEG, XLSX (max
+                                      50MB).
+                                    </div>
+                                  </div>
                                 </FieldContent>
                               </Field>
                             </FieldGroup>

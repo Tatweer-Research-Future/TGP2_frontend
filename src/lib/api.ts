@@ -921,6 +921,95 @@ export async function updatePortalAssignment(
   });
 }
 
+// Create assignment with file support
+export async function createPortalAssignmentWithFile(
+  sessionId: number | string,
+  params: {
+    title: string;
+    description?: string | null;
+    due_date?: string | null;
+    type?: string;
+    is_gradable?: boolean;
+    link?: string | null;
+    file?: File | null;
+  }
+): Promise<PortalAssignment> {
+  const form = new FormData();
+  form.append("title", params.title);
+  if (params.description !== undefined && params.description !== null) {
+    form.append("description", params.description);
+  }
+  if (params.due_date !== undefined && params.due_date !== null) {
+    form.append("due_date", params.due_date);
+  }
+  if (params.type !== undefined) {
+    form.append("type", params.type);
+  }
+  if (params.is_gradable !== undefined) {
+    form.append("is_gradable", String(params.is_gradable));
+  }
+  if (params.link !== undefined && params.link !== null) {
+    form.append("link", params.link);
+  }
+  if (params.file) {
+    form.append("file", params.file);
+  }
+  form.append("session", String(sessionId));
+  
+  return apiFetchFormData<PortalAssignment>(`/portal/assignments/`, form, {
+    method: "POST",
+  });
+}
+
+// Update assignment with file support
+export async function updatePortalAssignmentWithFile(
+  assignmentId: number | string,
+  params: {
+    title?: string;
+    description?: string | null;
+    due_date?: string | null;
+    type?: string;
+    is_gradable?: boolean;
+    link?: string | null;
+    file?: File | null;
+    session?: number | string;
+  }
+): Promise<PortalAssignment> {
+  const form = new FormData();
+  if (params.title !== undefined) {
+    form.append("title", params.title);
+  }
+  if (params.description !== undefined && params.description !== null) {
+    form.append("description", params.description);
+  }
+  if (params.due_date !== undefined && params.due_date !== null) {
+    form.append("due_date", params.due_date);
+  }
+  if (params.type !== undefined) {
+    form.append("type", params.type);
+  }
+  if (params.is_gradable !== undefined) {
+    form.append("is_gradable", String(params.is_gradable));
+  }
+  if (params.link !== undefined && params.link !== null) {
+    form.append("link", params.link);
+  }
+  if (params.file) {
+    form.append("file", params.file);
+  }
+  if (params.session !== undefined) {
+    form.append("session", String(params.session));
+  }
+  
+  return apiFetchFormData<PortalAssignment>(
+    `/portal/assignments/${assignmentId}/`,
+    form,
+    {
+      method: "PUT",
+    }
+  );
+}
+
 export async function deletePortalAssignment(
   assignmentId: number | string
 ): Promise<void> {
