@@ -1280,8 +1280,37 @@ export default function SessionEditPage() {
                                   key={a.id}
                                   className="group border-b-1 border-border/60 last:border-b-0 hover:bg-muted/40 transition-colors"
                                 >
-                                  <td className="px-2 md:px-4 py-3 whitespace-nowrap">
+                                  <td className="px-2 md:px-4 py-3">
                                     <div className="font-medium">{a.title}</div>
+                                    {(a.file || a.link) && (
+                                      <div className="mt-1">
+                                        {a.file ? (
+                                          <a
+                                            href={a.file}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                          >
+                                            <FileText className="h-3 w-3" />
+                                            <span className="truncate max-w-[200px]">
+                                              {a.file.split("/").pop() || "View file"}
+                                            </span>
+                                          </a>
+                                        ) : a.link ? (
+                                          <a
+                                            href={a.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                            <span className="truncate max-w-[200px]">
+                                              Assignment link
+                                            </span>
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="px-2 md:px-4 py-3 whitespace-nowrap text-muted-foreground">
                                     {a.due_date

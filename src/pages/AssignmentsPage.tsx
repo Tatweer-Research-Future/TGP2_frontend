@@ -6,6 +6,7 @@ import {
   IconChevronLeft,
   IconExternalLink,
   IconCalendar,
+  IconFile,
 } from "@tabler/icons-react";
 import { RiBardFill } from "react-icons/ri";
 import { useUserGroups } from "@/hooks/useUserGroups";
@@ -453,6 +454,37 @@ export default function AssignmentsPage() {
                                               }
                                             </p>
                                           )}
+                                          {(assignmentGroup.assignment?.file || assignmentGroup.assignment?.link) && (
+                                            <div className="mt-1">
+                                              {assignmentGroup.assignment.file ? (
+                                                <a
+                                                  href={assignmentGroup.assignment.file}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                                >
+                                                  <IconFile className="size-3" />
+                                                  <span className="truncate max-w-[200px]">
+                                                    {assignmentGroup.assignment.file.split("/").pop() || "View file"}
+                                                  </span>
+                                                </a>
+                                              ) : assignmentGroup.assignment.link ? (
+                                                <a
+                                                  href={assignmentGroup.assignment.link}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                                                >
+                                                  <IconExternalLink className="size-3" />
+                                                  <span className="truncate max-w-[200px]">
+                                                    Assignment link
+                                                  </span>
+                                                </a>
+                                              ) : null}
+                                            </div>
+                                          )}
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap">
                                           {assignmentGroup.assignment && (
@@ -562,7 +594,19 @@ export default function AssignmentsPage() {
                       Due: {formatDate(selectedAssignment.due_date)}
                     </span>
                   </div>
-                  {selectedAssignment.link && (
+                  {selectedAssignment.file ? (
+                    <a
+                      href={selectedAssignment.file}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline text-sm"
+                    >
+                      <IconFile className="size-4" />
+                      <span className="truncate max-w-[200px]">
+                        {selectedAssignment.file.split("/").pop() || "View file"}
+                      </span>
+                    </a>
+                  ) : selectedAssignment.link ? (
                     <a
                       href={selectedAssignment.link}
                       target="_blank"
@@ -572,7 +616,7 @@ export default function AssignmentsPage() {
                       <IconExternalLink className="size-4" />
                       Assignment Link
                     </a>
-                  )}
+                  ) : null}
                 </DialogDescription>
               </DialogHeader>
 

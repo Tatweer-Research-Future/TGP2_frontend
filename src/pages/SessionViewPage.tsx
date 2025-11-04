@@ -452,6 +452,33 @@ export default function SessionViewPage() {
                                           {a.description}
                                         </div>
                                       )}
+                                      {(a.file || a.link) && (
+                                        <div className="flex items-center gap-2">
+                                          {a.file ? (
+                                            <a
+                                              href={a.file}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm text-primary hover:underline inline-flex items-center gap-1.5"
+                                            >
+                                              <FileText className="h-4 w-4" />
+                                              <span className="truncate max-w-[300px]">
+                                                {a.file.split("/").pop() || "View file"}
+                                              </span>
+                                            </a>
+                                          ) : a.link ? (
+                                            <a
+                                              href={a.link}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm text-primary hover:underline inline-flex items-center gap-1.5"
+                                            >
+                                              <ExternalLink className="h-4 w-4" />
+                                              <span>Assignment link</span>
+                                            </a>
+                                          ) : null}
+                                        </div>
+                                      )}
                                       {mySubmissions.length > 0 && (
                                         <div className="space-y-2">
                                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">

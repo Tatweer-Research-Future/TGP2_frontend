@@ -749,6 +749,7 @@ export type PortalAssignment = {
   type: string;
   is_gradable: boolean;
   link?: string | null;
+  file?: string | null;
   my_submissions?: AssignmentSubmission[];
 };
 
