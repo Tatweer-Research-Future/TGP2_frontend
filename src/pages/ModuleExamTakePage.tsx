@@ -35,7 +35,9 @@ export default function ModuleExamTakePage() {
       "support",
       "attendance_tracker",
     ];
-    const domain = g.find((x) => !generic.some((k) => x.toLowerCase().includes(k)));
+    const domain = g.find(
+      (x) => !generic.some((k) => x.toLowerCase().includes(k))
+    );
     return domain || "My Track";
   }, [groups]);
 
@@ -48,10 +50,15 @@ export default function ModuleExamTakePage() {
   const [started, setStarted] = useState(false);
   const [timeLeftSec, setTimeLeftSec] = useState(600);
   const timerRef = useRef<number | null>(null);
-  const [selectedChoices, setSelectedChoices] = useState<Record<number, number>>({});
+  const [selectedChoices, setSelectedChoices] = useState<
+    Record<number, number>
+  >({});
   const [submitting, setSubmitting] = useState(false);
 
-  const moduleIdNum = useMemo(() => (moduleIdParam ? Number(moduleIdParam) : null), [moduleIdParam]);
+  const moduleIdNum = useMemo(
+    () => (moduleIdParam ? Number(moduleIdParam) : null),
+    [moduleIdParam]
+  );
 
   // Load module and test detail
   useEffect(() => {
@@ -66,7 +73,9 @@ export default function ModuleExamTakePage() {
         let mod: PortalModule | null = null;
         try {
           const modulesResp = await getPortalModules();
-          mod = (modulesResp.results || []).find((m) => m.id === moduleIdNum) ?? null;
+          mod =
+            (modulesResp.results || []).find((m) => m.id === moduleIdNum) ??
+            null;
         } catch (_) {}
         if (mod) setModuleObj(mod);
 
@@ -115,8 +124,6 @@ export default function ModuleExamTakePage() {
         if (prev <= 1) {
           window.clearInterval(id);
           timerRef.current = null;
-          // Auto submit on expiry
-          handleSubmit(true);
           return 0;
         }
         return prev - 1;
@@ -156,35 +163,31 @@ export default function ModuleExamTakePage() {
     return true;
   }
 
-  async function handleSubmit(isAuto = false) {
+  async function handleSubmit() {
     if (!testDetail || !selectedKind) return;
-    if (!isAuto && answeredCount < totalQuestions) {
-      toast.error("Please answer all questions before submitting.");
-      return;
-    }
     // Build ordered choice_ids by question order
-    const ordered = [...(testDetail.questions || [])].sort((a, b) => a.order - b.order);
+    const ordered = [...(testDetail.questions || [])].sort(
+      (a, b) => a.order - b.order
+    );
     const choiceIds: number[] = [];
     for (const q of ordered) {
       const cid = selectedChoices[q.id];
-      if (!cid) {
-        if (!isAuto) {
-          toast.error("Please answer all questions before submitting.");
-          return;
-        }
-      } else {
+      if (cid) {
         choiceIds.push(cid);
       }
     }
     try {
       setSubmitting(true);
-      await submitModuleTest(testDetail.id, { kind: selectedKind, choice_ids: choiceIds });
+      await submitModuleTest(testDetail.id, {
+        kind: selectedKind,
+        choice_ids: choiceIds,
+      });
       toast.success("Exam submitted successfully.");
       navigate("/modules");
     } catch (e: any) {
       const msg =
         e?.data && typeof e.data === "object"
-          ? (e.data.detail || JSON.stringify(e.data))
+          ? e.data.detail || JSON.stringify(e.data)
           : e?.message || "Failed to submit exam.";
       toast.error(String(msg));
     } finally {
@@ -194,7 +197,9 @@ export default function ModuleExamTakePage() {
 
   const weekLabel = useMemo(() => {
     if (!moduleObj) return "";
-    return `Week ${moduleObj.order}${moduleObj.title ? `: ${moduleObj.title}` : ""}`;
+    return `Week ${moduleObj.order}${
+      moduleObj.title ? `: ${moduleObj.title}` : ""
+    }`;
   }, [moduleObj]);
 
   const alreadySubmitted = useMemo(() => {
@@ -206,7 +211,9 @@ export default function ModuleExamTakePage() {
 
   const isInactive = useMemo(() => {
     if (!testDetail || !selectedKind) return true;
-    return selectedKind === "PRE" ? !testDetail.is_active_pre : !testDetail.is_active_post;
+    return selectedKind === "PRE"
+      ? !testDetail.is_active_pre
+      : !testDetail.is_active_post;
   }, [testDetail, selectedKind]);
 
   return (
@@ -227,13 +234,21 @@ export default function ModuleExamTakePage() {
                 {testDetail.title}
               </CardTitle>
               {selectedKind && (
-                <Badge variant="secondary">{selectedKind === "PRE" ? "Pre-Exam" : "Post-Exam"}</Badge>
+                <Badge variant="secondary">
+                  {selectedKind === "PRE" ? "Pre-Exam" : "Post-Exam"}
+                </Badge>
               )}
               {weekLabel && <Badge variant="outline">{weekLabel}</Badge>}
               {trackTitle && <Badge variant="outline">{trackTitle}</Badge>}
               <div className="ml-auto flex items-center gap-2">
                 {started ? (
-                  <Badge className={timeLeftSec <= 60 ? "bg-destructive text-destructive-foreground" : ""}>
+                  <Badge
+                    className={
+                      timeLeftSec <= 60
+                        ? "bg-destructive text-destructive-foreground"
+                        : ""
+                    }
+                  >
                     {formatTime(timeLeftSec)}
                   </Badge>
                 ) : (
@@ -249,7 +264,8 @@ export default function ModuleExamTakePage() {
           <Card className="mt-4">
             <CardHeader className="pb-2">
               <div className="text-sm text-muted-foreground">
-                Please answer each question exactly once. You have 10 minutes to complete the exam.
+                Please answer each question exactly once. You have 10 minutes to
+                complete the exam.
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -257,7 +273,8 @@ export default function ModuleExamTakePage() {
                 <div className="flex flex-col items-center justify-center py-12">
                   {alreadySubmitted && (
                     <div className="mb-4 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-4 py-2 text-sm">
-                      You have already submitted this {selectedKind === "PRE" ? "Pre" : "Post"} exam.
+                      You have already submitted this{" "}
+                      {selectedKind === "PRE" ? "Pre" : "Post"} exam.
                     </div>
                   )}
                   {isInactive && (
@@ -279,7 +296,10 @@ export default function ModuleExamTakePage() {
               {started && (
                 <div className="space-y-6">
                   {testDetail.questions.map((q, idx) => (
-                    <div key={q.id} className="rounded-md border p-4 bg-muted/20">
+                    <div
+                      key={q.id}
+                      className="rounded-md border p-4 bg-muted/20"
+                    >
                       <div className="flex items-start gap-3">
                         <Badge variant="outline">Q{idx + 1}</Badge>
                         <div className="font-medium flex-1">{q.title}</div>
@@ -291,7 +311,11 @@ export default function ModuleExamTakePage() {
                       )}
                       {q.image && (
                         <div className="mt-3">
-                          <img src={q.image} alt="Question" className="max-h-64 rounded-md border" />
+                          <img
+                            src={q.image}
+                            alt="Question"
+                            className="max-h-64 rounded-md border"
+                          />
                         </div>
                       )}
                       <div className="mt-4 space-y-2">
@@ -300,7 +324,9 @@ export default function ModuleExamTakePage() {
                             key={c.id}
                             className={
                               "flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer bg-background hover:bg-muted/40 " +
-                              (selectedChoices[q.id] === c.id ? "ring-1 ring-primary" : "")
+                              (selectedChoices[q.id] === c.id
+                                ? "ring-1 ring-primary"
+                                : "")
                             }
                           >
                             <input
@@ -320,8 +346,8 @@ export default function ModuleExamTakePage() {
 
                   <div className="flex justify-end">
                     <Button
-                      disabled={submitting || answeredCount < totalQuestions}
-                      onClick={() => handleSubmit(false)}
+                      disabled={submitting}
+                      onClick={() => handleSubmit()}
                       className="min-w-[160px]"
                     >
                       {submitting ? "Submitting..." : "Submit"}
@@ -336,5 +362,3 @@ export default function ModuleExamTakePage() {
     </div>
   );
 }
-
-
