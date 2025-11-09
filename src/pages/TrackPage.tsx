@@ -457,19 +457,33 @@ export function TrackPage() {
                                     colSpan={3}
                                     className="px-4 py-3 text-right"
                                   >
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(
-                                          `/modules/${mod.id}/pre-post-exams/view`,
-                                          { state: { testId: mod.test?.id } }
-                                        );
-                                      }}
-                                    >
-                                      View Exam
-                                    </Button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(
+                                        `/modules/${mod.id}/pre-post-exams/view`,
+                                        { state: { testId: mod.test?.id } }
+                                      );
+                                    }}
+                                  >
+                                    View Exam
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(
+                                        `/modules/${mod.id}/pre-post-exams/results`,
+                                        { state: { testId: mod.test?.id } }
+                                      );
+                                    }}
+                                  >
+                                    View Results
+                                  </Button>
+                                </div>
                                   </td>
                                 </tr>
                               )}

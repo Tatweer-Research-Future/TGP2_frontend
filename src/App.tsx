@@ -31,6 +31,7 @@ import ModuleExamEditPage from "@/pages/ModuleExamEditPage";
 import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
 import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
 import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
+import ModulePrePostExamResultsPage from "@/pages/ModulePrePostExamResultsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import AssignmentsPage from "@/pages/AssignmentsPage";
 import i18n from "./i18n/config";
@@ -175,6 +176,15 @@ export default function App() {
                           <PermissionProtectedRoute requiredPage="/modules/:moduleId/pre-post-exams/view">
                             <ModulePrePostExamViewPage />
                           </PermissionProtectedRoute>
+                        }
+                      />
+                      {/* Pre/Post Exam results for a specific module */}
+                      <Route
+                        path="/modules/:moduleId/pre-post-exams/results"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <ModulePrePostExamResultsPage />
+                          </StaffOrInstructorRoute>
                         }
                       />
                       <Route

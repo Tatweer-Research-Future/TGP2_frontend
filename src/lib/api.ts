@@ -846,7 +846,9 @@ export async function getPortalModules(): Promise<PortalModulesResponse> {
   return apiFetch<PortalModulesResponse>(`/portal/modules/`);
 }
 
-export type UpdatePortalModulePayload = Partial<Pick<PortalModule, "title" | "description" | "order">>;
+export type UpdatePortalModulePayload = Partial<
+  Pick<PortalModule, "title" | "description" | "order">
+>;
 
 export async function updatePortalModule(
   id: number | string,
@@ -992,7 +994,7 @@ export async function createPortalAssignmentWithFile(
     form.append("file", params.file);
   }
   form.append("session", String(sessionId));
-  
+
   return apiFetchFormData<PortalAssignment>(`/portal/assignments/`, form, {
     method: "POST",
   });
@@ -1037,7 +1039,7 @@ export async function updatePortalAssignmentWithFile(
   if (params.session !== undefined) {
     form.append("session", String(params.session));
   }
-  
+
   return apiFetchFormData<PortalAssignment>(
     `/portal/assignments/${assignmentId}/`,
     form,
@@ -1327,9 +1329,7 @@ export async function getModuleTestById(
   return apiFetch<ModuleTestDetail>(`/portal/tests/${id}/`);
 }
 
-export async function deleteModuleTest(
-  id: number | string
-): Promise<void> {
+export async function deleteModuleTest(id: number | string): Promise<void> {
   return apiFetch<void>(`/portal/tests/${id}/`, {
     method: "DELETE",
     requireCsrf: true,
@@ -1416,6 +1416,75 @@ export async function submitModuleTest(
     body: payload,
     requireCsrf: true,
   });
+}
+
+// --- Module Test Results (Pre/Post) ---
+export type ModuleTestResult = {
+  user_id: number;
+  user_name: string;
+  user_email?: string | null;
+  pre_score?: number | null;
+  pre_max?: number | null;
+  post_score?: number | null;
+  post_max?: number | null;
+  // Optional fields if backend provides pre/post percentages or deltas
+  pre_percentage?: number | null;
+  post_percentage?: number | null;
+  improvement_points?: number | null;
+  improvement_percentage?: number | null;
+};
+
+export type ModuleTestSubmission = {
+  id: number;
+  submitted_at: string;
+  score_total: number;
+  score_max: number;
+  trainee: { id: number; name: string; email: string };
+};
+
+export type ModuleTestResultsQuestion = {
+  id: number;
+  order: number;
+  title: string;
+  answers_count: number;
+  correct_count: number;
+  incorrect_count: number;
+  choices: Array<{
+    id: number;
+    text: string;
+    is_correct: boolean;
+    count: number;
+  }>;
+};
+
+export type ModuleTestResultsKindBucket = {
+  submissions: ModuleTestSubmission[];
+  totals: {
+    submissions_count: number;
+    sum_scores: number;
+    sum_max: number;
+  };
+  questions: ModuleTestResultsQuestion[];
+};
+
+export type ModuleTestResultsResponse = {
+  test: {
+    id: number;
+    title: string;
+    module: { id: number; title?: string; order?: number } | number;
+  };
+  kinds: {
+    PRE?: ModuleTestResultsKindBucket;
+    POST?: ModuleTestResultsKindBucket;
+  };
+};
+
+export async function getModuleTestResults(
+  testId: number | string
+): Promise<ModuleTestResultsResponse> {
+  return apiFetch<ModuleTestResultsResponse>(
+    `/portal/tests/${testId}/results/`
+  );
 }
 
 // --- Assignments ---

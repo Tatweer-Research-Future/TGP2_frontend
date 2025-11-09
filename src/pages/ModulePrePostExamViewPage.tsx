@@ -142,15 +142,30 @@ export default function ModulePrePostExamViewPage() {
                 )}
                 <Badge variant="secondary">Points: {test.total_points}</Badge>
                 <div className="ml-auto">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setConfirmDeleteOpen(true)}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        navigate(
+                          `/modules/${moduleIdNum}/pre-post-exams/results`,
+                          { state: { testId: test.id } }
+                        );
+                      }}
+                    >
+                      View Results
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setConfirmDeleteOpen(true)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardHeader>
