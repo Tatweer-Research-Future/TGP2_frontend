@@ -201,6 +201,42 @@ export default function FormsResultsPage() {
   const toggleGroup = (idx: number) =>
     setExpandedGroups((prev) => ({ ...prev, [idx]: !prev[idx] }))
 
+  // Consistent color mapping for option labels
+  // This ensures the same label (e.g., "ممتاز") always has the same color across all charts
+  const getOptionColor = (label: string, index: number): string => {
+    // Define consistent color mapping for common Arabic labels
+    const labelColorMap: Record<string, string> = {
+      // Arabic labels (common in surveys)
+      "ممتاز": "#22C55E", // Green - best/excellent
+      "جيد جداً": "#06B6D4", // Cyan - very good
+      "جيد": "#6366F1", // Indigo - good
+      "مقبول": "#F59E0B", // Amber - acceptable
+      "ضعيف": "#EF4444", // Red - weak/poor
+      "لا": "#EF4444", // Red - no
+      "نعم": "#22C55E", // Green - yes
+      // English labels (if used)
+      "Excellent": "#22C55E",
+      "Very Good": "#06B6D4",
+      "Good": "#6366F1",
+      "Acceptable": "#F59E0B",
+      "Poor": "#EF4444",
+      "Yes": "#22C55E",
+      "No": "#EF4444",
+    };
+
+    // Normalize label (trim and lowercase for comparison)
+    const normalizedLabel = label.trim();
+    
+    // Check if we have a predefined color for this label
+    if (labelColorMap[normalizedLabel]) {
+      return labelColorMap[normalizedLabel];
+    }
+
+    // Fallback palette for unknown labels (consistent order)
+    const fallbackPalette = ["#6366F1", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#84CC16", "#F97316", "#EC4899", "#14B8A6"];
+    return fallbackPalette[index % fallbackPalette.length];
+  };
+
   // AI analysis for forms summary and notes
   async function handleAnalyzeForms() {
     if (!summary || !filteredData) return;
@@ -545,9 +581,9 @@ Constraints:
                               {(() => {
                                 const options = field.options.map((o) => ({ name: o.label, value: o.count }))
                                 const total = options.reduce((s, o) => s + o.value, 0)
-                                const palette = ["#6366F1", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#84CC16"]
                                 const chartConfig: ChartConfig = options.reduce((acc, o, i) => {
-                                  acc[o.name] = { label: o.name, color: palette[i % palette.length] }
+                                  const color = getOptionColor(o.name, i);
+                                  acc[o.name] = { label: o.name, color }
                                   return acc
                                 }, {} as ChartConfig)
                                 return (
@@ -556,19 +592,23 @@ Constraints:
                                       <PieChart>
                                         <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                                         <Pie data={options} dataKey="value" nameKey="name" innerRadius={60} outerRadius={95}>
-                                          {options.map((d, i) => (
-                                            <Cell key={i} fill={palette[i % palette.length]} />
-                                          ))}
+                                          {options.map((d, i) => {
+                                            const color = getOptionColor(d.name, i);
+                                            return <Cell key={i} fill={color} />
+                                          })}
                                         </Pie>
                                       </PieChart>
                                     </ChartContainer>
                                     <div className="flex flex-wrap items-center gap-3 justify-center pt-2">
-                                      {options.map((o, i) => (
-                                        <div key={i} className="flex items-center gap-2 text-xs">
-                                          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: palette[i % palette.length] }} />
-                                          <span className="text-muted-foreground">{o.name}: {o.value} ({total ? Math.round((o.value / total) * 100) : 0}%)</span>
-                                        </div>
-                                      ))}
+                                      {options.map((o, i) => {
+                                        const color = getOptionColor(o.name, i);
+                                        return (
+                                          <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: color }} />
+                                            <span className="text-muted-foreground">{o.name}: {o.value} ({total ? Math.round((o.value / total) * 100) : 0}%)</span>
+                                          </div>
+                                        )
+                                      })}
                                     </div>
                                   </>
                                 )
@@ -587,9 +627,9 @@ Constraints:
                     {(() => {
                       const options = group.parent.options.map((o) => ({ name: o.label, value: o.count }))
                       const total = options.reduce((s, o) => s + o.value, 0)
-                      const palette = ["#6366F1", "#22C55E", "#F59E0B", "#EF4444", "#06B6D4", "#A855F7", "#84CC16"]
                       const chartConfig: ChartConfig = options.reduce((acc, o, i) => {
-                        acc[o.name] = { label: o.name, color: palette[i % palette.length] }
+                        const color = getOptionColor(o.name, i);
+                        acc[o.name] = { label: o.name, color }
                         return acc
                       }, {} as ChartConfig)
                       return (
@@ -598,19 +638,23 @@ Constraints:
                             <PieChart>
                               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                               <Pie data={options} dataKey="value" nameKey="name" innerRadius={70} outerRadius={110}>
-                                {options.map((d, i) => (
-                                  <Cell key={i} fill={palette[i % palette.length]} />
-                                ))}
+                                {options.map((d, i) => {
+                                  const color = getOptionColor(d.name, i);
+                                  return <Cell key={i} fill={color} />
+                                })}
                               </Pie>
                             </PieChart>
                           </ChartContainer>
                           <div className="flex flex-wrap items-center gap-3 justify-center pt-2">
-                            {options.map((o, i) => (
-                              <div key={i} className="flex items-center gap-2 text-base">
-                                <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: palette[i % palette.length] }} />
-                                <span className="text-muted-foreground">{o.name}: {o.value} ({total ? Math.round((o.value / total) * 100) : 0}%)</span>
-                              </div>
-                            ))}
+                            {options.map((o, i) => {
+                              const color = getOptionColor(o.name, i);
+                              return (
+                                <div key={i} className="flex items-center gap-2 text-base">
+                                  <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: color }} />
+                                  <span className="text-muted-foreground">{o.name}: {o.value} ({total ? Math.round((o.value / total) * 100) : 0}%)</span>
+                                </div>
+                              )
+                            })}
                           </div>
                         </>
                       )
