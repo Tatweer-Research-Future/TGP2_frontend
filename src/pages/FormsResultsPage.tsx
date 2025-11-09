@@ -25,10 +25,12 @@ export default function FormsResultsPage() {
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiLang, setAiLang] = useState<"en" | "ar">(i18n?.language?.startsWith("ar") ? "ar" : "en");
+  const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null); // null = all tracks
 
-  function getAiCacheKey(formId: number | null, lang: "en" | "ar"): string | null {
+  function getAiCacheKey(formId: number | null, lang: "en" | "ar", trackId: number | null): string | null {
     if (formId == null) return null;
-    return `forms_ai_summary_${formId}_${lang}`;
+    const trackSuffix = trackId != null ? `_track_${trackId}` : "_all_tracks";
+    return `forms_ai_summary_${formId}_${lang}${trackSuffix}`;
   }
 
   useEffect(() => {
@@ -81,21 +83,58 @@ export default function FormsResultsPage() {
     };
   }, [selectedFormId]);
 
-  const totalsPercent = useMemo(() => {
-    if (!summary) return 0;
-    const sum = Number(summary.totals.sum_final_scores);
-    const max = Number(summary.totals.max_total_overall);
-    if (!max) return 0;
-    return Math.round((sum / max) * 100);
+  // Get available tracks from grouped_by_person_group
+  const availableTracks = useMemo(() => {
+    if (!summary?.grouped_by_person_group) return [];
+    return summary.grouped_by_person_group.map((g) => g.group);
   }, [summary]);
 
+  // Get filtered data based on selected track
+  const filteredData = useMemo(() => {
+    if (!summary) return null;
+    
+    // If no track selected or no grouped data, use overall summary
+    if (selectedTrackId == null || !summary.grouped_by_person_group) {
+      return {
+        totals: summary.totals,
+        fields: summary.fields,
+      };
+    }
+    
+    // Find the selected track's data
+    const trackData = summary.grouped_by_person_group.find(
+      (g) => g.group.id === selectedTrackId
+    );
+    
+    if (!trackData) {
+      // Fallback to overall if track not found
+      return {
+        totals: summary.totals,
+        fields: summary.fields,
+      };
+    }
+    
+    return {
+      totals: trackData.totals,
+      fields: trackData.fields,
+    };
+  }, [summary, selectedTrackId]);
+
+  const totalsPercent = useMemo(() => {
+    if (!filteredData) return 0;
+    const sum = Number(filteredData.totals.sum_final_scores);
+    const max = Number(filteredData.totals.max_total_overall);
+    if (!max) return 0;
+    return Math.round((sum / max) * 100);
+  }, [filteredData]);
+
   const questionFields = useMemo(
-    () => (summary ? summary.fields.filter((f) => f.type === "question") : []),
-    [summary]
+    () => (filteredData ? filteredData.fields.filter((f) => f.type === "question") : []),
+    [filteredData]
   );
   const textFields = useMemo(
-    () => (summary ? summary.fields.filter((f) => f.type !== "question") : []),
-    [summary]
+    () => (filteredData ? filteredData.fields.filter((f) => f.type !== "question") : []),
+    [filteredData]
   );
 
   // Determine if a field (by id) is a Yes/No question using original form meta
@@ -133,7 +172,7 @@ export default function FormsResultsPage() {
 
   // Build groups: a yes/no question with its following sub-questions until next required field
   const groupedQuestions = useMemo(() => {
-    if (!summary) return [] as Array<{ parent: typeof questionFields[number]; subs: typeof questionFields }>
+    if (!questionFields.length) return [] as Array<{ parent: typeof questionFields[number]; subs: typeof questionFields }>
     const fields = [...questionFields].sort((a, b) => a.order - b.order)
     const groups: Array<{ parent: typeof fields[number]; subs: typeof fields }> = []
     let i = 0
@@ -156,7 +195,7 @@ export default function FormsResultsPage() {
       }
     }
     return groups
-  }, [summary, questionFields, formMeta])
+  }, [questionFields, formMeta])
 
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({})
   const toggleGroup = (idx: number) =>
@@ -164,11 +203,11 @@ export default function FormsResultsPage() {
 
   // AI analysis for forms summary and notes
   async function handleAnalyzeForms() {
-    if (!summary) return;
+    if (!summary || !filteredData) return;
     try {
       setAiLoading(true);
       // Use local cache if available
-      const cacheKey = getAiCacheKey(selectedFormId, aiLang);
+      const cacheKey = getAiCacheKey(selectedFormId, aiLang, selectedTrackId);
       if (cacheKey) {
         const cached = localStorage.getItem(cacheKey);
         if (cached && cached.length > 0) {
@@ -178,7 +217,7 @@ export default function FormsResultsPage() {
         }
       }
       // Prepare compact JSON payload for the LLM
-      const fieldsPayload = summary.fields.map((f) => {
+      const fieldsPayload = filteredData.fields.map((f) => {
         if (f.type === "question") {
           const total = (f as any).responses_count ?? f.options.reduce((s, o) => s + o.count, 0)
           return {
@@ -202,12 +241,21 @@ export default function FormsResultsPage() {
           }
         }
       })
+      const selectedTrack = selectedTrackId != null 
+        ? availableTracks.find((t) => t.id === selectedTrackId)
+        : null;
+      
       const payload = {
         form: summary.form,
-        totals: summary.totals,
+        track: selectedTrack ? { id: selectedTrack.id, name: selectedTrack.name } : null,
+        totals: filteredData.totals,
         fields: fieldsPayload,
       }
-      const system = `You are an expert program evaluator. Analyze survey results and open-text notes to produce a clear, actionable report for program leaders.
+      const trackContext = selectedTrack 
+        ? `\n\nIMPORTANT: This analysis is for the track "${selectedTrack.name}" only. Focus on track-specific insights and comparisons where relevant.`
+        : "";
+      
+      const system = `You are an expert program evaluator. Analyze survey results and open-text notes to produce a clear, actionable report for program leaders.${trackContext}
 
 Goals:
 - Summarize overall satisfaction and key metrics.
@@ -220,7 +268,7 @@ Constraints:
 - Be concise and structured with clear headings and bullet points.
 - Include data-backed numbers (%, counts) when useful.
 - Keep it neutral and professional; avoid guessing when evidence is weak.
- - Output language: ${aiLang === "ar" ? "Arabic (Modern Standard)" : "English"}.
+- Output language: ${aiLang === "ar" ? "Arabic (Modern Standard)" : "English"}.
 `
       const user = `FORMS_SUMMARY_JSON:\n${JSON.stringify(payload)}\n\nIf helpful, compute percentages from counts. Use both numeric results and notes for insights.`
       const text = await generateWithGemini({ system, user })
@@ -236,9 +284,14 @@ Constraints:
     }
   }
 
-  // Load cached AI response when switching forms or language
+  // Reset track selection when form changes
   useEffect(() => {
-    const cacheKey = getAiCacheKey(selectedFormId, aiLang);
+    setSelectedTrackId(null);
+  }, [selectedFormId]);
+
+  // Load cached AI response when switching forms, language, or track
+  useEffect(() => {
+    const cacheKey = getAiCacheKey(selectedFormId, aiLang, selectedTrackId);
     if (!cacheKey) { setAiResponse(null); return; }
     try {
       const cached = localStorage.getItem(cacheKey);
@@ -246,7 +299,7 @@ Constraints:
     } catch {
       setAiResponse(null);
     }
-  }, [selectedFormId, aiLang]);
+  }, [selectedFormId, aiLang, selectedTrackId]);
 
   function renderYesNoProgress(field: typeof questionFields[number]) {
     const meta = formMeta?.fields?.find((f) => f.id === field.id)
@@ -276,6 +329,36 @@ Constraints:
   return (
     <div className="container mx-auto px-6 py-8">
       <h1 className="text-xl font-semibold mb-4">{t("navigation.forms_summary", { defaultValue: "Forms Summary" })}</h1>
+
+      {/* Track Filter */}
+      {summary && availableTracks.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">Filter by Track:</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedTrackId === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTrackId(null)}
+                className="rounded-full"
+              >
+                All Tracks
+              </Button>
+              {availableTracks.map((track) => (
+                <Button
+                  key={track.id}
+                  variant={selectedTrackId === track.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedTrackId(track.id)}
+                  className="rounded-full"
+                >
+                  {track.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Analysis Banner */}
       <div className="mb-6">
@@ -373,7 +456,7 @@ Constraints:
               <Loader />
               <span>Loading summary...</span>
             </div>
-          ) : summary ? (
+          ) : filteredData ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="relative overflow-hidden rounded-xl p-4 shadow-inner border border-primary/20 bg-transparent">
@@ -381,7 +464,7 @@ Constraints:
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Entries</div>
-                      <div className="mt-1 text-3xl font-extrabold tracking-tight">{summary.totals.entries_count.toLocaleString()}</div>
+                      <div className="mt-1 text-3xl font-extrabold tracking-tight">{filteredData.totals.entries_count.toLocaleString()}</div>
                     </div>
                     <div className="shrink-0 rounded-full bg-primary/15 text-primary p-2">
                       <IconGauge className="size-5" />
@@ -419,7 +502,7 @@ Constraints:
       </Card>
 
       {/* Charts grid: only question-type fields */}
-      {summary && groupedQuestions.length > 0 && (
+      {filteredData && groupedQuestions.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
           {groupedQuestions.map((group, gIdx) => (
             <Card key={group.parent.id} dir="rtl" className={`border-2 h-full`}>
@@ -541,7 +624,7 @@ Constraints:
       )}
 
       {/* Notes section: text/email fields outside charts grid */}
-      {summary && textFields.length > 0 && (
+      {filteredData && textFields.length > 0 && (
         <div className="mt-6 space-y-4">
           {textFields.map((field) => (
             <Card key={field.id} dir="rtl" className="border-2">

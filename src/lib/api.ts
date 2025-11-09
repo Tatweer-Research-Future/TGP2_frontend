@@ -444,6 +444,42 @@ export type FormSubmissionsSummary = {
         texts: string[];
       }
   >;
+  grouped_by_person_group?: Array<{
+    group: {
+      id: number;
+      name: string;
+    };
+    totals: {
+      entries_count: number;
+      sum_final_scores: string;
+      max_total_overall: string;
+      max_total_per_entry: string;
+    };
+    fields: Array<
+      | {
+          id: number;
+          label: string;
+          type: "question";
+          required: boolean;
+          order: number;
+          weight: string;
+          responses_count: number;
+          sum_weighted_score: string;
+          max_possible: string;
+          options: Array<{ id: number; label: string; count: number }>;
+        }
+      | {
+          id: number;
+          label: string;
+          type: "text" | "email";
+          required: boolean;
+          order: number;
+          weight: string;
+          responses_count: number;
+          texts: string[];
+        }
+    >;
+  }>;
 };
 
 export async function getFormSubmissionsSummary(
