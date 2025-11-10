@@ -21,7 +21,7 @@ import {
 import { Loader } from "@/components/ui/loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconBell, IconChartBar, IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
+import { IconBell, IconChartBar, IconPlus, IconEdit, IconTrash, IconTrophy, IconMedal } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useAuth } from "@/context/AuthContext";
@@ -690,12 +690,181 @@ export function HomePage() {
 
   const hasContent = announcements.length > 0 || polls.length > 0;
 
+  // Map track names to colors (matching TrackPage.tsx)
+  function getTrackTheme(trackName?: string) {
+    const name = (trackName || "").toLowerCase();
+    if (name.includes("ai") || name.includes("data")) {
+      return {
+        gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
+        border: "border-[#34d399]",
+        ring: "ring-[#34d399]/50",
+        glow: "shadow-[#34d399]/50",
+        badge: "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
+        text: "text-[#34d399] dark:text-[#34d399]",
+      };
+    }
+    if (
+      name.includes("software") ||
+      name.includes("app") ||
+      name.includes("development")
+    ) {
+      return {
+        gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
+        border: "border-[#6366f1]",
+        ring: "ring-[#6366f1]/50",
+        glow: "shadow-[#6366f1]/50",
+        badge: "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
+        text: "text-[#6366f1] dark:text-[#6366f1]",
+      };
+    }
+    if (name.includes("network") || name.includes("communication")) {
+      return {
+        gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
+        border: "border-[#0ea5e9]",
+        ring: "ring-[#0ea5e9]/50",
+        glow: "shadow-[#0ea5e9]/50",
+        badge: "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
+        text: "text-[#0ea5e9] dark:text-[#0ea5e9]",
+      };
+    }
+    // Fallback
+    return {
+      gradient: "bg-gradient-to-br from-yellow-400 to-yellow-600",
+      border: "border-yellow-400",
+      ring: "ring-yellow-400/50",
+      glow: "shadow-yellow-500/50",
+      badge: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+      text: "text-yellow-700 dark:text-yellow-300",
+    };
+  }
+
+  // Hardcoded leaderboard data for past week
+  const leaderboardData = [
+    {
+      track: "Software & App Development",
+      trackAr: "تطوير البرمجيات والتطبيقات",
+      name: "Abdulrauf Ibrahim Elbahloul",
+      nameAr: "عبد الرؤوف إبراهيم البهلول",
+      email: "abdoelbahloul434@gmail.com",
+    },
+    {
+      track: "AI & Data Analysis",
+      trackAr: "الذكاء الاصطناعي وتحليل البيانات",
+      name: "Raghad Mohammed Saleh Bushiha",
+      nameAr: "رغد محمد صالح بوشيحة",
+      email: "raghadbushiha@gmail.com",
+    },
+    {
+      track: "Networking & Telecommunications",
+      trackAr: "الشبكات والاتصالات",
+      name: "Ibrahim safi Abdullah hammoda",
+      nameAr: "ابراهيم صافي عبدالله حموده",
+      email: "ibrahimalsafi98@gmail.com",
+    },
+  ];
+
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-semibold">
           {t("pages.home.title", { defaultValue: "Home" })}
         </h1>
+      </div>
+
+      {/* Leaderboard Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <IconTrophy className="w-5 h-5 text-yellow-500" />
+          {t("pages.home.leaderboard", { defaultValue: "Leaderboard - Best of the Week" })}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {leaderboardData.map((winner, index) => {
+            // Get track-specific theme colors
+            const trackTheme = getTrackTheme(winner.track);
+            
+            return (
+              <Card 
+                key={index} 
+                className={cn(
+                  "relative overflow-hidden transition-all duration-300 hover:shadow-lg",
+                  "ring-2",
+                  trackTheme.ring
+                )}
+              >
+                {/* Confetti effect for all winners */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                  {[...Array(30)].map((_, i) => {
+                    const colors = ["bg-yellow-400", "bg-red-400", "bg-blue-400", "bg-green-400", "bg-purple-400", "bg-pink-400"];
+                    const color = colors[i % colors.length];
+                    const size = Math.random() * 4 + 2;
+                    const left = Math.random() * 100;
+                    const delay = Math.random() * 2;
+                    const duration = Math.random() * 2 + 1;
+                    
+                    return (
+                      <div
+                        key={i}
+                        className={cn("absolute rounded-full", color)}
+                        style={{
+                          width: `${size}px`,
+                          height: `${size}px`,
+                          left: `${left}%`,
+                          top: "-10px",
+                          animation: `confetti-fall ${duration}s ${delay}s infinite`,
+                          opacity: 0.8,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                
+                {/* Shine effect */}
+                <div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+                  style={{
+                    animation: "shine 3s infinite",
+                    transform: "translateX(-100%)",
+                  }}
+                />
+                
+                <CardContent className="p-5 relative z-10">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 relative">
+                      {/* Trophy icon with track-specific gradient */}
+                      <div className={cn(
+                        "w-16 h-16 rounded-full flex items-center justify-center shadow-lg",
+                        trackTheme.gradient,
+                        trackTheme.glow
+                      )}>
+                        <IconTrophy className="w-8 h-8 text-white" />
+                      </div>
+                      {/* Position emoji badge - all are 1st place */}
+                      <div className="absolute -top-2 -right-2 text-2xl animate-bounce">
+                        🥇
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="mb-2">
+                        <Badge 
+                          variant="secondary" 
+                          className={cn("text-xs mb-2 font-semibold", trackTheme.badge)}
+                        >
+                          {winner.track}
+                        </Badge>
+                        <h3 className={cn("font-bold text-base mt-2", trackTheme.text)}>
+                          {winner.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">
+                          {winner.nameAr}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {!hasContent && (
