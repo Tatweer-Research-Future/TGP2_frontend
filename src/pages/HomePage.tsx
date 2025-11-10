@@ -5,13 +5,17 @@ import {
   getAnnouncements,
   getPolls,
   voteOnPoll,
+  getAnnouncementReactions,
+  addAnnouncementReaction,
+  removeAnnouncementReaction,
   type Announcement,
   type Poll,
+  type ReactionCount,
 } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconBell, IconChartBar } from "@tabler/icons-react";
+import { IconBell, IconChartBar, IconPlus } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { cn } from "@/lib/utils";
@@ -36,33 +40,145 @@ function isNewAnnouncement(publishDate: string): boolean {
   return publish >= twentyFourHoursAgo && publish <= now;
 }
 
+// Common reaction emojis users can choose from
+const COMMON_REACTIONS = [
+  { emoji: "👍", label: "Like" },
+  { emoji: "👎", label: "Dislike" },
+  { emoji: "❤️", label: "Love" },
+  { emoji: "😂", label: "Funny" },
+  { emoji: "🤔", label: "Thinking" },
+  { emoji: "🙌", label: "Celebrate" },
+  { emoji: "💯", label: "Perfect" },
+  { emoji: "✅", label: "Correct" },
+  { emoji: "😢", label: "Sad" },
+  { emoji: "😠", label: "Angry" },
+  { emoji: "🔥", label: "Fire" },
+];
+
 function AnnouncementCard({ announcement }: { announcement: Announcement }) {
   const { t } = useTranslation();
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const isNew = isNewAnnouncement(announcement.publish_at);
+  const [reactionCounts, setReactionCounts] = useState<ReactionCount[]>([]);
+  const [myReactions, setMyReactions] = useState<string[]>([]);
+  const [isLoadingReactions, setIsLoadingReactions] = useState(true);
+  const [isReacting, setIsReacting] = useState(false);
+  const [showAddReactions, setShowAddReactions] = useState(false);
+
+  // Fetch reactions on mount
+  useEffect(() => {
+    async function loadReactions() {
+      try {
+        const response = await getAnnouncementReactions(announcement.id);
+        setReactionCounts(response.counts);
+        setMyReactions(response.my_reactions);
+      } catch (err) {
+        console.error("Failed to load reactions:", err);
+        // Silently fail - reactions are optional
+      } finally {
+        setIsLoadingReactions(false);
+      }
+    }
+    loadReactions();
+  }, [announcement.id]);
+
+  const handleReactionToggle = async (reaction: string) => {
+    if (isReacting) return;
+
+    const isCurrentlyReacted = myReactions.includes(reaction);
+    setIsReacting(true);
+
+    try {
+      if (isCurrentlyReacted) {
+        // Remove reaction
+        const response = await removeAnnouncementReaction(announcement.id, {
+          reaction,
+        });
+        setReactionCounts(response.counts);
+        setMyReactions(response.my_reactions);
+      } else {
+        // Add reaction
+        const response = await addAnnouncementReaction(announcement.id, {
+          reaction,
+        });
+        setReactionCounts(response.counts);
+        setMyReactions(response.my_reactions);
+      }
+    } catch (err) {
+      console.error("Failed to toggle reaction:", err);
+      toast.error(
+        t("pages.home.reactionError", {
+          defaultValue: "Failed to update reaction",
+        })
+      );
+    } finally {
+      setIsReacting(false);
+    }
+  };
+
+  // Get count for a specific reaction
+  const getReactionCount = (reaction: string): number => {
+    const count = reactionCounts.find((r) => r.reaction === reaction);
+    return count?.count || 0;
+  };
+
+  // Get reactions with count > 0 (visible reactions)
+  // Always include "💯" (Perfect) reaction
+  const perfectEmoji = "💯";
+  const visibleReactionsFromCounts = reactionCounts
+    .filter((r) => r.count > 0)
+    .map((r) => r.reaction);
   
-  const reactions: Array<{ emoji: string; label: string; count: number }> = [
-    { emoji: "👍", label: "Like", count: 12 },
-    { emoji: "❤️", label: "Love", count: 8 },
-    { emoji: "😂", label: "Funny", count: 5 },
-    { emoji: "🤔", label: "Thinking", count: 3 },
-    { emoji: "🙌", label: "Celebrate", count: 15 },
-    { emoji: "💯", label: "Perfect", count: 7 },
-    { emoji: "😢", label: "Sad", count: 2 },
+  // Ensure "💯" is always visible
+  const visibleReactions = [
+    ...new Set([...visibleReactionsFromCounts, perfectEmoji]),
   ];
-  
+
+  // Get all reactions that exist but aren't visible (count = 0)
+  const hiddenReactionsFromAPI = reactionCounts
+    .filter((r) => r.count === 0)
+    .map((r) => ({
+      emoji: r.reaction,
+      label: COMMON_REACTIONS.find((cr) => cr.emoji === r.reaction)?.label || r.reaction,
+    }));
+
+  // Get all common reactions that aren't in visible reactions
+  const availableCommonReactions = COMMON_REACTIONS.filter(
+    (r) => !visibleReactions.includes(r.emoji)
+  );
+
+  // Combine hidden API reactions and available common reactions
+  const availableReactions = [
+    ...hiddenReactionsFromAPI,
+    ...availableCommonReactions.filter(
+      (r) => !hiddenReactionsFromAPI.some((hr) => hr.emoji === r.emoji)
+    ),
+  ];
+
+  // Handle adding a new reaction (from the add panel)
+  const handleAddReaction = async (reaction: string) => {
+    await handleReactionToggle(reaction);
+    // Close the add panel after adding
+    setShowAddReactions(false);
+  };
+
   return (
-    <Card className={cn(
-      "border-l-4",
-      isNew ? "border-l-green-500 bg-green-50/30 dark:bg-green-950/10" : "border-l-blue-500"
-    )}>
+    <Card
+      className={cn(
+        "border-l-4",
+        isNew
+          ? "border-l-green-500 bg-green-50/30 dark:bg-green-950/10"
+          : "border-l-blue-500"
+      )}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="mt-1 relative">
-            <IconBell className={cn(
-              "w-5 h-5",
-              isNew ? "text-green-500" : "text-blue-500"
-            )} />
+            <IconBell
+              className={cn(
+                "w-5 h-5",
+                isNew ? "text-green-500" : "text-blue-500"
+              )}
+            />
             {isNew && (
               <span className="absolute -top-1 -right-1 flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
@@ -73,7 +189,9 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <h3 className="font-semibold text-base sm:text-lg">{announcement.title}</h3>
+                <h3 className="font-semibold text-base sm:text-lg">
+                  {announcement.title}
+                </h3>
                 {isNew && (
                   <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 shrink-0 animate-pulse">
                     NEW
@@ -87,25 +205,97 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
             <p className="text-base text-muted-foreground whitespace-pre-wrap break-words">
               {announcement.body}
             </p>
-            
-            {/* Emoji Reaction Buttons - Hidden for now */}
-            <div className="hidden flex items-center gap-1 mt-3 pt-3 border-t border-border/50">
-              {reactions.map((reaction) => (
-                <button
-                  key={reaction.emoji}
-                  onClick={() => setSelectedEmoji(selectedEmoji === reaction.emoji ? null : reaction.emoji)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors hover:bg-muted ${
-                    selectedEmoji === reaction.emoji
-                      ? "bg-blue-100 dark:bg-blue-900/30"
-                      : ""
-                  }`}
-                  title={reaction.label}
-                >
-                  <span className="text-lg">{reaction.emoji}</span>
-                  <span className="text-xs text-muted-foreground">{reaction.count}</span>
-                </button>
-              ))}
-            </div>
+
+            {/* Reaction Buttons */}
+            {!isLoadingReactions && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                {/* Visible reactions (count > 1) */}
+                <div className="flex items-center gap-1 flex-wrap">
+                  {visibleReactions.map((reaction) => {
+                    const count = getReactionCount(reaction);
+                    const isReacted = myReactions.includes(reaction);
+                    const reactionLabel =
+                      COMMON_REACTIONS.find((r) => r.emoji === reaction)?.label ||
+                      reaction;
+
+                    return (
+                      <button
+                        key={reaction}
+                        onClick={() => handleReactionToggle(reaction)}
+                        disabled={isReacting}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors",
+                          "hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed",
+                          isReacted
+                            ? "bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700"
+                            : "border border-transparent"
+                        )}
+                        title={reactionLabel}
+                      >
+                        <span className="text-lg">{reaction}</span>
+                        {count > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Add Reaction Button */}
+                  <button
+                    onClick={() => setShowAddReactions(!showAddReactions)}
+                    className={cn(
+                      "flex items-center justify-center px-2 py-1 rounded-md text-sm transition-colors",
+                      "hover:bg-muted border border-border",
+                      showAddReactions && "bg-muted"
+                    )}
+                    title={t("pages.home.addReaction", {
+                      defaultValue: "Add reaction",
+                    })}
+                  >
+                    <img
+                      src="/assets/svg/reaction-emoji-add.svg"
+                      alt="Add reaction"
+                      className="w-5 h-5 opacity-50 dark:opacity-60 dark:invert"
+                    />
+                  </button>
+                </div>
+
+                {/* Add Reaction Panel (shown when button is clicked) */}
+                {showAddReactions && availableReactions.length > 0 && (
+                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/30 flex-wrap">
+                    {availableReactions.map((reaction) => {
+                      const isReacted = myReactions.includes(reaction.emoji);
+                      const count = getReactionCount(reaction.emoji);
+                      
+                      return (
+                        <button
+                          key={reaction.emoji}
+                          onClick={() => handleAddReaction(reaction.emoji)}
+                          disabled={isReacting}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-1 rounded-md text-sm transition-colors",
+                            "hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed",
+                            isReacted
+                              ? "bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700"
+                              : "border border-transparent"
+                          )}
+                          title={reaction.label}
+                        >
+                          <span className="text-lg">{reaction.emoji}</span>
+                          {count > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

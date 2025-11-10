@@ -1190,6 +1190,81 @@ export async function getAnnouncementById(id: number): Promise<Announcement> {
   return apiFetch<Announcement>(`/portal/announcements/${id}/`);
 }
 
+// --- Announcement Reactions API ---
+export type ReactionCount = {
+  reaction: string;
+  count: number;
+};
+
+export type AnnouncementReactionsResponse = {
+  announcement: number;
+  counts: ReactionCount[];
+  total: number;
+  my_reactions: string[];
+};
+
+export type AddReactionPayload = {
+  reaction?: string;
+  reactions?: string[];
+};
+
+export type RemoveReactionPayload = {
+  reaction?: string;
+  reactions?: string[];
+};
+
+export type AddReactionResponse = {
+  announcement: number;
+  created: number;
+  counts: ReactionCount[];
+  total: number;
+  my_reactions: string[];
+};
+
+export type RemoveReactionResponse = {
+  announcement: number;
+  deleted: number;
+  counts: ReactionCount[];
+  total: number;
+  my_reactions: string[];
+};
+
+export async function getAnnouncementReactions(
+  announcementId: number
+): Promise<AnnouncementReactionsResponse> {
+  return apiFetch<AnnouncementReactionsResponse>(
+    `/portal/announcements/${announcementId}/reactions/`
+  );
+}
+
+export async function addAnnouncementReaction(
+  announcementId: number,
+  payload: AddReactionPayload
+): Promise<AddReactionResponse> {
+  return apiFetch<AddReactionResponse>(
+    `/portal/announcements/${announcementId}/reactions/`,
+    {
+      method: "POST",
+      body: payload,
+      requireCsrf: true,
+    }
+  );
+}
+
+export async function removeAnnouncementReaction(
+  announcementId: number,
+  payload: RemoveReactionPayload
+): Promise<RemoveReactionResponse> {
+  return apiFetch<RemoveReactionResponse>(
+    `/portal/announcements/${announcementId}/reactions/`,
+    {
+      method: "DELETE",
+      body: payload,
+      requireCsrf: true,
+    }
+  );
+}
+
 // --- Polls API ---
 export type PollChoice = {
   id: number;
