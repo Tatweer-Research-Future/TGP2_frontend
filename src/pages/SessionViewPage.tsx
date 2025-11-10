@@ -176,6 +176,38 @@ export default function SessionViewPage() {
     ? submissionRecords[submissionAssignment.id] ?? null
     : null;
 
+  // Force-download for specific file types that don't render well in-browser
+  const shouldDownload = (url: string | undefined | null) => {
+    if (!url) return false;
+    const cleanUrl = url.split("?")[0] || "";
+    return /\.(ppt|pptx|doc|docx)$/i.test(cleanUrl);
+  };
+
+  async function downloadFile(url: string, suggestedFilename?: string) {
+    try {
+      const response = await fetch(url, { method: "GET" });
+      // If the server responds with an HTML error page, fallback to opening
+      if (!response.ok || !response.body) {
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download =
+        suggestedFilename?.trim() ||
+        (url.split("/").pop() || "download").split("?")[0];
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // Fallback: attempt to open in a new tab
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
   return (
     <Dialog
       open={Boolean(submissionAssignment)}
@@ -356,13 +388,20 @@ export default function SessionViewPage() {
                                       variant="ghost"
                                       size="sm"
                                       className="inline-flex items-center gap-1"
-                                      onClick={() =>
-                                        window.open(
-                                          href,
-                                          "_blank",
-                                          "noopener,noreferrer"
-                                        )
-                                      }
+                                      onClick={() => {
+                                        if (shouldDownload(href)) {
+                                          const filename =
+                                            c.file?.split("/").pop() ||
+                                            (c.title || "download");
+                                          downloadFile(href, filename || undefined);
+                                        } else {
+                                          window.open(
+                                            href,
+                                            "_blank",
+                                            "noopener,noreferrer"
+                                          );
+                                        }
+                                      }}
                                     >
                                       <ExternalLink className="h-4 w-4" />
                                       View
@@ -460,6 +499,16 @@ export default function SessionViewPage() {
                                               target="_blank"
                                               rel="noopener noreferrer"
                                               className="text-sm text-primary hover:underline inline-flex items-center gap-1.5"
+                                              onClick={(e) => {
+                                                const fileUrl = a.file as string;
+                                                if (shouldDownload(fileUrl)) {
+                                                  e.preventDefault();
+                                                  const filename =
+                                                    fileUrl.split("/").pop() ||
+                                                    "download";
+                                                  downloadFile(fileUrl, filename);
+                                                }
+                                              }}
                                             >
                                               <FileText className="h-4 w-4" />
                                               <span className="truncate max-w-[300px]">
