@@ -1190,6 +1190,65 @@ export async function getAnnouncementById(id: number): Promise<Announcement> {
   return apiFetch<Announcement>(`/portal/announcements/${id}/`);
 }
 
+export type CreateAnnouncementPayload = {
+  title: string;
+  body: string;
+  scope: "GLOBAL" | "TRACK";
+  track?: number | null;
+  publish_at: string;
+  expire_at?: string | null;
+  is_disabled?: boolean;
+};
+
+export type UpdateAnnouncementPayload = Partial<CreateAnnouncementPayload>;
+
+export type CreateInstructorAnnouncementPayload = {
+  title: string;
+  body: string;
+  track?: number | null;
+  publish_at: string;
+  expire_at?: string | null;
+  is_disabled?: boolean;
+};
+
+export async function createAnnouncement(
+  payload: CreateAnnouncementPayload
+): Promise<Announcement> {
+  return apiFetch<Announcement>(`/portal/announcements/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function createInstructorAnnouncement(
+  payload: CreateInstructorAnnouncementPayload
+): Promise<Announcement> {
+  return apiFetch<Announcement>(`/portal/announcements/instructor/`, {
+    method: "POST",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function updateAnnouncement(
+  id: number,
+  payload: UpdateAnnouncementPayload
+): Promise<Announcement> {
+  return apiFetch<Announcement>(`/portal/announcements/${id}/`, {
+    method: "PATCH",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+export async function deleteAnnouncement(id: number): Promise<void> {
+  return apiFetch<void>(`/portal/announcements/${id}/`, {
+    method: "DELETE",
+    requireCsrf: true,
+  });
+}
+
 // --- Announcement Reactions API ---
 export type ReactionCount = {
   reaction: string;

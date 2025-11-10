@@ -8,17 +8,42 @@ import {
   getAnnouncementReactions,
   addAnnouncementReaction,
   removeAnnouncementReaction,
+  createAnnouncement,
+  createInstructorAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  getPortalTracks,
   type Announcement,
   type Poll,
   type ReactionCount,
+  type PortalTrack,
 } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconBell, IconChartBar, IconPlus } from "@tabler/icons-react";
+import { IconBell, IconChartBar, IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useUserGroups } from "@/hooks/useUserGroups";
+import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -55,7 +80,21 @@ const COMMON_REACTIONS = [
   { emoji: "🔥", label: "Fire" },
 ];
 
-function AnnouncementCard({ announcement }: { announcement: Announcement }) {
+function AnnouncementCard({ 
+  announcement, 
+  onEdit, 
+  onDelete,
+  canEdit,
+  currentUserId,
+  isStaffUser,
+}: { 
+  announcement: Announcement;
+  onEdit?: (announcement: Announcement) => void;
+  onDelete?: (id: number) => void;
+  canEdit?: boolean;
+  currentUserId?: number;
+  isStaffUser?: boolean;
+}) {
   const { t } = useTranslation();
   const isNew = isNewAnnouncement(announcement.publish_at);
   const [reactionCounts, setReactionCounts] = useState<ReactionCount[]>([]);
@@ -198,9 +237,44 @@ function AnnouncementCard({ announcement }: { announcement: Announcement }) {
                   </Badge>
                 )}
               </div>
-              <Badge variant="secondary" className="text-sm shrink-0">
-                {formatDate(announcement.publish_at)}
-              </Badge>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant="secondary" className="text-sm">
+                  {formatDate(announcement.publish_at)}
+                </Badge>
+                {/* Show edit/delete buttons only if:
+                    - User is staff (can edit/delete all), OR
+                    - User is instructor AND created this announcement */}
+                {canEdit && (isStaffUser || (currentUserId && announcement.created_by === currentUserId)) && (
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => onEdit(announcement)}
+                        title={t("common.edit", { defaultValue: "Edit" })}
+                      >
+                        <IconEdit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          if (confirm(t("common.confirmDelete", { defaultValue: "Are you sure you want to delete this announcement?" }))) {
+                            onDelete(announcement.id);
+                          }
+                        }}
+                        title={t("common.delete", { defaultValue: "Delete" })}
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-base text-muted-foreground whitespace-pre-wrap break-words">
               {announcement.body}
@@ -398,10 +472,45 @@ function PollCard({ poll, onVote }: { poll: Poll; onVote: (pollId: number, choic
 
 export function HomePage() {
   const { t } = useTranslation();
-  const { groupId } = useUserGroups();
+  const { groupId, isStaff, hasInstructor } = useUserGroups();
+  const { user } = useAuth();
+  
+  // Ensure we have valid boolean values
+  const isStaffUser = Boolean(isStaff);
+  const isInstructorUser = Boolean(hasInstructor);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [tracks, setTracks] = useState<PortalTrack[]>([]);
+  const [isLoadingTracks, setIsLoadingTracks] = useState(false);
+  
+  // Form state
+  const [formTitle, setFormTitle] = useState("");
+  const [formBody, setFormBody] = useState("");
+  const [formScope, setFormScope] = useState<"GLOBAL" | "TRACK">("TRACK");
+  const [formTrack, setFormTrack] = useState<string>("");
+  const [formPublishAt, setFormPublishAt] = useState("");
+  const [formExpireAt, setFormExpireAt] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load tracks for staff/instructors only
+  useEffect(() => {
+    if (isStaffUser || isInstructorUser) {
+      setIsLoadingTracks(true);
+      getPortalTracks()
+        .then((data) => {
+          setTracks(data.results || []);
+        })
+        .catch((err) => {
+          console.error("Failed to load tracks:", err);
+        })
+        .finally(() => {
+          setIsLoadingTracks(false);
+        });
+    }
+  }, [isStaffUser, isInstructorUser]);
 
   useEffect(() => {
     async function loadData() {
@@ -426,6 +535,130 @@ export function HomePage() {
     }
     loadData();
   }, [t, groupId]);
+
+  // Only staff and instructors can create/edit/delete announcements
+  // Trainees are read-only and should not see these buttons
+  const canEditAnnouncements = isStaffUser || isInstructorUser;
+
+  const handleCreateAnnouncement = () => {
+    setEditingAnnouncement(null);
+    setFormTitle("");
+    setFormBody("");
+    setFormScope(isStaff ? "GLOBAL" : "TRACK");
+    setFormTrack("");
+    setFormPublishAt(new Date().toISOString().slice(0, 16));
+    setFormExpireAt("");
+    setShowAnnouncementDialog(true);
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setFormTitle(announcement.title);
+    setFormBody(announcement.body);
+    setFormScope(announcement.scope);
+    setFormTrack(announcement.track?.toString() || "");
+    setFormPublishAt(announcement.publish_at.slice(0, 16));
+    setFormExpireAt(announcement.expire_at ? announcement.expire_at.slice(0, 16) : "");
+    setShowAnnouncementDialog(true);
+  };
+
+  const handleDeleteAnnouncement = async (id: number) => {
+    try {
+      await deleteAnnouncement(id);
+      toast.success(t("pages.home.announcementDeleted", { defaultValue: "Announcement deleted" }));
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("Failed to delete announcement:", err);
+      toast.error(t("pages.home.announcementDeleteError", { defaultValue: "Failed to delete announcement" }));
+    }
+  };
+
+  const handleSubmitAnnouncement = async () => {
+    if (!formTitle.trim() || !formBody.trim() || !formPublishAt) {
+      toast.error(t("pages.home.fillRequiredFields", { defaultValue: "Please fill all required fields" }));
+      return;
+    }
+
+    if (formScope === "TRACK" && isStaffUser && !formTrack) {
+      toast.error(t("pages.home.selectTrack", { defaultValue: "Please select a track" }));
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const publishAt = new Date(formPublishAt).toISOString();
+      const expireAt = formExpireAt ? new Date(formExpireAt).toISOString() : null;
+
+      if (editingAnnouncement) {
+        // Update existing announcement
+        const payload: any = {
+          title: formTitle,
+          body: formBody,
+          publish_at: publishAt,
+          expire_at: expireAt,
+        };
+        
+        if (isStaffUser) {
+          payload.scope = formScope;
+          if (formScope === "TRACK") {
+            payload.track = parseInt(formTrack);
+          }
+        }
+
+        const updated = await updateAnnouncement(editingAnnouncement.id, payload);
+        toast.success(t("pages.home.announcementUpdated", { defaultValue: "Announcement updated" }));
+        setAnnouncements((prev) =>
+          prev.map((a) => (a.id === updated.id ? updated : a))
+        );
+      } else {
+        // Create new announcement
+        if (isInstructorUser && !isStaffUser) {
+          // Use instructor endpoint
+          const payload: any = {
+            title: formTitle,
+            body: formBody,
+            publish_at: publishAt,
+            expire_at: expireAt,
+          };
+          
+          // Only include track if instructor trains multiple tracks
+          if (formTrack) {
+            payload.track = parseInt(formTrack);
+          }
+
+          const created = await createInstructorAnnouncement(payload);
+          toast.success(t("pages.home.announcementCreated", { defaultValue: "Announcement created" }));
+          setAnnouncements((prev) => [created, ...prev]);
+        } else {
+          // Staff uses regular endpoint
+          const payload: any = {
+            title: formTitle,
+            body: formBody,
+            scope: formScope,
+            publish_at: publishAt,
+            expire_at: expireAt,
+          };
+          
+          if (formScope === "TRACK") {
+            payload.track = parseInt(formTrack);
+          }
+
+          const created = await createAnnouncement(payload);
+          toast.success(t("pages.home.announcementCreated", { defaultValue: "Announcement created" }));
+          setAnnouncements((prev) => [created, ...prev]);
+        }
+      }
+      setShowAnnouncementDialog(false);
+    } catch (err: any) {
+      console.error("Failed to save announcement:", err);
+      toast.error(
+        err?.data?.detail || 
+        t("pages.home.announcementSaveError", { defaultValue: "Failed to save announcement" })
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handlePollVote = (pollId: number, choiceId: number) => {
     setPolls((prevPolls) =>
@@ -477,13 +710,44 @@ export function HomePage() {
 
       {announcements.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <IconBell className="w-5 h-5 text-purple-500" />
-            {t("pages.home.announcements", { defaultValue: "Announcements" })}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <IconBell className="w-5 h-5 text-purple-500" />
+              {t("pages.home.announcements", { defaultValue: "Announcements" })}
+            </h2>
+            {canEditAnnouncements && (
+              <Button onClick={handleCreateAnnouncement} size="sm">
+                <IconPlus className="h-4 w-4 mr-2" />
+                {t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+              </Button>
+            )}
+          </div>
           {announcements.map((announcement) => (
-            <AnnouncementCard key={announcement.id} announcement={announcement} />
+            <AnnouncementCard
+              key={announcement.id}
+              announcement={announcement}
+              onEdit={canEditAnnouncements ? handleEditAnnouncement : undefined}
+              onDelete={canEditAnnouncements ? handleDeleteAnnouncement : undefined}
+              canEdit={canEditAnnouncements}
+              currentUserId={user?.id}
+              isStaffUser={isStaffUser}
+            />
           ))}
+        </div>
+      )}
+
+      {announcements.length === 0 && canEditAnnouncements && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <IconBell className="w-5 h-5 text-purple-500" />
+              {t("pages.home.announcements", { defaultValue: "Announcements" })}
+            </h2>
+            <Button onClick={handleCreateAnnouncement} size="sm">
+              <IconPlus className="h-4 w-4 mr-2" />
+              {t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -498,6 +762,163 @@ export function HomePage() {
           ))}
         </div>
       )}
+
+      {/* Announcement Form Dialog */}
+      <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAnnouncement
+                ? t("pages.home.editAnnouncement", { defaultValue: "Edit Announcement" })
+                : t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+            </DialogTitle>
+            <DialogDescription>
+              {editingAnnouncement
+                ? t("pages.home.editAnnouncementDesc", { defaultValue: "Update the announcement details" })
+                : t("pages.home.createAnnouncementDesc", { defaultValue: "Create a new announcement for your track" })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">
+                {t("common.title", { defaultValue: "Title" })} *
+              </Label>
+              <Input
+                id="title"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder={t("pages.home.announcementTitlePlaceholder", { defaultValue: "Enter announcement title" })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="body">
+                {t("common.body", { defaultValue: "Body" })} *
+              </Label>
+              <Textarea
+                id="body"
+                value={formBody}
+                onChange={(e) => setFormBody(e.target.value)}
+                placeholder={t("pages.home.announcementBodyPlaceholder", { defaultValue: "Enter announcement content" })}
+                rows={6}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {isStaffUser && (
+              <div className="space-y-2">
+                <Label htmlFor="scope">
+                  {t("pages.home.scope", { defaultValue: "Scope" })} *
+                </Label>
+                <Select
+                  value={formScope}
+                  onValueChange={(value: "GLOBAL" | "TRACK") => {
+                    setFormScope(value);
+                    if (value === "GLOBAL") {
+                      setFormTrack("");
+                    }
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="scope">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GLOBAL">
+                      {t("pages.home.global", { defaultValue: "Global" })}
+                    </SelectItem>
+                    <SelectItem value="TRACK">
+                      {t("pages.home.track", { defaultValue: "Track" })}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(formScope === "TRACK" || (!isStaffUser && isInstructorUser)) && (
+              <div className="space-y-2">
+                <Label htmlFor="track">
+                  {t("pages.home.track", { defaultValue: "Track" })}
+                  {isStaffUser && formScope === "TRACK" && " *"}
+                </Label>
+                <Select
+                  value={formTrack}
+                  onValueChange={setFormTrack}
+                  disabled={isSubmitting || isLoadingTracks}
+                >
+                  <SelectTrigger id="track">
+                    <SelectValue placeholder={
+                      isLoadingTracks
+                        ? t("common.loading", { defaultValue: "Loading..." })
+                        : t("pages.home.selectTrack", { defaultValue: "Select a track" })
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tracks.map((track) => (
+                      <SelectItem key={track.id} value={track.id.toString()}>
+                        {track.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!isStaffUser && isInstructorUser && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("pages.home.trackOptional", { defaultValue: "Optional if you train only one track" })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="publish_at">
+                {t("pages.home.publishAt", { defaultValue: "Publish At" })} *
+              </Label>
+              <Input
+                id="publish_at"
+                type="datetime-local"
+                value={formPublishAt}
+                onChange={(e) => setFormPublishAt(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expire_at">
+                {t("pages.home.expireAt", { defaultValue: "Expire At" })}
+                <span className="text-muted-foreground text-xs ml-2">
+                  ({t("common.optional", { defaultValue: "Optional" })})
+                </span>
+              </Label>
+              <Input
+                id="expire_at"
+                type="datetime-local"
+                value={formExpireAt}
+                onChange={(e) => setFormExpireAt(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAnnouncementDialog(false)}
+              disabled={isSubmitting}
+            >
+              {t("common.cancel", { defaultValue: "Cancel" })}
+            </Button>
+            <Button onClick={handleSubmitAnnouncement} disabled={isSubmitting}>
+              {isSubmitting
+                ? t("common.saving", { defaultValue: "Saving..." })
+                : editingAnnouncement
+                ? t("common.update", { defaultValue: "Update" })
+                : t("common.create", { defaultValue: "Create" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
