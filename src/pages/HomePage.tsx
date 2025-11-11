@@ -697,6 +697,7 @@ export function HomePage() {
       return {
         gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
         border: "border-[#34d399]",
+        borderColor: "#34d399",
         ring: "ring-[#34d399]/50",
         glow: "shadow-[#34d399]/50",
         badge: "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
@@ -711,6 +712,7 @@ export function HomePage() {
       return {
         gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
         border: "border-[#6366f1]",
+        borderColor: "#6366f1",
         ring: "ring-[#6366f1]/50",
         glow: "shadow-[#6366f1]/50",
         badge: "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
@@ -721,6 +723,7 @@ export function HomePage() {
       return {
         gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
         border: "border-[#0ea5e9]",
+        borderColor: "#0ea5e9",
         ring: "ring-[#0ea5e9]/50",
         glow: "shadow-[#0ea5e9]/50",
         badge: "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
@@ -731,6 +734,7 @@ export function HomePage() {
     return {
       gradient: "bg-gradient-to-br from-yellow-400 to-yellow-600",
       border: "border-yellow-400",
+      borderColor: "#eab308",
       ring: "ring-yellow-400/50",
       glow: "shadow-yellow-500/50",
       badge: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
@@ -746,6 +750,7 @@ export function HomePage() {
       name: "Abdulrauf Ibrahim Elbahloul",
       nameAr: "عبد الرؤوف إبراهيم البهلول",
       email: "abdoelbahloul434@gmail.com",
+      image: "/assets/TraineePictures/عبد الرؤوف إبراهيم البهلول.png",
     },
     {
       track: "AI & Data Analysis",
@@ -753,6 +758,7 @@ export function HomePage() {
       name: "Raghad Mohammed Saleh Bushiha",
       nameAr: "رغد محمد صالح بوشيحة",
       email: "raghadbushiha@gmail.com",
+      image: "/assets/TraineePictures/رغد محمد صالح بوشيحة.png",
     },
     {
       track: "Networking & Telecommunications",
@@ -760,6 +766,7 @@ export function HomePage() {
       name: "Ibrahim safi Abdullah hammoda",
       nameAr: "ابراهيم صافي عبدالله حموده",
       email: "ibrahimalsafi98@gmail.com",
+      image: "/assets/TraineePictures/ابراهيم صافي عبدالله حموده.png",
     },
   ];
 
@@ -828,22 +835,37 @@ export function HomePage() {
                 />
                 
                 <CardContent className="p-5 relative z-10">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 relative">
-                      {/* Trophy icon with track-specific gradient */}
+                  <div className="flex flex-col items-center text-center gap-4">
+                    {/* Winner's picture */}
+                    <div className="relative">
+                      <div 
+                        className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg"
+                        style={{ borderColor: trackTheme.borderColor }}
+                      >
+                        <img
+                          src={winner.image}
+                          alt={winner.name}
+                          className="w-full h-full object-cover"
+                          style={{ 
+                            objectPosition: "center 35%",
+                            transform: "scale(1.1)"
+                          }}
+                        />
+                      </div>
+                      {/* Trophy icon overlay */}
                       <div className={cn(
-                        "w-16 h-16 rounded-full flex items-center justify-center shadow-lg",
+                        "absolute -bottom-1 -right-1 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-background",
                         trackTheme.gradient,
                         trackTheme.glow
                       )}>
-                        <IconTrophy className="w-8 h-8 text-white" />
+                        <IconTrophy className="w-5 h-5 text-white" />
                       </div>
                       {/* Position emoji badge - all are 1st place */}
-                      <div className="absolute -top-2 -right-2 text-2xl animate-bounce">
+                      <div className="absolute -top-2 -right-2 text-2xl animate-bounce z-10">
                         🥇
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 w-full">
                       <div className="mb-2">
                         <Badge 
                           variant="secondary" 
@@ -851,7 +873,7 @@ export function HomePage() {
                         >
                           {winner.track}
                         </Badge>
-                        <h3 className={cn("font-bold text-base mt-2", trackTheme.text)}>
+                        <h3 className={cn("font-bold text-lg mt-2", trackTheme.text)}>
                           {winner.name}
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1 font-medium">
