@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+ssimport { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -861,7 +861,7 @@ export function HomePage() {
                         <IconTrophy className="w-5 h-5 text-white" />
                       </div>
                       {/* Position emoji badge - all are 1st place */}
-                      <div className="absolute -top-2 -right-2 text-2xl animate-bounce z-10">
+                      <div className="absolute top-0 right-0 text-2xl animate-bounce z-10">
                         🥇
                       </div>
                     </div>
