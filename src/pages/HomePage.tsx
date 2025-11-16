@@ -747,26 +747,26 @@ export function HomePage() {
     {
       track: "Software & App Development",
       trackAr: "تطوير البرمجيات والتطبيقات",
-      name: "Abdulrauf Ibrahim Elbahloul",
-      nameAr: "عبد الرؤوف إبراهيم البهلول",
-      email: "abdoelbahloul434@gmail.com",
-      image: "/assets/TraineePictures/عبد الرؤوف إبراهيم البهلول.png",
+      name: "Abdalrhman",
+      nameAr: "عبدالرحمن محمد بلعم",
+      email: "",
+      image: "/assets/TraineePictures/عبدالرحمن بلعم.jpg",
     },
     {
       track: "AI & Data Analysis",
       trackAr: "الذكاء الاصطناعي وتحليل البيانات",
-      name: "Raghad Mohammed Saleh Bushiha",
-      nameAr: "رغد محمد صالح بوشيحة",
-      email: "raghadbushiha@gmail.com",
-      image: "/assets/TraineePictures/رغد محمد صالح بوشيحة.png",
+      name: "Mohammed Ali Shawish",
+      nameAr: "محمد علي شاوش",
+      email: "",
+      image: "/assets/TraineePictures/محمد الشاوش.jpg",
     },
     {
       track: "Networking & Telecommunications",
       trackAr: "الشبكات والاتصالات",
-      name: "Ibrahim safi Abdullah hammoda",
-      nameAr: "ابراهيم صافي عبدالله حموده",
-      email: "ibrahimalsafi98@gmail.com",
-      image: "/assets/TraineePictures/ابراهيم صافي عبدالله حموده.png",
+      name: "Ahmed Mohammed Alfakhry",
+      nameAr: "أحمد محمد الفاخري",
+      email: "",
+      image: "/assets/TraineePictures/أحمد محمد خليفة الفاخري.jpg",
     },
   ];
 
@@ -847,7 +847,10 @@ export function HomePage() {
                           alt={winner.name}
                           className="w-full h-full object-cover"
                           style={{ 
-                            objectPosition: "center 35%",
+                            objectPosition: 
+                              winner.name === "Mohammed Ali Shawish" || winner.name === "Ahmed Mohammed Alfakhry"
+                                ? "55% 35%"
+                                : "center 35%",
                             transform: "scale(1.1)"
                           }}
                         />
