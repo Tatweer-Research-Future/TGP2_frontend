@@ -19,9 +19,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { IconClock, IconCalendar, IconUsers, IconSearch, IconDownload } from "@tabler/icons-react";
+import {
+  IconClock,
+  IconCalendar,
+  IconUsers,
+  IconSearch,
+  IconDownload,
+  IconDotsVertical,
+} from "@tabler/icons-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { TimePickerDialog } from "@/components/TimePickerDialog";
@@ -31,6 +43,7 @@ import {
   getAttendanceOverview,
   submitCheckIn,
   submitCheckOut,
+  submitAttendanceUpdate,
   exportAttendanceCSV,
   type AttendanceOverviewResponse,
   type CheckInPayload,
@@ -42,18 +55,31 @@ export function AttendancePage() {
   const navigate = useNavigate();
   const { isAttendanceTracker, isInGroup } = useUserGroups();
   const [data, setData] = useState<AttendanceOverviewResponse | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [selectedEvent, setSelectedEvent] = useState<number | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [timePickerMode, setTimePickerMode] = useState<'checkin' | 'checkout'>('checkin');
+  const [timePickerMode, setTimePickerMode] = useState<"checkin" | "checkout">(
+    "checkin"
+  );
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent">("all");
-  
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "present" | "absent"
+  >("all");
+
+  // Optimistic break state per user for current date/event
+  const [onBreakUsers, setOnBreakUsers] = useState<Record<number, string>>({});
+  useEffect(() => {
+    // Clear optimistic map when date or event changes
+    setOnBreakUsers({});
+  }, [selectedDate, selectedEvent]);
+
   // Export section state
   const [exportFromDate, setExportFromDate] = useState<string>("");
   const [exportToDate, setExportToDate] = useState<string>("");
@@ -87,7 +113,10 @@ export function AttendancePage() {
       const response = await getAttendanceOverview(selectedDate);
       setData(response);
       // Auto-select first event if none selected or current selection is invalid
-      if (!selectedEvent || !response.events.find(e => e.id === selectedEvent)) {
+      if (
+        !selectedEvent ||
+        !response.events.find((e) => e.id === selectedEvent)
+      ) {
         if (response.events.length > 0) {
           setSelectedEvent(response.events[0].id);
         } else {
@@ -170,10 +199,10 @@ export function AttendancePage() {
     setIsSubmitting(true);
     try {
       // Filter out users who are already checked in
-      const eligibleUsers = Array.from(selectedUsers).filter(userId => {
-        const user = data?.users.find(u => u.user_id === userId);
+      const eligibleUsers = Array.from(selectedUsers).filter((userId) => {
+        const user = data?.users.find((u) => u.user_id === userId);
         if (!user) return false;
-        const eventData = user.events.find(e => e.event_id === selectedEvent);
+        const eventData = user.events.find((e) => e.event_id === selectedEvent);
         const checkInTime = eventData?.check_in_time || null;
         return !checkInTime; // Only include users who haven't checked in yet
       });
@@ -183,7 +212,7 @@ export function AttendancePage() {
         return;
       }
 
-      const promises = eligibleUsers.map(userId => {
+      const promises = eligibleUsers.map((userId) => {
         const payload: CheckInPayload = {
           candidate_id: userId,
           event: selectedEvent,
@@ -196,15 +225,19 @@ export function AttendancePage() {
       const responses = await Promise.all(promises);
       const totalSuccess = responses.reduce((sum, res) => sum + res.success, 0);
       const totalErrors = responses.reduce((sum, res) => sum + res.errors, 0);
-      
-      if (totalSuccess > 0) toast.success(`Successfully checked in ${totalSuccess} user(s)`);
-      if (totalErrors > 0) toast.error(`Failed to check in ${totalErrors} user(s)`);
-      
+
+      if (totalSuccess > 0)
+        toast.success(`Successfully checked in ${totalSuccess} user(s)`);
+      if (totalErrors > 0)
+        toast.error(`Failed to check in ${totalErrors} user(s)`);
+
       const skippedCount = selectedUsers.size - eligibleUsers.length;
       if (skippedCount > 0) {
-        toast.info(`Skipped ${skippedCount} user(s) who were already checked in`);
+        toast.info(
+          `Skipped ${skippedCount} user(s) who were already checked in`
+        );
       }
-      
+
       await fetchData();
     } catch (error) {
       console.error("Bulk check-in error:", error);
@@ -219,21 +252,23 @@ export function AttendancePage() {
     setIsSubmitting(true);
     try {
       // Filter out users who are already checked out or not checked in
-      const eligibleUsers = Array.from(selectedUsers).filter(userId => {
-        const user = data?.users.find(u => u.user_id === userId);
+      const eligibleUsers = Array.from(selectedUsers).filter((userId) => {
+        const user = data?.users.find((u) => u.user_id === userId);
         if (!user) return false;
-        const eventData = user.events.find(e => e.event_id === selectedEvent);
+        const eventData = user.events.find((e) => e.event_id === selectedEvent);
         const checkInTime = eventData?.check_in_time || null;
         const checkOutTime = eventData?.check_out_time || null;
         return checkInTime && !checkOutTime; // Only include users who are checked in but not checked out
       });
 
       if (eligibleUsers.length === 0) {
-        toast.info("All selected users are already checked out or not checked in");
+        toast.info(
+          "All selected users are already checked out or not checked in"
+        );
         return;
       }
 
-      const promises = eligibleUsers.map(userId => {
+      const promises = eligibleUsers.map((userId) => {
         const payload: CheckOutPayload = {
           candidate_id: userId,
           event: selectedEvent,
@@ -246,15 +281,19 @@ export function AttendancePage() {
       const responses = await Promise.all(promises);
       const totalSuccess = responses.reduce((sum, res) => sum + res.success, 0);
       const totalErrors = responses.reduce((sum, res) => sum + res.errors, 0);
-      
-      if (totalSuccess > 0) toast.success(`Successfully checked out ${totalSuccess} user(s)`);
-      if (totalErrors > 0) toast.error(`Failed to check out ${totalErrors} user(s)`);
-      
+
+      if (totalSuccess > 0)
+        toast.success(`Successfully checked out ${totalSuccess} user(s)`);
+      if (totalErrors > 0)
+        toast.error(`Failed to check out ${totalErrors} user(s)`);
+
       const skippedCount = selectedUsers.size - eligibleUsers.length;
       if (skippedCount > 0) {
-        toast.info(`Skipped ${skippedCount} user(s) who were already checked out or not checked in`);
+        toast.info(
+          `Skipped ${skippedCount} user(s) who were already checked out or not checked in`
+        );
       }
-      
+
       await fetchData();
     } catch (error) {
       console.error("Bulk check-out error:", error);
@@ -264,9 +303,70 @@ export function AttendancePage() {
     }
   };
 
+  const handleUserBreakStart = async (userId: number) => {
+    if (!selectedEvent) return;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        candidate_id: userId,
+        event: selectedEvent,
+        attendance_date: selectedDate,
+        break_start_time: getCurrentTime(),
+        notes: "",
+      };
+      const response = await submitAttendanceUpdate(payload);
+      if (response.success > 0) {
+        toast.success("Break started successfully");
+        setOnBreakUsers((prev) => ({
+          ...prev,
+          [userId]: payload.break_start_time!,
+        }));
+        await fetchData();
+      } else {
+        toast.error(response.results[0]?.message || "Failed to start break");
+      }
+    } catch (error) {
+      console.error("Break start error:", error);
+      toast.error("Failed to start break");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUserBreakEnd = async (userId: number) => {
+    if (!selectedEvent) return;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        candidate_id: userId,
+        event: selectedEvent,
+        attendance_date: selectedDate,
+        break_end_time: getCurrentTime(),
+        notes: "",
+      };
+      const response = await submitAttendanceUpdate(payload);
+      if (response.success > 0) {
+        toast.success("Break ended successfully");
+        setOnBreakUsers((prev) => {
+          const next = { ...prev };
+          delete next[userId];
+          return next;
+        });
+        await fetchData();
+      } else {
+        toast.error(response.results[0]?.message || "Failed to end break");
+      }
+    } catch (error) {
+      console.error("Break end error:", error);
+      toast.error("Failed to end break");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleTimePickerConfirm = (time: string) => {
     if (pendingUserId) {
-      if (timePickerMode === 'checkin') {
+      if (timePickerMode === "checkin") {
         handleUserCheckIn(pendingUserId, time);
       } else {
         handleUserCheckOut(pendingUserId, time);
@@ -274,7 +374,7 @@ export function AttendancePage() {
       setPendingUserId(null);
       return;
     }
-    if (timePickerMode === 'checkin') {
+    if (timePickerMode === "checkin") {
       handleBulkCheckIn(time);
     } else {
       handleBulkCheckOut(time);
@@ -283,7 +383,8 @@ export function AttendancePage() {
 
   const handleUserSelect = (userId: number, checked: boolean) => {
     const next = new Set(selectedUsers);
-    if (checked) next.add(userId); else next.delete(userId);
+    if (checked) next.add(userId);
+    else next.delete(userId);
     setSelectedUsers(next);
   };
 
@@ -293,11 +394,12 @@ export function AttendancePage() {
 
   // Check if user has both instructor and attendance_tracker permissions
   const canNavigateToUserDetails = () => {
-    const hasInstructor = isInGroup('instructor -> Software') || 
-                         isInGroup('instructor -> Network') || 
-                         isInGroup('instructor -> Data') ||
-                         isInGroup('instructor');
-    const hasAttendanceTracker = isInGroup('attendance_tracker');
+    const hasInstructor =
+      isInGroup("instructor -> Software") ||
+      isInGroup("instructor -> Network") ||
+      isInGroup("instructor -> Data") ||
+      isInGroup("instructor");
+    const hasAttendanceTracker = isInGroup("attendance_tracker");
     return hasInstructor && hasAttendanceTracker;
   };
 
@@ -305,15 +407,15 @@ export function AttendancePage() {
     if (checked && data) {
       const sortedUsers = getSortedUsers();
       // Only select users who can be checked in or out (not complete)
-      const selectableUsers = sortedUsers.filter(user => {
+      const selectableUsers = sortedUsers.filter((user) => {
         if (!selectedEvent) return false;
-        const eventData = user.events.find(e => e.event_id === selectedEvent);
+        const eventData = user.events.find((e) => e.event_id === selectedEvent);
         const checkInTime = eventData?.check_in_time || null;
         const checkOutTime = eventData?.check_out_time || null;
         // Can select if not checked in OR checked in but not checked out
         return !checkInTime || (checkInTime && !checkOutTime);
       });
-      setSelectedUsers(new Set(selectableUsers.map(u => u.user_id)));
+      setSelectedUsers(new Set(selectableUsers.map((u) => u.user_id)));
     } else {
       setSelectedUsers(new Set());
     }
@@ -321,32 +423,34 @@ export function AttendancePage() {
 
   const getFilteredUsers = () => {
     if (!data) return [];
-    
+
     let filtered = data.users;
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(user => 
-        (user.user_name && user.user_name.toLowerCase().includes(query)) ||
-        (user.user_email && user.user_email.toLowerCase().includes(query)) ||
-        ((user as any).phone && (user as any).phone.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (user) =>
+          (user.user_name && user.user_name.toLowerCase().includes(query)) ||
+          (user.user_email && user.user_email.toLowerCase().includes(query)) ||
+          ((user as any).phone &&
+            (user as any).phone.toLowerCase().includes(query))
       );
     }
-    
+
     // Apply track filter
     if (selectedTrack !== "all") {
-      filtered = filtered.filter(user => 
-        (user as any).track === selectedTrack
+      filtered = filtered.filter(
+        (user) => (user as any).track === selectedTrack
       );
     }
-    
+
     // Apply status filter
     if (statusFilter !== "all" && selectedEvent) {
-      filtered = filtered.filter(user => {
-        const eventData = user.events.find(e => e.event_id === selectedEvent);
+      filtered = filtered.filter((user) => {
+        const eventData = user.events.find((e) => e.event_id === selectedEvent);
         const checkInTime = eventData?.check_in_time || null;
-        
+
         if (statusFilter === "present") {
           return !!checkInTime;
         } else if (statusFilter === "absent") {
@@ -355,24 +459,24 @@ export function AttendancePage() {
         return true;
       });
     }
-    
+
     return filtered;
   };
 
   const getSortedUsers = () => {
     const filtered = getFilteredUsers();
     if (!selectedEvent) return filtered;
-    
+
     return filtered.sort((a, b) => {
-      const aEventData = a.events.find(e => e.event_id === selectedEvent);
-      const bEventData = b.events.find(e => e.event_id === selectedEvent);
-      
+      const aEventData = a.events.find((e) => e.event_id === selectedEvent);
+      const bEventData = b.events.find((e) => e.event_id === selectedEvent);
+
       const aCheckedIn = !!aEventData?.check_in_time;
       const bCheckedIn = !!bEventData?.check_in_time;
-      
+
       // If both have same check-in status, maintain original order
       if (aCheckedIn === bCheckedIn) return 0;
-      
+
       // Not checked in users first, checked in users last
       return aCheckedIn ? 1 : -1;
     });
@@ -380,22 +484,35 @@ export function AttendancePage() {
 
   const getAvailableTracks = () => {
     if (!data) return [];
-    const tracks = new Set(data.users.map(user => (user as any).track).filter(Boolean));
+    const tracks = new Set(
+      data.users.map((user) => (user as any).track).filter(Boolean)
+    );
     return Array.from(tracks).sort();
   };
 
   const getTrackColor = (track: string) => {
     const colorMap: Record<string, string> = {
-      "Software & App Development": "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-500/30",
-      "Networking & Telecommunications": "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30",
-      "AI & Data Analysis": "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-200 dark:border-purple-500/30",
-      "Cybersecurity": "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
-      "Digital Marketing": "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30",
-      "Cloud Computing": "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/30",
-      "IoT & Embedded Systems": "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-200 dark:border-pink-500/30",
-      "Blockchain & Cryptocurrency": "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/30",
+      "Software & App Development":
+        "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-500/30",
+      "Networking & Telecommunications":
+        "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30",
+      "AI & Data Analysis":
+        "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-200 dark:border-purple-500/30",
+      Cybersecurity:
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
+      "Digital Marketing":
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30",
+      "Cloud Computing":
+        "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/30",
+      "IoT & Embedded Systems":
+        "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-200 dark:border-pink-500/30",
+      "Blockchain & Cryptocurrency":
+        "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/30",
     };
-    return colorMap[track] || "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30";
+    return (
+      colorMap[track] ||
+      "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30"
+    );
   };
 
   // Calculate attendance statistics
@@ -409,10 +526,10 @@ export function AttendancePage() {
     let presentCount = 0;
     let absentCount = 0;
 
-    filteredUsers.forEach(user => {
-      const eventData = user.events.find(e => e.event_id === selectedEvent);
+    filteredUsers.forEach((user) => {
+      const eventData = user.events.find((e) => e.event_id === selectedEvent);
       const checkInTime = eventData?.check_in_time || null;
-      
+
       if (checkInTime) {
         presentCount++;
       } else {
@@ -430,8 +547,8 @@ export function AttendancePage() {
     }
 
     const filteredUsers = getSortedUsers();
-    const selectedEventData = data.events.find(e => e.id === selectedEvent);
-    
+    const selectedEventData = data.events.find((e) => e.id === selectedEvent);
+
     if (!selectedEventData) {
       toast.error("Event not found");
       return;
@@ -440,22 +557,22 @@ export function AttendancePage() {
     // Prepare CSV headers
     const headers = [
       "Name",
-      "Email", 
+      "Email",
       "Phone",
       "Track",
       "Status",
       "Check In Time",
       "Check Out Time",
       "Date",
-      "Event"
+      "Event",
     ];
 
     // Prepare CSV data with proper text handling
-    const csvData = filteredUsers.map(user => {
-      const eventData = user.events.find(e => e.event_id === selectedEvent);
+    const csvData = filteredUsers.map((user) => {
+      const eventData = user.events.find((e) => e.event_id === selectedEvent);
       const checkInTime = eventData?.check_in_time || "";
       const checkOutTime = eventData?.check_out_time || "";
-      
+
       let status = "Absent";
       if (checkInTime && checkOutTime) {
         status = "Present";
@@ -485,21 +602,21 @@ export function AttendancePage() {
         checkInTime,
         checkOutTime,
         formatDateForExcel(selectedDate),
-        sanitizeText(selectedEventData.title)
+        sanitizeText(selectedEventData.title),
       ];
     });
 
     // Create CSV content with UTF-8 BOM for proper Arabic text support
     const csvContent = [
       headers.join(","),
-      ...csvData.map(row => 
-        row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(",")
-      )
+      ...csvData.map((row) =>
+        row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(",")
+      ),
     ].join("\n");
 
     // Add UTF-8 BOM (Byte Order Mark) to ensure proper Arabic text encoding
     // This is essential for Excel and other applications to correctly display Arabic text
-    const BOM = '\uFEFF';
+    const BOM = "\uFEFF";
     const csvWithBOM = BOM + csvContent;
 
     // Create and download file with proper UTF-8 encoding
@@ -507,20 +624,28 @@ export function AttendancePage() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    
+
     // Generate filename with date and filters
     const dateStr = selectedDate.replace(/-/g, "");
     const eventStr = selectedEventData.title.replace(/[^a-zA-Z0-9]/g, "_");
     const filterStr = statusFilter !== "all" ? `_${statusFilter}` : "";
-    const trackStr = selectedTrack !== "all" ? `_${selectedTrack.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
-    
-    link.setAttribute("download", `attendance_${dateStr}_${eventStr}${filterStr}${trackStr}.csv`);
+    const trackStr =
+      selectedTrack !== "all"
+        ? `_${selectedTrack.replace(/[^a-zA-Z0-9]/g, "_")}`
+        : "";
+
+    link.setAttribute(
+      "download",
+      `attendance_${dateStr}_${eventStr}${filterStr}${trackStr}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    toast.success(`Exported ${filteredUsers.length} records to CSV (UTF-8 with Arabic support, proper date format)`);
+
+    toast.success(
+      `Exported ${filteredUsers.length} records to CSV (UTF-8 with Arabic support, proper date format)`
+    );
   };
 
   const handleBackendExport = async () => {
@@ -547,13 +672,19 @@ export function AttendancePage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       // Generate filename
       const fromDateStr = exportFromDate.replace(/-/g, "");
       const toDateStr = exportToDate.replace(/-/g, "");
-      const trackStr = exportTrack !== "all" ? `_${exportTrack.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
-      const eventStr = exportEvent !== "all" ? `_${exportEvent.replace(/[^a-zA-Z0-9]/g, "_")}` : "";
-      
+      const trackStr =
+        exportTrack !== "all"
+          ? `_${exportTrack.replace(/[^a-zA-Z0-9]/g, "_")}`
+          : "";
+      const eventStr =
+        exportEvent !== "all"
+          ? `_${exportEvent.replace(/[^a-zA-Z0-9]/g, "_")}`
+          : "";
+
       link.download = `attendance_${fromDateStr}_to_${toDateStr}${trackStr}${eventStr}.csv`;
       document.body.appendChild(link);
       link.click();
@@ -584,8 +715,12 @@ export function AttendancePage() {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t('pages.attendance.title')}</h1>
-          <p className="text-muted-foreground">{t('pages.attendance.subtitle')}</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            {t("pages.attendance.title")}
+          </h1>
+          <p className="text-muted-foreground">
+            {t("pages.attendance.subtitle")}
+          </p>
         </div>
       </div>
 
@@ -596,8 +731,12 @@ export function AttendancePage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.totalUsers')}</p>
-                  <p className="text-2xl font-bold">{getAttendanceStats().totalUsers}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t("pages.attendance.statistics.totalUsers")}
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {getAttendanceStats().totalUsers}
+                  </p>
                 </div>
                 <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
                   <IconUsers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -605,13 +744,17 @@ export function AttendancePage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.presentToday')}</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{getAttendanceStats().presentCount}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t("pages.attendance.statistics.presentToday")}
+                  </p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {getAttendanceStats().presentCount}
+                  </p>
                 </div>
                 <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
                   <IconClock className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -619,13 +762,17 @@ export function AttendancePage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">{t('pages.attendance.statistics.absentToday')}</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{getAttendanceStats().absentCount}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {t("pages.attendance.statistics.absentToday")}
+                  </p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    {getAttendanceStats().absentCount}
+                  </p>
                 </div>
                 <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
                   <IconCalendar className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -730,7 +877,9 @@ export function AttendancePage() {
           {exportFromDate && exportToDate && (
             <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
               <div className="font-medium mb-1">Export Summary:</div>
-              <div>Date Range: {exportFromDate} to {exportToDate}</div>
+              <div>
+                Date Range: {exportFromDate} to {exportToDate}
+              </div>
               {exportTrack !== "all" && <div>Track: {exportTrack}</div>}
               {exportEvent !== "all" && <div>Event: {exportEvent}</div>}
             </div>
@@ -750,7 +899,9 @@ export function AttendancePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Date Picker */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('common.labels.date')}</label>
+              <label className="text-sm font-medium">
+                {t("common.labels.date")}
+              </label>
               <Input
                 type="date"
                 value={selectedDate}
@@ -777,33 +928,49 @@ export function AttendancePage() {
                 </SelectContent>
               </Select>
             </div>
-
           </div>
 
           {/* Bulk Actions */}
           {selectedEvent && selectedUsers.size > 0 && (
             <div className="flex gap-3 pt-4 border-t">
-              <Button onClick={() => handleBulkCheckIn()} disabled={isSubmitting} className="flex items-center gap-2">
+              <Button
+                onClick={() => handleBulkCheckIn()}
+                disabled={isSubmitting}
+                className="flex items-center gap-2"
+              >
                 <IconClock className="size-4" />
-                {t('pages.attendance.markAttendance')} ({selectedUsers.size})
+                {t("pages.attendance.markAttendance")} ({selectedUsers.size})
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setTimePickerMode('checkin'); setShowTimePicker(true); setPendingUserId(null); }}
+                onClick={() => {
+                  setTimePickerMode("checkin");
+                  setShowTimePicker(true);
+                  setPendingUserId(null);
+                }}
                 disabled={isSubmitting}
               >
-                {t('pages.attendance.markAttendance')} ({t('common.labels.time')})
+                {t("pages.attendance.markAttendance")} (
+                {t("common.labels.time")})
               </Button>
-              <Button onClick={() => handleBulkCheckOut()} disabled={isSubmitting} className="flex items-center gap-2">
+              <Button
+                onClick={() => handleBulkCheckOut()}
+                disabled={isSubmitting}
+                className="flex items-center gap-2"
+              >
                 <IconClock className="size-4" />
-                {t('pages.attendance.checkOut')} ({selectedUsers.size})
+                {t("pages.attendance.checkOut")} ({selectedUsers.size})
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setTimePickerMode('checkout'); setShowTimePicker(true); setPendingUserId(null); }}
+                onClick={() => {
+                  setTimePickerMode("checkout");
+                  setShowTimePicker(true);
+                  setPendingUserId(null);
+                }}
                 disabled={isSubmitting}
               >
-                {t('pages.attendance.checkOut')} ({t('common.labels.time')})
+                {t("pages.attendance.checkOut")} ({t("common.labels.time")})
               </Button>
             </div>
           )}
@@ -820,11 +987,19 @@ export function AttendancePage() {
                 Users ({getSortedUsers().length})
               </div>
               <div className="flex items-center gap-4">
-                {(searchQuery || statusFilter !== "all" || selectedTrack !== "all") && (
+                {(searchQuery ||
+                  statusFilter !== "all" ||
+                  selectedTrack !== "all") && (
                   <div className="text-sm text-muted-foreground">
-                    {searchQuery && <span className="mr-2">Search: "{searchQuery}"</span>}
-                    {statusFilter !== "all" && <span className="mr-2">Status: {statusFilter}</span>}
-                    {selectedTrack !== "all" && <span>Track: {selectedTrack}</span>}
+                    {searchQuery && (
+                      <span className="mr-2">Search: "{searchQuery}"</span>
+                    )}
+                    {statusFilter !== "all" && (
+                      <span className="mr-2">Status: {statusFilter}</span>
+                    )}
+                    {selectedTrack !== "all" && (
+                      <span>Track: {selectedTrack}</span>
+                    )}
                   </div>
                 )}
                 {getSortedUsers().length > 0 && (
@@ -833,7 +1008,9 @@ export function AttendancePage() {
                     size="sm"
                     onClick={exportToCSV}
                     className="flex items-center gap-2"
-                    title={`Export ${getSortedUsers().length} filtered records to CSV`}
+                    title={`Export ${
+                      getSortedUsers().length
+                    } filtered records to CSV`}
                   >
                     <IconDownload className="size-4" />
                     Export CSV
@@ -849,13 +1026,13 @@ export function AttendancePage() {
               <div className="relative">
                 <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
                 <Input
-                  placeholder={t('common.placeholders.searchPlaceholder')}
+                  placeholder={t("common.placeholders.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              
+
               {/* Filters */}
               <div className="flex flex-col sm:flex-row gap-4">
                 {/* Track Filter */}
@@ -873,9 +1050,17 @@ export function AttendancePage() {
                       variant={selectedTrack === track ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSelectedTrack(track)}
-                      className={selectedTrack === track ? "" : `border-2 ${getTrackColor(track).split(' ')[2]}`}
+                      className={
+                        selectedTrack === track
+                          ? ""
+                          : `border-2 ${getTrackColor(track).split(" ")[2]}`
+                      }
                     >
-                      <div className={`w-2 h-2 rounded-full mr-2 ${getTrackColor(track).split(' ')[0]}`} />
+                      <div
+                        className={`w-2 h-2 rounded-full mr-2 ${
+                          getTrackColor(track).split(" ")[0]
+                        }`}
+                      />
                       {track}
                     </Button>
                   ))}
@@ -894,7 +1079,11 @@ export function AttendancePage() {
                     variant={statusFilter === "present" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setStatusFilter("present")}
-                    className={statusFilter === "present" ? "" : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-500/30 dark:text-green-200 dark:hover:bg-green-500/10"}
+                    className={
+                      statusFilter === "present"
+                        ? ""
+                        : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-500/30 dark:text-green-200 dark:hover:bg-green-500/10"
+                    }
                   >
                     <div className="w-2 h-2 rounded-full mr-2 bg-green-500" />
                     Present
@@ -903,7 +1092,11 @@ export function AttendancePage() {
                     variant={statusFilter === "absent" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setStatusFilter("absent")}
-                    className={statusFilter === "absent" ? "" : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"}
+                    className={
+                      statusFilter === "absent"
+                        ? ""
+                        : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"
+                    }
                   >
                     <div className="w-2 h-2 rounded-full mr-2 bg-red-500" />
                     Absent
@@ -911,7 +1104,9 @@ export function AttendancePage() {
                 </div>
 
                 {/* Clear Filters Button */}
-                {(searchQuery || statusFilter !== "all" || selectedTrack !== "all") && (
+                {(searchQuery ||
+                  statusFilter !== "all" ||
+                  selectedTrack !== "all") && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -930,10 +1125,11 @@ export function AttendancePage() {
 
             {!data || getSortedUsers().length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {searchQuery || statusFilter !== "all" || selectedTrack !== "all" 
-                  ? "No users found matching your filters" 
-                  : "No users found for the selected date"
-                }
+                {searchQuery ||
+                statusFilter !== "all" ||
+                selectedTrack !== "all"
+                  ? "No users found matching your filters"
+                  : "No users found for the selected date"}
               </div>
             ) : (
               <Table>
@@ -943,14 +1139,23 @@ export function AttendancePage() {
                       <Checkbox
                         checked={(() => {
                           const sortedUsers = getSortedUsers();
-                          const selectableUsers = sortedUsers.filter(user => {
+                          const selectableUsers = sortedUsers.filter((user) => {
                             if (!selectedEvent) return false;
-                            const eventData = user.events.find(e => e.event_id === selectedEvent);
-                            const checkInTime = eventData?.check_in_time || null;
-                            const checkOutTime = eventData?.check_out_time || null;
-                            return !checkInTime || (checkInTime && !checkOutTime);
+                            const eventData = user.events.find(
+                              (e) => e.event_id === selectedEvent
+                            );
+                            const checkInTime =
+                              eventData?.check_in_time || null;
+                            const checkOutTime =
+                              eventData?.check_out_time || null;
+                            return (
+                              !checkInTime || (checkInTime && !checkOutTime)
+                            );
                           });
-                          return selectedUsers.size === selectableUsers.length && selectableUsers.length > 0;
+                          return (
+                            selectedUsers.size === selectableUsers.length &&
+                            selectableUsers.length > 0
+                          );
                         })()}
                         onCheckedChange={handleSelectAll}
                       />
@@ -962,34 +1167,62 @@ export function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {getSortedUsers().map((user) => {
-                    const eventData = user.events.find(e => e.event_id === selectedEvent);
+                    const eventData = user.events.find(
+                      (e) => e.event_id === selectedEvent
+                    );
                     const checkInTime = eventData?.check_in_time || null;
                     const checkOutTime = eventData?.check_out_time || null;
+                    const optimisticBreakStart =
+                      onBreakUsers[user.user_id] || null;
+                    const isOnBreak =
+                      !!eventData?.break_started_at || !!optimisticBreakStart;
                     const canCheckIn = !checkInTime;
                     const canCheckOut = !!checkInTime && !checkOutTime;
+                    const canBreakIn =
+                      !!checkInTime && !checkOutTime && !isOnBreak;
+                    const canBreakOut =
+                      !!checkInTime && !checkOutTime && isOnBreak;
                     return (
                       <TableRow key={user.user_id}>
                         <TableCell>
                           <Checkbox
                             checked={selectedUsers.has(user.user_id)}
                             disabled={!canCheckIn && !canCheckOut}
-                            onCheckedChange={(checked) => handleUserSelect(user.user_id, checked as boolean)}
+                            onCheckedChange={(checked) =>
+                              handleUserSelect(user.user_id, checked as boolean)
+                            }
                           />
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div 
-                              className={`font-medium ${canNavigateToUserDetails() ? 'cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors' : ''}`}
-                              onClick={canNavigateToUserDetails() ? () => handleUserClick(user.user_id) : undefined}
+                            <div
+                              className={`font-medium ${
+                                canNavigateToUserDetails()
+                                  ? "cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                                  : ""
+                              }`}
+                              onClick={
+                                canNavigateToUserDetails()
+                                  ? () => handleUserClick(user.user_id)
+                                  : undefined
+                              }
                             >
                               {user.user_name}
                             </div>
-                            <div className="text-sm text-muted-foreground">{user.user_email}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {user.user_email}
+                            </div>
                             {(user as any).phone && (
-                              <div className="text-sm text-muted-foreground">{(user as any).phone}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {(user as any).phone}
+                              </div>
                             )}
                             {(user as any).track && (
-                              <div className={`text-xs font-medium mt-1 px-2 py-1 rounded-full border inline-block ${getTrackColor((user as any).track)}`}>
+                              <div
+                                className={`text-xs font-medium mt-1 px-2 py-1 rounded-full border inline-block ${getTrackColor(
+                                  (user as any).track
+                                )}`}
+                              >
                                 {(user as any).track}
                               </div>
                             )}
@@ -999,6 +1232,12 @@ export function AttendancePage() {
                           <AttendanceStatusBadge
                             checkInTime={checkInTime}
                             checkOutTime={checkOutTime}
+                            isOnBreak={isOnBreak}
+                            breakSince={
+                              optimisticBreakStart ||
+                              eventData?.break_started_at ||
+                              null
+                            }
                           />
                         </TableCell>
                         <TableCell className="text-right space-x-2">
@@ -1007,15 +1246,28 @@ export function AttendancePage() {
                             onClick={() => handleUserCheckIn(user.user_id)}
                             disabled={!canCheckIn || isSubmitting}
                           >
-                            {t('pages.attendance.markAttendance')}
+                            {t("pages.attendance.markAttendance")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="hidden"
+                            aria-hidden="true"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUserBreakStart(user.user_id)}
+                            disabled={!canBreakIn || isSubmitting}
+                          >
+                            Start Break
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => { setPendingUserId(user.user_id); setTimePickerMode('checkin'); setShowTimePicker(true); }}
-                            disabled={!canCheckIn || isSubmitting}
+                            onClick={() => handleUserBreakEnd(user.user_id)}
+                            disabled={!canBreakOut || isSubmitting}
                           >
-                            {t('pages.attendance.markAttendance')} ({t('common.labels.time')})
+                            End Break
                           </Button>
                           <Button
                             size="sm"
@@ -1023,16 +1275,49 @@ export function AttendancePage() {
                             onClick={() => handleUserCheckOut(user.user_id)}
                             disabled={!canCheckOut || isSubmitting}
                           >
-                            {t('pages.attendance.checkOut')}
+                            {t("pages.attendance.checkOut")}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => { setPendingUserId(user.user_id); setTimePickerMode('checkout'); setShowTimePicker(true); }}
-                            disabled={!canCheckOut || isSubmitting}
-                          >
-                            {t('pages.attendance.checkOut')} ({t('common.labels.time')})
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="px-2"
+                                disabled={
+                                  isSubmitting || (!canCheckIn && !canCheckOut)
+                                }
+                                title="More actions"
+                              >
+                                <IconDotsVertical className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canCheckIn && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setPendingUserId(user.user_id);
+                                    setTimePickerMode("checkin");
+                                    setShowTimePicker(true);
+                                  }}
+                                >
+                                  {t("pages.attendance.markAttendance")} (
+                                  {t("common.labels.time")})
+                                </DropdownMenuItem>
+                              )}
+                              {canCheckOut && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setPendingUserId(user.user_id);
+                                    setTimePickerMode("checkout");
+                                    setShowTimePicker(true);
+                                  }}
+                                >
+                                  {t("pages.attendance.checkOut")} (
+                                  {t("common.labels.time")})
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -1049,17 +1334,25 @@ export function AttendancePage() {
         open={showTimePicker}
         onOpenChange={setShowTimePicker}
         onTimeSelect={handleTimePickerConfirm}
-        title={timePickerMode === 'checkin' ? t('pages.attendance.markAttendance') + ' ' + t('common.labels.time') : t('pages.attendance.checkOut') + ' ' + t('common.labels.time')}
+        title={
+          timePickerMode === "checkin"
+            ? t("pages.attendance.markAttendance") +
+              " " +
+              t("common.labels.time")
+            : t("pages.attendance.checkOut") + " " + t("common.labels.time")
+        }
         description={
           pendingUserId
-            ? (timePickerMode === 'checkin' ? 'Select the time to check in this user.' : 'Select the time to check out this user.')
-            : (timePickerMode === 'checkin' ? `Select the time for checking in ${selectedUsers.size} selected user(s).` : `Select the time for checking out ${selectedUsers.size} selected user(s).`)
+            ? timePickerMode === "checkin"
+              ? "Select the time to check in this user."
+              : "Select the time to check out this user."
+            : timePickerMode === "checkin"
+            ? `Select the time for checking in ${selectedUsers.size} selected user(s).`
+            : `Select the time for checking out ${selectedUsers.size} selected user(s).`
         }
         defaultTime={getCurrentTime()}
-        defaultAM={timePickerMode === 'checkin'}
+        defaultAM={timePickerMode === "checkin"}
       />
     </div>
   );
 }
-
-

@@ -544,6 +544,14 @@ export type AttendanceOverviewUser = {
     check_in_time: string | null;
     check_out_time: string | null;
     notes: string | null;
+    // Break-related fields provided by the attendance overview endpoint
+    break_started_at?: string | null;
+    break_time?: string | null;
+    break_accumulated?: string | null;
+    break_intervals?: Array<{
+      start: string;
+      end: string | null;
+    }>;
     log_id: number | null;
   }>;
 };
@@ -568,6 +576,19 @@ export type CheckOutPayload = {
   event: number;
   attendance_date: string;
   check_out_time: string;
+  // Optional notes included in all attendance updates
+  notes?: string;
+};
+
+// General-purpose attendance update payload for PUT /attendance/submit/
+// Supports setting check-out time and/or starting/ending breaks.
+export type AttendanceUpdatePayload = {
+  candidate_id: number;
+  event: number;
+  attendance_date: string;
+  check_out_time?: string;
+  break_start_time?: string;
+  break_end_time?: string;
   notes?: string;
 };
 
@@ -605,6 +626,17 @@ export async function submitCheckIn(
 
 export async function submitCheckOut(
   payload: CheckOutPayload
+): Promise<AttendanceSubmitResponse> {
+  return apiFetch<AttendanceSubmitResponse>("/attendance/submit/", {
+    method: "PUT",
+    body: payload,
+    requireCsrf: true,
+  });
+}
+
+// Submit a generic attendance update (check-out and/or break start/end)
+export async function submitAttendanceUpdate(
+  payload: AttendanceUpdatePayload
 ): Promise<AttendanceSubmitResponse> {
   return apiFetch<AttendanceSubmitResponse>("/attendance/submit/", {
     method: "PUT",
