@@ -32,6 +32,7 @@ import ModuleExamResultsPage from "@/pages/ModuleExamResultsPage";
 import ModuleExamTakePage from "@/pages/ModuleExamTakePage";
 import ModulePrePostExamViewPage from "@/pages/ModulePrePostExamViewPage";
 import ModulePrePostExamResultsPage from "@/pages/ModulePrePostExamResultsPage";
+import WeekRankingPage from "@/pages/WeekRankingPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import AssignmentsPage from "@/pages/AssignmentsPage";
 import i18n from "./i18n/config";
@@ -184,6 +185,15 @@ export default function App() {
                         element={
                           <StaffOrInstructorRoute>
                             <ModulePrePostExamResultsPage />
+                          </StaffOrInstructorRoute>
+                        }
+                      />
+                      {/* Week ranking (drag & drop) */}
+                      <Route
+                        path="/modules/:moduleId/ranking"
+                        element={
+                          <StaffOrInstructorRoute>
+                            <WeekRankingPage />
                           </StaffOrInstructorRoute>
                         }
                       />

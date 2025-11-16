@@ -75,8 +75,17 @@ export function TrackPage() {
         setIsLoading(true);
         const data = await getPortalModules();
         if (!cancelled) setModules(data.results ?? []);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Failed to load tracks");
+      } catch (e: unknown) {
+        let message = "Failed to load tracks";
+        if (
+          typeof e === "object" &&
+          e !== null &&
+          "message" in e &&
+          typeof (e as { message?: unknown }).message === "string"
+        ) {
+          message = (e as { message: string }).message;
+        }
+        if (!cancelled) setError(message);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -97,8 +106,9 @@ export function TrackPage() {
   function clearModuleError(id: number) {
     setModuleErrors((prev) => {
       if (!(id in prev)) return prev;
-      const { [id]: _removed, ...rest } = prev;
-      return rest;
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
     });
   }
 
@@ -159,25 +169,30 @@ export function TrackPage() {
         });
       });
       handleCancelEditingModule(mod.id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       let message = "Failed to update module title";
-      if (err?.data) {
-        if (typeof err.data === "string") {
-          message = err.data;
-        } else if (typeof err.data?.detail === "string") {
-          message = err.data.detail;
+      if (typeof err === "object" && err !== null) {
+        const withData = err as { data?: unknown; message?: unknown };
+        if (typeof withData.data === "string") {
+          message = withData.data;
         } else if (
-          Array.isArray(err.data?.title) &&
-          typeof err.data.title[0] === "string"
+          typeof withData.data === "object" &&
+          withData.data !== null
         ) {
-          message = err.data.title[0];
-        } else if (typeof err.data?.title === "string") {
-          message = err.data.title;
-        } else if (typeof err.message === "string" && err.message.length) {
-          message = err.message;
+          const detail = (withData.data as { detail?: unknown }).detail;
+          if (typeof detail === "string") {
+            message = detail;
+          } else {
+            const titleVal = (withData.data as { title?: unknown }).title;
+            if (Array.isArray(titleVal) && typeof titleVal[0] === "string") {
+              message = titleVal[0];
+            } else if (typeof titleVal === "string") {
+              message = titleVal;
+            }
+          }
+        } else if (typeof withData.message === "string") {
+          message = withData.message;
         }
-      } else if (typeof err?.message === "string" && err.message.length) {
-        message = err.message;
       }
 
       setModuleErrors((prev) => ({
@@ -365,17 +380,34 @@ export function TrackPage() {
                           </div>
                         </button>
                         {isInstructor && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleStartEditingModule(mod);
-                            }}
-                            className="px-4 py-3 text-[#6d5cff] opacity-0 transition-opacity duration-150 group-hover:opacity-80 focus-visible:opacity-100"
-                            aria-label={`Edit ${mod.title}`}
-                          >
-                            <IconPencil className="size-4" />
-                          </button>
+                          <div className="ms-auto flex items-center gap-2 px-4 py-3">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                navigate(`/modules/${mod.id}/ranking`, {
+                                  state: {
+                                    weekOrder: mod.order,
+                                    moduleTitle: mod.title,
+                                  },
+                                });
+                              }}
+                            >
+                              Rank Week
+                            </Button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleStartEditingModule(mod);
+                              }}
+                              className="text-[#6d5cff] opacity-0 transition-opacity duration-150 group-hover:opacity-80 focus-visible:opacity-100"
+                              aria-label={`Edit ${mod.title}`}
+                            >
+                              <IconPencil className="size-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
@@ -457,33 +489,33 @@ export function TrackPage() {
                                     colSpan={3}
                                     className="px-4 py-3 text-right"
                                   >
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(
-                                        `/modules/${mod.id}/pre-post-exams/view`,
-                                        { state: { testId: mod.test?.id } }
-                                      );
-                                    }}
-                                  >
-                                    View Exam
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(
-                                        `/modules/${mod.id}/pre-post-exams/results`,
-                                        { state: { testId: mod.test?.id } }
-                                      );
-                                    }}
-                                  >
-                                    View Results
-                                  </Button>
-                                </div>
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(
+                                            `/modules/${mod.id}/pre-post-exams/view`,
+                                            { state: { testId: mod.test?.id } }
+                                          );
+                                        }}
+                                      >
+                                        View Exam
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(
+                                            `/modules/${mod.id}/pre-post-exams/results`,
+                                            { state: { testId: mod.test?.id } }
+                                          );
+                                        }}
+                                      >
+                                        View Results
+                                      </Button>
+                                    </div>
                                   </td>
                                 </tr>
                               )}
