@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,21 +40,247 @@ import { TimePickerDialog } from "@/components/TimePickerDialog";
 import { AttendanceStatusBadge } from "@/components/AttendanceStatusBadge";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import {
-  getAttendanceOverview,
+  getMyLogs,
+  getEvents,
+  getCandidates,
   submitCheckIn,
   submitCheckOut,
   submitAttendanceUpdate,
   exportAttendanceCSV,
   type AttendanceOverviewResponse,
+  type AttendanceOverviewUser,
+  type AttendanceLog,
+  type AttendanceEvent,
+  type BackendCandidate,
   type CheckInPayload,
   type CheckOutPayload,
 } from "@/lib/api";
+
+type OverviewUserWithMeta = AttendanceOverviewUser & {
+  track?: string | null;
+  phone?: string | null;
+};
+
+interface AttendanceData extends AttendanceOverviewResponse {
+  users: OverviewUserWithMeta[];
+}
+
+function deriveTrackName(candidate: BackendCandidate): string | null {
+  if (candidate.track) return candidate.track;
+  if (candidate.groups && candidate.groups.length > 0) {
+    const trackGroup = candidate.groups.find((group) =>
+      group.toLowerCase().includes("track")
+    );
+    if (trackGroup) {
+      const segments = trackGroup.split("->");
+      return segments[segments.length - 1]?.trim() || trackGroup;
+    }
+  }
+  return null;
+}
+
+function getEventId(log: AttendanceLog): number | null {
+  if (typeof log.event === "number") {
+    return log.event;
+  }
+  if (log.event && typeof log.event.id === "number") {
+    return log.event.id;
+  }
+  return null;
+}
+
+function getTraineeId(log: AttendanceLog): number | null {
+  if (typeof log.trainee === "number") return log.trainee;
+  if (log.trainee && typeof log.trainee.id === "number") {
+    return log.trainee.id;
+  }
+  return null;
+}
+
+function getTraineeName(log: AttendanceLog): string | null {
+  if (typeof log.trainee !== "number") {
+    return log.trainee.name || log.trainee_email || null;
+  }
+  return log.trainee_name || log.trainee_email || null;
+}
+
+function getTraineeEmail(log: AttendanceLog): string | null {
+  if (typeof log.trainee !== "number") {
+    return log.trainee.email || log.trainee_email || null;
+  }
+  return log.trainee_email || null;
+}
+
+function timeStringToSeconds(time: string | null | undefined): number | null {
+  if (!time) return null;
+  const [h, m, s] = time.split(":").map((part) => Number(part));
+  if ([h, m, s].some((value) => Number.isNaN(value))) return null;
+  return h * 3600 + m * 60 + s;
+}
+
+function formatBreakDuration(start: string, end: string | null): string {
+  const startSeconds = timeStringToSeconds(start);
+  const endSeconds = timeStringToSeconds(end);
+  if (startSeconds == null || endSeconds == null) {
+    return end ? "" : "In progress";
+  }
+  const diff = Math.max(endSeconds - startSeconds, 0);
+  const hours = Math.floor(diff / 3600)
+    .toString()
+    .padStart(2, "0");
+  const minutes = Math.floor((diff % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = Math.floor(diff % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+function buildOverviewFromLogs({
+  logs,
+  events,
+  candidates,
+  date,
+}: {
+  logs: AttendanceLog[];
+  events: AttendanceEvent[];
+  candidates: BackendCandidate[];
+  date: string;
+}): AttendanceData {
+  const eventMap = new Map<number, AttendanceEvent>();
+  events.forEach((event) => eventMap.set(event.id, event));
+  logs.forEach((log) => {
+    const eventId = getEventId(log);
+    if (!eventId || eventMap.has(eventId)) return;
+    const fallbackEvent: AttendanceEvent = {
+      id: eventId,
+      title:
+        (typeof log.event !== "number" && log.event?.title) ||
+        log.event_title ||
+        `Event ${eventId}`,
+      start_time:
+        (typeof log.event !== "number" && log.event?.start_time) || "",
+      end_time: (typeof log.event !== "number" && log.event?.end_time) || "",
+    };
+    eventMap.set(eventId, fallbackEvent);
+  });
+
+  const normalizedEvents = Array.from(eventMap.values()).sort(
+    (a, b) => a.id - b.id
+  );
+
+  const createEmptyEventEntries = () =>
+    normalizedEvents.map((event) => ({
+      event_id: event.id,
+      event_title: event.title,
+      has_log: false,
+      check_in_time: null,
+      check_out_time: null,
+      notes: null,
+      break_started_at: null,
+      break_time: null,
+      break_accumulated: null,
+      break_intervals: [],
+      status: null,
+      duration: null,
+      worked_duration: null,
+      log_id: null,
+    }));
+
+  const usersMap = new Map<number, OverviewUserWithMeta>();
+
+  candidates.forEach((candidate) => {
+    const user: OverviewUserWithMeta = {
+      user_id: candidate.id,
+      user_name: candidate.name || candidate.full_name || candidate.email,
+      user_email: candidate.email,
+      events: createEmptyEventEntries(),
+      track: deriveTrackName(candidate),
+      phone: candidate.phone ?? null,
+    };
+    usersMap.set(candidate.id, user);
+  });
+
+  logs.forEach((log) => {
+    const traineeId = getTraineeId(log);
+    if (!traineeId) {
+      return;
+    }
+    const user =
+      usersMap.get(traineeId) ??
+      (() => {
+        const fallback: OverviewUserWithMeta = {
+          user_id: traineeId,
+          user_name:
+            getTraineeName(log) ||
+            getTraineeEmail(log) ||
+            `Trainee ${traineeId}`,
+          user_email: getTraineeEmail(log) || "",
+          events: createEmptyEventEntries(),
+          track: null,
+          phone: null,
+        };
+        usersMap.set(traineeId, fallback);
+        return fallback;
+      })();
+
+    const eventId = getEventId(log);
+    if (!eventId) {
+      return;
+    }
+    let eventEntry = user.events.find((evt) => evt.event_id === eventId);
+
+    if (!eventEntry) {
+      eventEntry = {
+        event_id: eventId,
+        event_title:
+          (typeof log.event !== "number" && log.event?.title) ||
+          log.event_title ||
+          `Event ${eventId}`,
+        has_log: false,
+        check_in_time: null,
+        check_out_time: null,
+        notes: null,
+        break_started_at: null,
+        break_time: null,
+        break_accumulated: null,
+        break_intervals: [],
+        status: null,
+        duration: null,
+        worked_duration: null,
+        log_id: null,
+      };
+      user.events.push(eventEntry);
+    }
+
+    eventEntry.has_log = true;
+    eventEntry.check_in_time = log.check_in_time;
+    eventEntry.check_out_time = log.check_out_time;
+    eventEntry.notes = log.notes || "";
+    eventEntry.break_started_at = log.break_started_at ?? null;
+    eventEntry.break_time = log.break_time ?? null;
+    eventEntry.break_accumulated = log.break_accumulated ?? null;
+    eventEntry.break_intervals = log.break_intervals ?? [];
+    eventEntry.status = log.status ?? null;
+    eventEntry.duration = log.duration ?? log.worked_duration ?? null;
+    eventEntry.worked_duration = log.worked_duration ?? log.duration ?? null;
+    eventEntry.log_id = log.id;
+  });
+
+  return {
+    date,
+    events: normalizedEvents,
+    users: Array.from(usersMap.values()),
+    count: usersMap.size,
+  };
+}
 
 export function AttendancePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAttendanceTracker, isInGroup } = useUserGroups();
-  const [data, setData] = useState<AttendanceOverviewResponse | null>(null);
+  const [data, setData] = useState<AttendanceData | null>(null);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -70,7 +296,7 @@ export function AttendancePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "present" | "absent"
+    "all" | "present" | "absent" | "break"
   >("all");
 
   // Optimistic break state per user for current date/event
@@ -87,55 +313,43 @@ export function AttendancePage() {
   const [exportEvent, setExportEvent] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
 
-  // Check if user has permission
-  if (!isAttendanceTracker) {
-    return (
-      <div className="container mx-auto px-6 py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <h2 className="text-xl font-semibold text-muted-foreground">
-                Access Denied
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                You don't have permission to access attendance features.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await getAttendanceOverview(selectedDate);
-      setData(response);
-      // Auto-select first event if none selected or current selection is invalid
-      if (
-        !selectedEvent ||
-        !response.events.find((e) => e.id === selectedEvent)
-      ) {
-        if (response.events.length > 0) {
-          setSelectedEvent(response.events[0].id);
-        } else {
-          setSelectedEvent(null);
+      const [logs, eventsList, candidatesResponse] = await Promise.all([
+        getMyLogs(selectedDate),
+        getEvents(),
+        getCandidates(),
+      ]);
+      const transformed = buildOverviewFromLogs({
+        logs,
+        events: eventsList,
+        candidates: candidatesResponse.results ?? [],
+        date: selectedDate,
+      });
+      setData(transformed);
+      setSelectedEvent((current) => {
+        if (
+          current &&
+          transformed.events.some((event) => event.id === current)
+        ) {
+          return current;
         }
-      }
+        return transformed.events[0]?.id ?? null;
+      });
     } catch (error) {
-      console.error("Failed to fetch attendance overview:", error);
-      toast.error("Failed to load attendance overview");
+      console.error("Failed to fetch attendance data:", error);
+      toast.error("Failed to load attendance data");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchData();
     // Clear selections when date changes
     setSelectedUsers(new Set());
-  }, [selectedDate]);
+  }, [fetchData]);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -421,10 +635,20 @@ export function AttendancePage() {
     }
   };
 
-  const getFilteredUsers = () => {
+  const isUserOnBreak = (user: OverviewUserWithMeta): boolean => {
+    if (!selectedEvent) return false;
+    const eventData = user.events.find((e) => e.event_id === selectedEvent);
+    const optimisticBreakStart = onBreakUsers[user.user_id] || null;
+    const checkOutTime = eventData?.check_out_time || null;
+    return (
+      !checkOutTime && (!!eventData?.break_started_at || !!optimisticBreakStart)
+    );
+  };
+
+  const getFilteredUsers = (): OverviewUserWithMeta[] => {
     if (!data) return [];
 
-    let filtered = data.users;
+    let filtered: OverviewUserWithMeta[] = data.users;
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -433,16 +657,13 @@ export function AttendancePage() {
         (user) =>
           (user.user_name && user.user_name.toLowerCase().includes(query)) ||
           (user.user_email && user.user_email.toLowerCase().includes(query)) ||
-          ((user as any).phone &&
-            (user as any).phone.toLowerCase().includes(query))
+          (user.phone && user.phone.toLowerCase().includes(query))
       );
     }
 
     // Apply track filter
     if (selectedTrack !== "all") {
-      filtered = filtered.filter(
-        (user) => (user as any).track === selectedTrack
-      );
+      filtered = filtered.filter((user) => user.track === selectedTrack);
     }
 
     // Apply status filter
@@ -450,11 +671,15 @@ export function AttendancePage() {
       filtered = filtered.filter((user) => {
         const eventData = user.events.find((e) => e.event_id === selectedEvent);
         const checkInTime = eventData?.check_in_time || null;
+        const checkOutTime = eventData?.check_out_time || null;
+        const onBreak = isUserOnBreak(user);
 
         if (statusFilter === "present") {
-          return !!checkInTime;
+          return !!checkInTime && !checkOutTime && !onBreak;
         } else if (statusFilter === "absent") {
           return !checkInTime;
+        } else if (statusFilter === "break") {
+          return onBreak;
         }
         return true;
       });
@@ -463,7 +688,7 @@ export function AttendancePage() {
     return filtered;
   };
 
-  const getSortedUsers = () => {
+  const getSortedUsers = (): OverviewUserWithMeta[] => {
     const filtered = getFilteredUsers();
     if (!selectedEvent) return filtered;
 
@@ -482,10 +707,12 @@ export function AttendancePage() {
     });
   };
 
-  const getAvailableTracks = () => {
+  const getAvailableTracks = (): string[] => {
     if (!data) return [];
     const tracks = new Set(
-      data.users.map((user) => (user as any).track).filter(Boolean)
+      data.users
+        .map((user) => user.track)
+        .filter((track): track is string => Boolean(track))
     );
     return Array.from(tracks).sort();
   };
@@ -584,7 +811,18 @@ export function AttendancePage() {
       const sanitizeText = (text: string) => {
         if (!text) return "";
         // Remove any control characters but preserve Arabic and other Unicode characters
-        return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+        return Array.from(text)
+          .filter((char) => {
+            const code = char.charCodeAt(0);
+            const isControl =
+              (code >= 0 && code <= 8) ||
+              code === 11 ||
+              code === 12 ||
+              (code >= 14 && code <= 31) ||
+              code === 127;
+            return !isControl;
+          })
+          .join("");
       };
 
       // Use original date format - Excel will recognize it as a date
@@ -596,8 +834,8 @@ export function AttendancePage() {
       return [
         sanitizeText(user.user_name || ""),
         sanitizeText(user.user_email || ""),
-        sanitizeText((user as any).phone || ""),
-        sanitizeText((user as any).track || ""),
+        sanitizeText(user.phone || ""),
+        sanitizeText(user.track || ""),
         status,
         checkInTime,
         checkOutTime,
@@ -699,6 +937,25 @@ export function AttendancePage() {
       setIsExporting(false);
     }
   };
+
+  if (!isAttendanceTracker) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <h2 className="text-xl font-semibold text-muted-foreground">
+                Access Denied
+              </h2>
+              <p className="text-muted-foreground mt-2">
+                You don't have permission to access attendance features.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -914,17 +1171,25 @@ export function AttendancePage() {
               <label className="text-sm font-medium">Event</label>
               <Select
                 value={selectedEvent?.toString() || ""}
-                onValueChange={(value) => setSelectedEvent(parseInt(value))}
+                onValueChange={(value) => {
+                  const parsed = Number(value);
+                  setSelectedEvent(Number.isFinite(parsed) ? parsed : null);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select an event" />
                 </SelectTrigger>
                 <SelectContent>
-                  {data?.events.map((event) => (
-                    <SelectItem key={event.id} value={event.id.toString()}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
+                  {(data?.events ?? [])
+                    .filter(
+                      (event): event is AttendanceEvent =>
+                        Boolean(event) && typeof event.id === "number"
+                    )
+                    .map((event) => (
+                      <SelectItem key={event.id} value={event.id.toString()}>
+                        {event.title || `Event ${event.id}`}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1089,6 +1354,19 @@ export function AttendancePage() {
                     Present
                   </Button>
                   <Button
+                    variant={statusFilter === "break" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter("break")}
+                    className={
+                      statusFilter === "break"
+                        ? ""
+                        : "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-200 dark:hover:bg-amber-500/10"
+                    }
+                  >
+                    <div className="w-2 h-2 rounded-full mr-2 bg-amber-500" />
+                    On Break
+                  </Button>
+                  <Button
                     variant={statusFilter === "absent" ? "default" : "outline"}
                     size="sm"
                     onClick={() => setStatusFilter("absent")}
@@ -1176,6 +1454,29 @@ export function AttendancePage() {
                       onBreakUsers[user.user_id] || null;
                     const isOnBreak =
                       !!eventData?.break_started_at || !!optimisticBreakStart;
+                    const activeBreakStart =
+                      optimisticBreakStart ||
+                      eventData?.break_started_at ||
+                      null;
+                    const lastBreakInterval =
+                      eventData?.break_intervals &&
+                      eventData.break_intervals.length > 0
+                        ? eventData.break_intervals[
+                            eventData.break_intervals.length - 1
+                          ]
+                        : null;
+                    const breakInfo = activeBreakStart
+                      ? `On break since ${activeBreakStart}`
+                      : lastBreakInterval
+                      ? `Last break: ${lastBreakInterval.start} - ${
+                          lastBreakInterval.end ?? "ongoing"
+                        }`
+                      : null;
+                    const totalBreakTime =
+                      eventData?.break_time ||
+                      eventData?.break_accumulated ||
+                      null;
+                    const breakIntervals = eventData?.break_intervals ?? [];
                     const canCheckIn = !checkInTime;
                     const canCheckOut = !!checkInTime && !checkOutTime;
                     const canBreakIn =
@@ -1212,33 +1513,80 @@ export function AttendancePage() {
                             <div className="text-sm text-muted-foreground">
                               {user.user_email}
                             </div>
-                            {(user as any).phone && (
+                            {user.phone && (
                               <div className="text-sm text-muted-foreground">
-                                {(user as any).phone}
+                                {user.phone}
                               </div>
                             )}
-                            {(user as any).track && (
+                            {user.track && (
                               <div
                                 className={`text-xs font-medium mt-1 px-2 py-1 rounded-full border inline-block ${getTrackColor(
-                                  (user as any).track
+                                  user.track
                                 )}`}
                               >
-                                {(user as any).track}
+                                {user.track}
+                              </div>
+                            )}
+                            {(breakInfo || totalBreakTime) && (
+                              <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                {breakInfo && <div>{breakInfo}</div>}
+                                {totalBreakTime && (
+                                  <div>Total break: {totalBreakTime}</div>
+                                )}
                               </div>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <AttendanceStatusBadge
-                            checkInTime={checkInTime}
-                            checkOutTime={checkOutTime}
-                            isOnBreak={isOnBreak}
-                            breakSince={
-                              optimisticBreakStart ||
-                              eventData?.break_started_at ||
-                              null
-                            }
-                          />
+                          <div className="inline-flex items-center gap-2">
+                            <AttendanceStatusBadge
+                              checkInTime={checkInTime}
+                              checkOutTime={checkOutTime}
+                              isOnBreak={isOnBreak}
+                              breakSince={
+                                optimisticBreakStart ||
+                                eventData?.break_started_at ||
+                                null
+                              }
+                            />
+                            {breakIntervals.length > 0 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                  >
+                                    Breaks
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-64">
+                                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                                    Break history
+                                  </div>
+                                  <div className="max-h-60 overflow-y-auto">
+                                    {breakIntervals.map((interval, idx) => (
+                                      <div
+                                        key={`${user.user_id}-${interval.start}-${idx}`}
+                                        className="px-3 py-2 text-left text-sm border-b last:border-0"
+                                      >
+                                        <div className="font-medium">
+                                          {interval.start} -{" "}
+                                          {interval.end ?? "Ongoing"}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {formatBreakDuration(
+                                            interval.start,
+                                            interval.end
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button

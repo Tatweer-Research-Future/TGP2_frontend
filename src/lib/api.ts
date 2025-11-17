@@ -16,8 +16,14 @@ SUPPORT -- 9 (AttendancePage only, is home)
 */
 const defaultBaseUrl = "https://cbl.futr.ly/api/v1";
 
-export const apiBaseUrl: string =
-  (import.meta as any).env?.VITE_API_BASE_URL ?? defaultBaseUrl;
+const metaEnv =
+  (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }
+  ).env ?? {};
+
+export const apiBaseUrl: string = metaEnv.VITE_API_BASE_URL ?? defaultBaseUrl;
 
 let cachedCsrfToken: string | null = null;
 
@@ -55,7 +61,7 @@ export async function ensureCsrfToken(): Promise<string> {
       cachedCsrfToken = data.csrfToken;
       return data.csrfToken;
     }
-  } catch (_) {
+  } catch {
     // ignore
   }
 
@@ -76,6 +82,11 @@ export type ApiRequestOptions = {
   body?: unknown;
   // If true, will force fetching CSRF token before the request, regardless of method
   requireCsrf?: boolean;
+};
+
+type ApiError = Error & {
+  status?: number;
+  data?: unknown;
 };
 
 export async function apiFetch<T>(
@@ -117,7 +128,7 @@ export async function apiFetch<T>(
     let detail: unknown = undefined;
     try {
       detail = await response.json();
-    } catch (_) {
+    } catch {
       // ignore
     }
 
@@ -133,14 +144,14 @@ export async function apiFetch<T>(
       }
     }
 
-    const error = new Error(
+    const error: ApiError = new Error(
       typeof detail === "object" && detail !== null
         ? JSON.stringify(detail)
         : response.statusText
     );
     // Attach for consumer
-    (error as any).status = response.status;
-    (error as any).data = detail;
+    error.status = response.status;
+    error.data = detail;
     throw error;
   }
 
@@ -205,15 +216,17 @@ export async function apiFetchFormData<T>(
     let detail: unknown = undefined;
     try {
       detail = await response.json();
-    } catch (_) {}
+    } catch {
+      // ignore
+    }
 
-    const error = new Error(
+    const error: ApiError = new Error(
       typeof detail === "object" && detail !== null
         ? JSON.stringify(detail)
         : response.statusText
     );
-    (error as any).status = response.status;
-    (error as any).data = detail;
+    error.status = response.status;
+    error.data = detail;
     throw error;
   }
 
@@ -245,6 +258,8 @@ export type BackendCandidate = {
   name: string;
   phone: string | null;
   full_name?: string;
+  track?: string | null;
+  groups?: string[];
   forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API
 };
 
@@ -525,12 +540,25 @@ export type AttendanceEvent = {
 
 export type AttendanceLog = {
   id: number;
-  trainee: { id: number; name: string; email: string };
-  event: AttendanceEvent;
+  trainee: { id: number; name: string; email: string } | number;
+  trainee_name?: string | null;
+  trainee_email?: string | null;
+  event: AttendanceEvent | number;
+  event_title?: string | null;
   attendance_date: string;
   check_in_time: string;
   check_out_time: string | null;
   notes: string;
+  status?: string | null;
+  duration?: string | null;
+  worked_duration?: string | null;
+  break_time?: string | null;
+  break_started_at?: string | null;
+  break_accumulated?: string | null;
+  break_intervals?: Array<{
+    start: string;
+    end: string | null;
+  }>;
 };
 
 export type AttendanceOverviewUser = {
@@ -552,6 +580,9 @@ export type AttendanceOverviewUser = {
       start: string;
       end: string | null;
     }>;
+    status?: string | null;
+    duration?: string | null;
+    worked_duration?: string | null;
     log_id: number | null;
   }>;
 };
@@ -601,8 +632,8 @@ export type AttendanceSubmitResponse = {
     status: "success" | "error";
     message: string;
     candidate?: { id: number; email: string; name: string };
-    data?: any;
-    errors?: any;
+    data?: unknown;
+    errors?: unknown;
   }>;
 };
 
