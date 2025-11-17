@@ -10,12 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
 import { useUserGroups } from "@/hooks/useUserGroups";
-import { apiFetch, getCandidates, type BackendCandidate } from "@/lib/api";
+import {
+  getModuleTraineeOrders,
+  submitModuleTraineeOrders,
+  type TraineeOrdersResponse,
+  type TraineeOrderItem,
+} from "@/lib/api";
 import {
   IconArrowBackUp,
   IconDownload,
   IconGripVertical,
-  IconRefresh,
   IconCheck,
   IconCrown,
   IconMedal,
@@ -29,6 +33,16 @@ type RankItem = {
   email: string;
 };
 
+function getLatestUpdatedAt(orders: TraineeOrderItem[]): string | null {
+  return orders.reduce<string | null>((latest, order) => {
+    if (!order.updated_at) return latest;
+    if (!latest) return order.updated_at;
+    return new Date(order.updated_at).getTime() > new Date(latest).getTime()
+      ? order.updated_at
+      : latest;
+  }, null);
+}
+
 export default function WeekRankingPage() {
   const navigate = useNavigate();
   const params = useParams();
@@ -40,11 +54,12 @@ export default function WeekRankingPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<RankItem[]>([]);
-  const [originalItems, setOriginalItems] = useState<RankItem[]>([]);
-  const [search, setSearch] = useState("");
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasServerOrders, setHasServerOrders] = useState(false);
+  const [lastEvaluator, setLastEvaluator] = useState<string | null>(null);
+  const [, setLastUpdatedAt] = useState<string | null>(null);
 
   const trackName = useMemo(() => {
     const g = (groups || []).map((x) => x.trim());
@@ -99,22 +114,19 @@ export default function WeekRankingPage() {
   }
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
+      if (!moduleId) {
+        toast.error("Missing module id");
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
-        // Fetch all candidates; backend group_id filter isn't aligned with instructor groups
-        // UsersPage also calls without group_id to get the trainee list
-        const list = await getCandidates();
-        const ranked: RankItem[] = (list.results || []).map(
-          (c: BackendCandidate) => ({
-            id: c.id,
-            name: c.name || c.full_name || c.email,
-            email: c.email,
-          })
-        );
+        const response = await getModuleTraineeOrders(moduleId);
         if (!cancelled) {
-          setItems(ranked);
-          setOriginalItems(ranked);
+          syncFromResponse(response);
         }
       } catch (e: unknown) {
         const msg =
@@ -123,45 +135,64 @@ export default function WeekRankingPage() {
           "message" in e &&
           typeof (e as { message?: unknown }).message === "string"
             ? (e as { message: string }).message
-            : "Failed to load candidates";
+            : "Failed to load trainee orders";
         toast.error(msg);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
     };
-  }, [groupId]);
+  }, [groupId, moduleId]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (x) =>
-        (x.name && x.name.toLowerCase().includes(q)) ||
-        (x.email && x.email.toLowerCase().includes(q))
-    );
-  }, [items, search]);
+  function syncFromResponse(response: TraineeOrdersResponse) {
+    const normalized: RankItem[] = (response.items || []).map((entry) => ({
+      id: entry.user,
+      name: entry.user_name || entry.user_email,
+      email: entry.user_email,
+    }));
 
-  function handleDragStart(index: number) {
-    setDragIndex(index);
+    const nextNotes: Record<number, string> = {};
+    (response.items || []).forEach((entry) => {
+      nextNotes[entry.user] = entry.note || "";
+    });
+
+    const evaluatorName =
+      response.items?.find((entry) => entry.evaluated_by_name)
+        ?.evaluated_by_name || null;
+    const latestUpdated =
+      response.updated_at || getLatestUpdatedAt(response.items || []) || null;
+
+    setItems(normalized);
+    setNotes(nextNotes);
+    setHasServerOrders(response.has_submitted);
+    setLastEvaluator(evaluatorName);
+    setLastUpdatedAt(latestUpdated);
   }
 
-  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+  function handleDragStart(id: number) {
+    setDraggingId(id);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>, overId: number) {
     e.preventDefault();
-  }
-
-  function handleDrop(overIndex: number) {
-    if (dragIndex === null || dragIndex === overIndex) return;
+    if (draggingId === null || overId === draggingId) return;
     setItems((prev) => {
       const next = [...prev];
-      const [moved] = next.splice(dragIndex, 1);
-      next.splice(overIndex, 0, moved);
+      const fromIndex = next.findIndex((item) => item.id === draggingId);
+      const toIndex = next.findIndex((item) => item.id === overId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
       return next;
     });
-    setDragIndex(null);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
   }
 
   function exportRankingCSV() {
@@ -192,53 +223,39 @@ export default function WeekRankingPage() {
     toast.success("Ranking exported");
   }
 
-  function resetOrder() {
-    setItems(originalItems);
-  }
+  // Reset button removed per request
 
   async function submitRanking() {
     if (items.length === 0) {
       toast.error("No candidates to submit");
       return;
     }
-    const payload = {
-      module: moduleId,
-      week_label: weekLabel || undefined,
-      track: trackName,
-      ranking: items.map((x, i) => ({
-        rank: i + 1,
-        candidate_id: x.id,
-        note: notes[x.id] || "",
-      })),
-    };
+    if (!moduleId) {
+      toast.error("Missing module id");
+      return;
+    }
+
+    const submitItems = items.map((x, i) => ({
+      user: x.id,
+      order: i + 1,
+      note: notes[x.id] || "",
+    }));
+
     setIsSubmitting(true);
     try {
-      // Attempt to POST to a plausible endpoint. If it doesn't exist, fall back to download.
-      await apiFetch<unknown>("/portal/module-ranking/", {
-        method: "POST",
-        body: payload,
-        requireCsrf: true,
-      });
+      await submitModuleTraineeOrders(moduleId, submitItems);
+      const refreshed = await getModuleTraineeOrders(moduleId);
+      syncFromResponse(refreshed);
       toast.success("Ranking submitted");
-      return;
     } catch (err) {
-      console.warn(
-        "Ranking submit failed, falling back to JSON download:",
-        err
-      );
-      // Fallback: download the JSON so it can be shared/imported manually.
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json;charset=utf-8;",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ranking_${weekLabel || "module"}_${moduleId}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success("Ranking saved as JSON (server endpoint not available)");
+      const msg =
+        typeof err === "object" &&
+        err !== null &&
+        "message" in err &&
+        typeof (err as { message?: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : "Failed to submit ranking";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -258,23 +275,20 @@ export default function WeekRankingPage() {
     <div className="container mx-auto px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Rank Week Candidates</h1>
+          <h1 className="text-2xl font-bold">Rank Trainees</h1>
           <p className="text-muted-foreground">
             Track: {trackName} {weekLabel ? `• ${weekLabel}` : ""}
           </p>
+          {hasServerOrders && lastEvaluator && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Last submitted by {lastEvaluator}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => navigate(-1)}>
             <IconArrowBackUp className="size-4" />
             Back
-          </Button>
-          <Button
-            variant="outline"
-            onClick={resetOrder}
-            title="Reset to original order"
-          >
-            <IconRefresh className="size-4" />
-            Reset
           </Button>
           <Button
             onClick={exportRankingCSV}
@@ -290,7 +304,11 @@ export default function WeekRankingPage() {
             className="flex items-center gap-2"
           >
             <IconCheck className="size-4" />
-            {isSubmitting ? "Submitting..." : "Submit Ranking"}
+            {isSubmitting
+              ? "Submitting..."
+              : hasServerOrders
+              ? "Update Ranking"
+              : "Submit Ranking"}
           </Button>
         </div>
       </div>
@@ -299,32 +317,30 @@ export default function WeekRankingPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Drag to rank from best (top) to worst (bottom)</span>
-            <div className="w-64">
-              <Input
-                placeholder="Search by name or email"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-xl border overflow-hidden">
-            {filtered.map((c, index) => {
-              const isDragging = dragIndex === index;
+            {items.map((c, index) => {
+              const isDragging = draggingId === c.id;
               const meta = getRankMeta(index);
               return (
                 <div
                   key={c.id}
-                  className={`group relative flex items-center gap-4 px-4 py-3 bg-background/95 transition-all duration-150 hover:bg-accent/40 ${
+                  data-rank-id={c.id}
+                  className={`group relative flex items-center gap-4 px-4 py-3 bg-background/95 transition-all duration-200 ease-out hover:bg-accent/40 will-change-transform ${
                     isDragging
-                      ? "scale-[0.99] shadow-sm ring-2 ring-primary/30"
+                      ? "scale-95 shadow-xl ring-4 ring-primary/50 bg-accent/60 z-10 cursor-grabbing"
+                      : draggingId
+                      ? "opacity-90"
                       : ""
                   }`}
                   draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(index)}
+                  onDragStart={() => handleDragStart(c.id)}
+                  onDragOver={(e) => handleDragOver(e, c.id)}
+                  onDragEnter={(e) => handleDragOver(e, c.id)}
+                  onDrop={handleDragEnd}
+                  onDragEnd={handleDragEnd}
                   aria-grabbed={isDragging}
                 >
                   <div
@@ -361,9 +377,9 @@ export default function WeekRankingPage() {
                 </div>
               );
             })}
-            {filtered.length === 0 && (
+            {items.length === 0 && (
               <div className="px-4 py-10 text-center text-muted-foreground">
-                No candidates match your search
+                No candidates available
               </div>
             )}
           </div>

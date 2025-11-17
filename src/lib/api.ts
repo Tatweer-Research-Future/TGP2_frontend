@@ -1720,3 +1720,52 @@ export type SubmissionsListResponse = {
 export async function getSubmissions(): Promise<SubmissionsListResponse> {
   return apiFetch<SubmissionsListResponse>(`/portal/submissions/`);
 }
+
+// --- Trainee Orders (Per Module Ranking) ---
+export type TraineeOrderItem = {
+  user: number;
+  user_en?: string | null;
+  user_name: string;
+  user_email: string;
+  order: number | null;
+  note: string;
+  evaluated_by: number | null;
+  evaluated_by_name: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type TraineeOrdersResponse = {
+  has_submitted: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  items: TraineeOrderItem[];
+};
+
+export type SubmitTraineeOrderItem = {
+  user: number;
+  order: number;
+  note?: string | null;
+};
+
+export async function getModuleTraineeOrders(
+  moduleId: number | string
+): Promise<TraineeOrdersResponse> {
+  return apiFetch<TraineeOrdersResponse>(
+    `/portal/modules/${moduleId}/trainee-orders/`
+  );
+}
+
+export async function submitModuleTraineeOrders(
+  moduleId: number | string,
+  items: SubmitTraineeOrderItem[]
+): Promise<TraineeOrdersResponse> {
+  return apiFetch<TraineeOrdersResponse>(
+    `/portal/modules/${moduleId}/trainee-orders/`,
+    {
+      method: "POST",
+      body: { items },
+      requireCsrf: true,
+    }
+  );
+}

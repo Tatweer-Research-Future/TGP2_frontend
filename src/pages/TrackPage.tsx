@@ -394,7 +394,7 @@ export function TrackPage() {
                                 });
                               }}
                             >
-                              Rank Week
+                              Rank Trainees
                             </Button>
                             <button
                               type="button"
