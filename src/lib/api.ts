@@ -257,6 +257,7 @@ export type BackendCandidate = {
   email: string;
   name: string;
   phone: string | null;
+  avatar?: string | null;
   full_name?: string;
   track?: string | null;
   groups?: string[];
@@ -287,6 +288,7 @@ export type BackendUserDetail = {
   id: number;
   email: string;
   name: string;
+  avatar?: string | null;
   groups?: string[]; // User groups array
   ai_analysis?: string | null;
   forms?: Array<{ id: number; title: string; forms_by_me: boolean }>; // updated API

@@ -44,7 +44,11 @@ export function CandidateCard({ candidate }: Props) {
       <CardHeader>
         <div className="flex items-center gap-3">
           <ConsistentAvatar
-            user={{ name: candidate.fullName, email: candidate.email }}
+            user={{
+              name: candidate.fullName,
+              email: candidate.email,
+              avatar: candidate.avatar,
+            }}
             className="size-10"
           />
           <div className="flex-1">

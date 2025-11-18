@@ -394,6 +394,7 @@ export function UsersPage() {
                             user={{
                               name: candidate.fullName,
                               email: candidate.email,
+                              avatar: candidate.avatar,
                             }}
                             className="size-8"
                           />

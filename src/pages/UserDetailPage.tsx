@@ -83,6 +83,7 @@ type UserDetail = {
   fullName: string;
   fullNameArabic?: string;
   email: string;
+  avatar?: string;
   city?: string;
   phoneNo?: string;
   gender?: string;
@@ -186,6 +187,7 @@ function transformBackendUserDetail(data: BackendUserDetail): UserDetail {
     fullName,
     fullNameArabic,
     email: data.email,
+    avatar: data.avatar ?? undefined,
     city: info.city ?? undefined,
     phoneNo: add.phone ?? undefined,
     gender: info.gender ?? undefined,
@@ -1172,6 +1174,7 @@ if you read the cv from the link provided with the data add a short section name
                   user={{
                     name: user.fullName,
                     email: user.email,
+                    avatar: user.avatar,
                   }}
                   className="size-24 text-2xl"
                 />
@@ -1613,6 +1616,7 @@ if you read the cv from the link provided with the data add a short section name
                     user={{
                       name: user.fullName,
                       email: user.email,
+                      avatar: user.avatar,
                     }}
                     className="size-20 text-xl"
                   />

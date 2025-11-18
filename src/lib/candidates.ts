@@ -1,3 +1,5 @@
+import type { BackendCandidate } from "./api";
+
 export type CandidateStatus = "not_interviewed" | "in_progress" | "interviewed";
 
 export type Candidate = {
@@ -5,6 +7,7 @@ export type Candidate = {
   fullName: string;
   fullNameArabic?: string;
   email: string;
+  avatar?: string;
   status: CandidateStatus;
   appliedDate: string;
   fieldsChosen?: string[];
@@ -15,14 +18,9 @@ export type Candidate = {
 };
 
 // Transform backend candidate data to frontend format
-export function transformBackendCandidate(backendCandidate: {
-  id: number;
-  email: string;
-  name: string;
-  phone: string | null;
-  forms?: Array<{ id: number; title: string; forms_by_me: boolean }>;
-  full_name?: string;
-}): Candidate {
+export function transformBackendCandidate(
+  backendCandidate: BackendCandidate & { avatar?: string | null }
+): Candidate {
   const totalForms = (backendCandidate.forms ?? []).length;
   const submittedByMeForms = (backendCandidate.forms ?? []).filter((f) => f.forms_by_me).length;
   const status: CandidateStatus = submittedByMeForms > 0 ? "interviewed" : "not_interviewed";
@@ -31,6 +29,7 @@ export function transformBackendCandidate(backendCandidate: {
     fullName: backendCandidate.name, // Use the English name as the primary full name
     fullNameArabic: backendCandidate.full_name, // Use full_name as the Arabic name
     email: backendCandidate.email,
+    avatar: backendCandidate.avatar ?? undefined,
     status,
     appliedDate: new Date().toISOString().split("T")[0], // Use current date as fallback since backend doesn't provide this
     fieldsChosen: [], // Backend doesn't provide this data
