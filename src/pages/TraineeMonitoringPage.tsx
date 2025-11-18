@@ -344,8 +344,9 @@ export function TraineeMonitoringPage() {
                 <TableHead className="text-center">
                   {t("pages.trainee_monitoring.track")}
                 </TableHead>
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-2">
+                {/* Name column: left-align header and cells for better visual consistency */}
+                <TableHead className="text-left">
+                  <div className="flex items-center justify-start gap-2">
                     <span>{t("table.headers.name")}</span>
                     <Button
                       type="button"
@@ -408,8 +409,9 @@ export function TraineeMonitoringPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-3">
+                      {/* Name column cells aligned with header (left) */}
+                      <TableCell className="text-left">
+                        <div className="flex items-center justify-start gap-3">
                           <ConsistentAvatar
                             user={{
                               name: trainee.full_name || trainee.name || "-",
