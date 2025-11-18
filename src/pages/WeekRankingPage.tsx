@@ -273,43 +273,45 @@ export default function WeekRankingPage() {
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Rank Trainees</h1>
-          <p className="text-muted-foreground">
-            Track: {trackName} {weekLabel ? `• ${weekLabel}` : ""}
-          </p>
-          {hasServerOrders && lastEvaluator && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Last submitted by {lastEvaluator}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Rank Trainees</h1>
+            <p className="text-muted-foreground">
+              Track: {trackName} {weekLabel ? `• ${weekLabel}` : ""}
             </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <IconArrowBackUp className="size-4" />
-            Back
-          </Button>
-          <Button
-            onClick={exportRankingCSV}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <IconDownload className="size-4" />
-            Export Ranking
-          </Button>
-          <Button
-            onClick={submitRanking}
-            disabled={isSubmitting}
-            className="flex items-center gap-2"
-          >
-            <IconCheck className="size-4" />
-            {isSubmitting
-              ? "Submitting..."
-              : hasServerOrders
-              ? "Update Ranking"
-              : "Submit Ranking"}
-          </Button>
+            {hasServerOrders && lastEvaluator && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Last submitted by {lastEvaluator}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="ghost" onClick={() => navigate(-1)}>
+              <IconArrowBackUp className="size-4 mr-2" />
+              Back
+            </Button>
+            <Button
+              onClick={exportRankingCSV}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <IconDownload className="size-4" />
+              Export Ranking
+            </Button>
+            <Button
+              onClick={submitRanking}
+              disabled={isSubmitting}
+              className="flex items-center gap-2"
+            >
+              <IconCheck className="size-4" />
+              {isSubmitting
+                ? "Submitting..."
+                : hasServerOrders
+                ? "Update Ranking"
+                : "Submit Ranking"}
+            </Button>
+          </div>
         </div>
       </div>
 

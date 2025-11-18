@@ -372,6 +372,45 @@ export async function getUserDetailById(
   return apiFetch<BackendUserDetail>(`/users/${id}/`);
 }
 
+// Trainee Performance API types and functions
+export type TraineePerformanceResponse = {
+  tracks: Array<{
+    track: string;
+    trainees: Array<{
+      user_id: number;
+      name: string;
+      full_name: string;
+      email: string;
+      attendance_days: number;
+      absent_days: number;
+      post_score_sum: number;
+      order_sum: number;
+      post_scores: Array<{
+        module_id: number;
+        module_title: string;
+        score_total: number;
+        score_max: number;
+      }>;
+      module_orders: Array<{
+        module_id: number;
+        module_title: string;
+        order: number;
+      }>;
+    }>;
+  }>;
+};
+
+export async function getTraineePerformance(
+  track?: string
+): Promise<TraineePerformanceResponse> {
+  let path = `/trainee-performance/`;
+  if (track) {
+    const params = new URLSearchParams({ track });
+    path = `${path}?${params.toString()}`;
+  }
+  return apiFetch<TraineePerformanceResponse>(path);
+}
+
 // Forms API
 export type BackendFormsList = {
   count: number;

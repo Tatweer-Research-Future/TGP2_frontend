@@ -27,6 +27,7 @@ import {
   IconSearch,
   IconDownload,
   IconDotsVertical,
+  IconArrowBackUp,
 } from "@tabler/icons-react";
 import {
   DropdownMenu,
@@ -971,13 +972,19 @@ export function AttendancePage() {
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {t("pages.attendance.title")}
-          </h1>
-          <p className="text-muted-foreground">
-            {t("pages.attendance.subtitle")}
-          </p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {t("pages.attendance.title")}
+            </h1>
+            <p className="text-muted-foreground">
+              {t("pages.attendance.subtitle")}
+            </p>
+          </div>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <IconArrowBackUp className="size-4 mr-2" />
+            {t("common.actions.back", { defaultValue: "Back" })}
+          </Button>
         </div>
       </div>
 
