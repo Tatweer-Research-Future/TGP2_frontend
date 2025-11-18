@@ -4,9 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IconCalendar, IconClock, IconCheck, IconX, IconChevronDown, IconChevronUp, IconSearch, IconFilter } from "@tabler/icons-react";
-import type { AttendanceLog } from "@/lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  IconCalendar,
+  IconClock,
+  IconCheck,
+  IconX,
+  IconChevronDown,
+  IconChevronUp,
+  IconSearch,
+  IconFilter,
+} from "@tabler/icons-react";
+import type { AttendanceLog, AttendanceEvent } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 
 interface AttendanceBreakdownProps {
@@ -41,7 +56,7 @@ interface AttendanceStats {
 
 interface AttendanceDay {
   date: string;
-  status: 'present' | 'absent' | 'partial';
+  status: "present" | "absent" | "partial";
   events: Array<{
     eventId: number;
     eventTitle: string;
@@ -53,7 +68,11 @@ interface AttendanceDay {
   }>;
 }
 
-export function AttendanceBreakdown({ userId, className, attendanceLog }: AttendanceBreakdownProps) {
+export function AttendanceBreakdown({
+  userId,
+  className,
+  attendanceLog,
+}: AttendanceBreakdownProps) {
   const { t } = useTranslation();
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +86,9 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
   const [attendanceDays, setAttendanceDays] = useState<AttendanceDay[]>([]);
   const [filteredDays, setFilteredDays] = useState<AttendanceDay[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "absent" | "partial">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "present" | "absent" | "partial"
+  >("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -106,53 +127,59 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(day => 
-        day.date.toLowerCase().includes(query) ||
-        day.events.some(event => 
-          event.eventTitle.toLowerCase().includes(query)
-        )
+      filtered = filtered.filter(
+        (day) =>
+          day.date.toLowerCase().includes(query) ||
+          day.events.some((event) =>
+            event.eventTitle.toLowerCase().includes(query)
+          )
       );
     }
 
     // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter(day => day.status === statusFilter);
+      filtered = filtered.filter((day) => day.status === statusFilter);
     }
 
     // Apply event filter
     if (eventFilter !== "all") {
-      filtered = filtered.filter(day => 
-        day.events.some(event => event.eventId.toString() === eventFilter)
+      filtered = filtered.filter((day) =>
+        day.events.some((event) => event.eventId.toString() === eventFilter)
       );
     }
 
     setFilteredDays(filtered);
   }, [attendanceDays, searchQuery, statusFilter, eventFilter]);
 
-  const processNewAttendanceData = (attendanceLog: NonNullable<AttendanceBreakdownProps['attendanceLog']>) => {
+  const processNewAttendanceData = (
+    attendanceLog: NonNullable<AttendanceBreakdownProps["attendanceLog"]>
+  ) => {
     console.log("Processing new attendance data:", attendanceLog);
-    
+
     // Create a map to track all unique dates across all events
     const allDates = new Set<string>();
-    const eventDataByDate = new Map<string, Array<{
-      eventId: number;
-      eventTitle: string;
-      startTime: string;
-      endTime: string;
-      checkInTime?: string;
-      checkOutTime?: string;
-      duration?: string;
-    }>>();
+    const eventDataByDate = new Map<
+      string,
+      Array<{
+        eventId: number;
+        eventTitle: string;
+        startTime: string;
+        endTime: string;
+        checkInTime?: string;
+        checkOutTime?: string;
+        duration?: string;
+      }>
+    >();
 
     // Process each event
-    attendanceLog.events.forEach(event => {
+    attendanceLog.events.forEach((event) => {
       // Add attended days
-      event.attended_days.forEach(day => {
+      event.attended_days.forEach((day) => {
         allDates.add(day.date);
         if (!eventDataByDate.has(day.date)) {
           eventDataByDate.set(day.date, []);
         }
-        
+
         const duration = calculateDuration(day.check_in, day.check_out);
         eventDataByDate.get(day.date)!.push({
           eventId: event.event_id,
@@ -166,12 +193,12 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
       });
 
       // Add absent days
-      event.absent_days.forEach(day => {
+      event.absent_days.forEach((day) => {
         allDates.add(day.date);
         if (!eventDataByDate.has(day.date)) {
           eventDataByDate.set(day.date, []);
         }
-        
+
         eventDataByDate.get(day.date)!.push({
           eventId: event.event_id,
           eventTitle: event.event_title,
@@ -182,28 +209,30 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     });
 
     // Convert to attendance days
-    const days: AttendanceDay[] = Array.from(allDates).sort().map(date => {
-      const events = eventDataByDate.get(date) || [];
-      const hasCompleteAttendance = events.some(event => 
-        event.checkInTime && event.checkOutTime
-      );
-      const hasPartialAttendance = events.some(event => 
-        event.checkInTime && !event.checkOutTime
-      );
+    const days: AttendanceDay[] = Array.from(allDates)
+      .sort()
+      .map((date) => {
+        const events = eventDataByDate.get(date) || [];
+        const hasCompleteAttendance = events.some(
+          (event) => event.checkInTime && event.checkOutTime
+        );
+        const hasPartialAttendance = events.some(
+          (event) => event.checkInTime && !event.checkOutTime
+        );
 
-      let status: 'present' | 'absent' | 'partial' = 'absent';
-      if (hasCompleteAttendance) {
-        status = 'present';
-      } else if (hasPartialAttendance) {
-        status = 'partial';
-      }
+        let status: "present" | "absent" | "partial" = "absent";
+        if (hasCompleteAttendance) {
+          status = "present";
+        } else if (hasPartialAttendance) {
+          status = "partial";
+        }
 
-      return {
-        date,
-        status,
-        events,
-      };
-    });
+        return {
+          date,
+          status,
+          events,
+        };
+      });
 
     setAttendanceDays(days);
     setFilteredDays(days);
@@ -224,7 +253,7 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
 
   const processAttendanceData = (logs: AttendanceLog[]) => {
     console.log("Processing attendance data:", logs);
-    
+
     // Group logs by date
     const logsByDate = logs.reduce((acc, log) => {
       const date = log.attendance_date;
@@ -234,16 +263,16 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
       acc[date].push(log);
       return acc;
     }, {} as Record<string, AttendanceLog[]>);
-    
+
     console.log("Grouped logs by date:", logsByDate);
 
     // Process each date
     const days: AttendanceDay[] = [];
     const dates = Object.keys(logsByDate).sort();
 
-    dates.forEach(date => {
+    dates.forEach((date) => {
       const dayLogs = logsByDate[date];
-      const events = dayLogs.map(log => {
+      const events = dayLogs.map((log) => {
         const duration = log.check_out_time
           ? calculateDuration(log.check_in_time, log.check_out_time)
           : undefined;
@@ -251,15 +280,18 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
         // `log.event` can be either a number (event ID) or an AttendanceEvent object.
         // Safely derive the event metadata regardless of the shape.
         const isEventObject = typeof log.event !== "number";
-        const eventId = isEventObject ? log.event.id : log.event;
+        const eventObj: AttendanceEvent | null = isEventObject
+          ? (log.event as AttendanceEvent)
+          : null;
+        const eventId =
+          isEventObject && eventObj ? eventObj.id : (log.event as number);
 
         return {
           eventId,
           eventTitle:
-            log.event_title ??
-            (isEventObject ? log.event.title : `Event ${eventId}`),
-          startTime: isEventObject ? log.event.start_time || "" : "",
-          endTime: isEventObject ? log.event.end_time || "" : "",
+            log.event_title ?? (eventObj ? eventObj.title : `Event ${eventId}`),
+          startTime: eventObj?.start_time ?? "",
+          endTime: eventObj?.end_time ?? "",
           checkInTime: log.check_in_time,
           checkOutTime: log.check_out_time || undefined,
           duration,
@@ -267,18 +299,18 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
       });
 
       // Determine status
-      const hasCompleteAttendance = dayLogs.some(log => 
-        log.check_in_time && log.check_out_time
+      const hasCompleteAttendance = dayLogs.some(
+        (log) => log.check_in_time && log.check_out_time
       );
-      const hasPartialAttendance = dayLogs.some(log => 
-        log.check_in_time && !log.check_out_time
+      const hasPartialAttendance = dayLogs.some(
+        (log) => log.check_in_time && !log.check_out_time
       );
 
-      let status: 'present' | 'absent' | 'partial' = 'absent';
+      let status: "present" | "absent" | "partial" = "absent";
       if (hasCompleteAttendance) {
-        status = 'present';
+        status = "present";
       } else if (hasPartialAttendance) {
-        status = 'partial';
+        status = "partial";
       }
 
       days.push({
@@ -293,8 +325,12 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
 
     // Calculate statistics - use backend values when available
     let totalDays, presentDays, absentDays, attendanceRate;
-    
-    if (attendanceLog && attendanceLog.attendance_days !== undefined && attendanceLog.absent_days !== undefined) {
+
+    if (
+      attendanceLog &&
+      attendanceLog.attendance_days !== undefined &&
+      attendanceLog.absent_days !== undefined
+    ) {
       // Use backend values when available
       totalDays = attendanceLog.attendance_days + attendanceLog.absent_days;
       presentDays = attendanceLog.attendance_days;
@@ -303,10 +339,13 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     } else {
       // Fallback to calculated values from details
       totalDays = days.length;
-      presentDays = days.filter(d => d.status === 'present').length;
-      const partialDays = days.filter(d => d.status === 'partial').length;
-      absentDays = days.filter(d => d.status === 'absent').length;
-      attendanceRate = totalDays > 0 ? ((presentDays + partialDays * 0.5) / totalDays) * 100 : 0;
+      presentDays = days.filter((d) => d.status === "present").length;
+      const partialDays = days.filter((d) => d.status === "partial").length;
+      absentDays = days.filter((d) => d.status === "absent").length;
+      attendanceRate =
+        totalDays > 0
+          ? ((presentDays + partialDays * 0.5) / totalDays) * 100
+          : 0;
     }
 
     setStats({
@@ -328,31 +367,31 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
-  const getStatusBadge = (status: 'present' | 'absent' | 'partial') => {
+  const getStatusBadge = (status: "present" | "absent" | "partial") => {
     switch (status) {
-      case 'present':
+      case "present":
         return (
           <Badge className="bg-green-50 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30">
             <IconCheck className="size-3 mr-1" />
             Present
           </Badge>
         );
-      case 'partial':
+      case "partial":
         return (
           <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30">
             <IconClock className="size-3 mr-1" />
             Partial
           </Badge>
         );
-      case 'absent':
+      case "absent":
         return (
           <Badge className="bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30">
             <IconX className="size-3 mr-1" />
@@ -439,11 +478,18 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
             </div>
             <div className="grid gap-3">
               {attendanceLog.events.map((event) => {
-                const totalEventDays = event.attended_days.length + event.absent_days.length;
-                const eventAttendanceRate = totalEventDays > 0 ? (event.attended_days.length / totalEventDays) * 100 : 0;
-                
+                const totalEventDays =
+                  event.attended_days.length + event.absent_days.length;
+                const eventAttendanceRate =
+                  totalEventDays > 0
+                    ? (event.attended_days.length / totalEventDays) * 100
+                    : 0;
+
                 return (
-                  <div key={event.event_id} className="bg-muted/30 rounded-lg p-4 space-y-3">
+                  <div
+                    key={event.event_id}
+                    className="bg-muted/30 rounded-lg p-4 space-y-3"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{event.event_title}</div>
                       <div className="text-sm text-muted-foreground">
@@ -455,22 +501,28 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                         <div className="text-lg font-bold text-green-600 dark:text-green-400">
                           {event.attended_days.length}
                         </div>
-                        <div className="text-xs text-muted-foreground">Attended</div>
+                        <div className="text-xs text-muted-foreground">
+                          Attended
+                        </div>
                       </div>
                       <div>
                         <div className="text-lg font-bold text-red-600 dark:text-red-400">
                           {event.absent_days.length}
                         </div>
-                        <div className="text-xs text-muted-foreground">Absent</div>
+                        <div className="text-xs text-muted-foreground">
+                          Absent
+                        </div>
                       </div>
                       <div>
                         <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                           {eventAttendanceRate.toFixed(1)}%
                         </div>
-                        <div className="text-xs text-muted-foreground">Rate</div>
+                        <div className="text-xs text-muted-foreground">
+                          Rate
+                        </div>
                       </div>
                     </div>
-                    
+
                     {/* Progress Bar */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs text-muted-foreground">
@@ -478,7 +530,7 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                         <span>{eventAttendanceRate.toFixed(1)}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${eventAttendanceRate}%` }}
                         />
@@ -500,24 +552,29 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
             <div className="bg-muted/30 rounded-lg p-4">
               <div className="flex items-end justify-between h-20 space-x-1">
                 {attendanceDays.slice(-7).map((day, index) => {
-                  const isPresent = day.status === 'present';
-                  const isPartial = day.status === 'partial';
+                  const isPresent = day.status === "present";
+                  const isPartial = day.status === "partial";
                   const height = isPresent ? 100 : isPartial ? 60 : 20;
-                  
+
                   return (
-                    <div key={index} className="flex flex-col items-center space-y-1 flex-1">
-                      <div 
+                    <div
+                      key={index}
+                      className="flex flex-col items-center space-y-1 flex-1"
+                    >
+                      <div
                         className={`w-full rounded-t transition-all duration-300 ${
-                          isPresent 
-                            ? 'bg-green-500' 
-                            : isPartial 
-                            ? 'bg-yellow-500' 
-                            : 'bg-red-500'
+                          isPresent
+                            ? "bg-green-500"
+                            : isPartial
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
                         }`}
                         style={{ height: `${height}%` }}
                       />
                       <div className="text-xs text-muted-foreground">
-                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                        {new Date(day.date).toLocaleDateString("en-US", {
+                          weekday: "short",
+                        })}
                       </div>
                     </div>
                   );
@@ -546,7 +603,8 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium text-muted-foreground">
-                Daily Attendance Records ({filteredDays.length} of {attendanceDays.length})
+                Daily Attendance Records ({filteredDays.length} of{" "}
+                {attendanceDays.length})
               </div>
             </div>
 
@@ -565,7 +623,10 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                 </div>
 
                 {/* Status Filter */}
-                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value: any) => setStatusFilter(value)}
+                >
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -586,7 +647,10 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                     <SelectContent>
                       <SelectItem value="all">All Events</SelectItem>
                       {attendanceLog.events.map((event) => (
-                        <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                        <SelectItem
+                          key={event.event_id}
+                          value={event.event_id.toString()}
+                        >
                           {event.event_title}
                         </SelectItem>
                       ))}
@@ -595,7 +659,9 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                 )}
 
                 {/* Clear Filters */}
-                {(searchQuery || statusFilter !== "all" || eventFilter !== "all") && (
+                {(searchQuery ||
+                  statusFilter !== "all" ||
+                  eventFilter !== "all") && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -615,16 +681,14 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
             {filteredDays.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <div className="mb-2">
-                  {attendanceDays.length === 0 
-                    ? "No attendance records found" 
-                    : "No records match your filters"
-                  }
+                  {attendanceDays.length === 0
+                    ? "No attendance records found"
+                    : "No records match your filters"}
                 </div>
                 <div className="text-sm">
-                  {attendanceDays.length === 0 
+                  {attendanceDays.length === 0
                     ? "This user may not have any attendance records in the last 30 days."
-                    : "Try adjusting your search or filter criteria."
-                  }
+                    : "Try adjusting your search or filter criteria."}
                 </div>
                 {attendanceDays.length === 0 && (
                   <div className="text-xs mt-1">User ID: {userId}</div>
@@ -638,12 +702,17 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
                       <div className="font-medium">{formatDate(day.date)}</div>
                       {getStatusBadge(day.status)}
                     </div>
-                    
+
                     {day.events.length > 0 && (
                       <div className="space-y-2">
                         {day.events.map((event, eventIndex) => (
-                          <div key={eventIndex} className="bg-muted/50 rounded p-3 space-y-2">
-                            <div className="font-medium text-sm">{event.eventTitle}</div>
+                          <div
+                            key={eventIndex}
+                            className="bg-muted/50 rounded p-3 space-y-2"
+                          >
+                            <div className="font-medium text-sm">
+                              {event.eventTitle}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               Scheduled: {event.startTime} - {event.endTime}
                             </div>
