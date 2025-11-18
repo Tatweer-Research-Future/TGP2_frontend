@@ -383,6 +383,7 @@ export type TraineePerformanceResponse = {
       name: string;
       full_name: string;
       email: string;
+      avatar?: string | null;
       attendance_days: number;
       absent_days: number;
       post_score_sum: number;
@@ -1799,6 +1800,9 @@ export type TraineeOrderItem = {
   user_en?: string | null;
   user_name: string;
   user_email: string;
+  // Some APIs return avatar as `user_avatar`; keep both for compatibility
+  user_avatar?: string | null;
+  avatar?: string | null;
   order: number | null;
   note: string;
   evaluated_by: number | null;

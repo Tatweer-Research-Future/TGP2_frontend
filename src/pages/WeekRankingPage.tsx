@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
+import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import {
   getModuleTraineeOrders,
   submitModuleTraineeOrders,
+  getTraineePerformance,
   type TraineeOrdersResponse,
   type TraineeOrderItem,
 } from "@/lib/api";
@@ -31,6 +33,7 @@ type RankItem = {
   id: number;
   name: string;
   email: string;
+  avatar?: string;
 };
 
 function getLatestUpdatedAt(orders: TraineeOrderItem[]): string | null {
@@ -60,6 +63,9 @@ export default function WeekRankingPage() {
   const [hasServerOrders, setHasServerOrders] = useState(false);
   const [lastEvaluator, setLastEvaluator] = useState<string | null>(null);
   const [, setLastUpdatedAt] = useState<string | null>(null);
+  const [avatarMap, setAvatarMap] = useState<Record<number, string | undefined>>(
+    {}
+  );
 
   const trackName = useMemo(() => {
     const g = (groups || []).map((x) => x.trim());
@@ -124,9 +130,25 @@ export default function WeekRankingPage() {
 
       try {
         setIsLoading(true);
-        const response = await getModuleTraineeOrders(moduleId);
+        const [ordersResponse, performance] = await Promise.all([
+          getModuleTraineeOrders(moduleId),
+          getTraineePerformance().catch(() => null),
+        ]);
+
+        if (!cancelled && performance) {
+          const nextAvatarMap: Record<number, string | undefined> = {};
+          performance.tracks.forEach((track) => {
+            track.trainees.forEach((trainee) => {
+              if (trainee.avatar) {
+                nextAvatarMap[trainee.user_id] = trainee.avatar;
+              }
+            });
+          });
+          setAvatarMap(nextAvatarMap);
+        }
+
         if (!cancelled) {
-          syncFromResponse(response);
+          syncFromResponse(ordersResponse);
         }
       } catch (e: unknown) {
         const msg =
@@ -153,6 +175,12 @@ export default function WeekRankingPage() {
       id: entry.user,
       name: entry.user_name || entry.user_email,
       email: entry.user_email,
+      // Prefer explicit avatar fields from trainee-orders; fall back to global avatar map
+      avatar:
+        entry.avatar ??
+        (entry as any).user_avatar ??
+        avatarMap[entry.user] ??
+        undefined,
     }));
 
     const nextNotes: Record<number, string> = {};
@@ -356,6 +384,16 @@ export default function WeekRankingPage() {
                     title={`Rank ${index + 1}`}
                   >
                     {meta.icon}#{index + 1}
+                  </div>
+                  <div className="shrink-0">
+                    <ConsistentAvatar
+                      user={{
+                        name: c.name,
+                        email: c.email,
+                        avatar: c.avatar,
+                      }}
+                      className="size-9"
+                    />
                   </div>
                   <div className="flex-1">
                     <div className="font-medium tracking-tight">{c.name}</div>

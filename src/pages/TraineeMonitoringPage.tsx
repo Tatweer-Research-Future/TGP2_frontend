@@ -16,12 +16,14 @@ import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 
 import { getTraineePerformance } from "@/lib/api";
+import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
 
 type Trainee = {
   user_id: number;
   name: string;
   full_name: string;
   email: string;
+  avatar?: string;
   attendance_days: number;
   absent_days: number;
   post_score_sum: number;
@@ -63,6 +65,7 @@ export function TraineeMonitoringPage() {
         trackData.trainees.forEach((trainee) => {
           allTrainees.push({
             ...trainee,
+            avatar: trainee.avatar ?? undefined,
             track: trackData.track,
           });
         });
@@ -406,10 +409,20 @@ export function TraineeMonitoringPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="font-medium text-center" dir="rtl">
-                          <span className="text-base">
-                            {trainee.full_name || trainee.name || "-"}
-                          </span>
+                        <div className="flex items-center justify-center gap-3">
+                          <ConsistentAvatar
+                            user={{
+                              name: trainee.full_name || trainee.name || "-",
+                              email: trainee.email,
+                              avatar: trainee.avatar,
+                            }}
+                            className="size-8"
+                          />
+                          <div className="font-medium text-center" dir="rtl">
+                            <span className="text-base">
+                              {trainee.full_name || trainee.name || "-"}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">

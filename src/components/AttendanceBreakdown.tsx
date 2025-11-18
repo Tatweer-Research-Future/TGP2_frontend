@@ -244,15 +244,22 @@ export function AttendanceBreakdown({ userId, className, attendanceLog }: Attend
     dates.forEach(date => {
       const dayLogs = logsByDate[date];
       const events = dayLogs.map(log => {
-        const duration = log.check_out_time 
+        const duration = log.check_out_time
           ? calculateDuration(log.check_in_time, log.check_out_time)
           : undefined;
-        
+
+        // `log.event` can be either a number (event ID) or an AttendanceEvent object.
+        // Safely derive the event metadata regardless of the shape.
+        const isEventObject = typeof log.event !== "number";
+        const eventId = isEventObject ? log.event.id : log.event;
+
         return {
-          eventId: log.event.id,
-          eventTitle: log.event.title,
-          startTime: log.event.start_time || '',
-          endTime: log.event.end_time || '',
+          eventId,
+          eventTitle:
+            log.event_title ??
+            (isEventObject ? log.event.title : `Event ${eventId}`),
+          startTime: isEventObject ? log.event.start_time || "" : "",
+          endTime: isEventObject ? log.event.end_time || "" : "",
           checkInTime: log.check_in_time,
           checkOutTime: log.check_out_time || undefined,
           duration,
