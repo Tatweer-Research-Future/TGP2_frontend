@@ -295,7 +295,7 @@ export function TrackPage() {
           {modules!
             .sort((a, b) => a.order - b.order)
             .map((mod) => {
-              const isOpen = openWeeks[mod.id] ?? true;
+              const isOpen = openWeeks[mod.id] ?? false;
               const moduleError = moduleErrors[mod.id];
               const isEditingModule =
                 isInstructor && editingModuleId === mod.id;

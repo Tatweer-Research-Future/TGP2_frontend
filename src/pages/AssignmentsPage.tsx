@@ -260,11 +260,6 @@ export default function AssignmentsPage() {
         if (!cancelled) {
           setAssignments(assignmentsData.results ?? []);
           setSubmissions(submissionsData.results ?? []);
-          // Open first week by default
-          if (submissionsData.results && submissionsData.results.length > 0) {
-            const firstWeek = submissionsData.results[0].week_order;
-            setOpenWeeks({ [firstWeek]: true });
-          }
         }
       } catch (e: any) {
         if (!cancelled)
