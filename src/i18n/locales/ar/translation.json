@@ -207,21 +207,18 @@
       "required": "رقم الهاتف مطلوب"
     }
   },
-  "errors": {
-    "required": "هذا الحقل مطلوب",
-    "invalid": "قيمة غير صحيحة",
-    "networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
-    "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
-    "unauthorized": "وصول غير مصرح به",
-    "forbidden": "الوصول مرفوض",
-    "notFound": "المورد غير موجود",
-    "validation": "يرجى التحقق من المدخلات والمحاولة مرة أخرى"
-  },
   "success": {
     "saved": "تم الحفظ بنجاح",
     "updated": "تم التحديث بنجاح",
     "deleted": "تم الحذف بنجاح",
     "created": "تم الإنشاء بنجاح"
+  },
+  "bank": {
+    "status": {
+      "submitted": "تم الإرسال",
+      "approved": "موافق عليه",
+      "rejected": "مرفوض"
+    }
   },
   "pages": {
     "home": {
@@ -280,7 +277,14 @@
       "subtitle": "إدارة معلومات حسابك",
       "personalInfo": "المعلومات الشخصية",
       "preferences": "التفضيلات",
-      "security": "الأمان"
+      "security": "الأمان",
+      "bankSectionTitle": "معلومات البنك",
+      "bankAccountNumber": "رقم الحساب البنكي",
+      "bankAccountNumberPlaceholder": "أدخل رقم حساب مكونًا من 17 رقمًا",
+      "saving": "جاري الحفظ...",
+      "bankAccountAdded": "تم إضافة الحساب البنكي بنجاح",
+      "bankAccountUpdated": "تم تحديث الحساب البنكي بنجاح",
+      "bankAccountSaveError": "تعذر حفظ الحساب البنكي. يرجى المحاولة مرة أخرى."
     },
     "dashboard": {
       "title": "لوحة التحكم",
@@ -331,5 +335,17 @@
     "rejected": "مرفوض",
     "completed": "مكتمل",
     "inProgress": "قيد التنفيذ"
+  },
+  "errors": {
+    "required": "هذا الحقل مطلوب",
+    "invalid": "قيمة غير صحيحة",
+    "networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+    "serverError": "خطأ في الخادم. يرجى المحاولة لاحقاً.",
+    "unauthorized": "وصول غير مصرح به",
+    "forbidden": "الوصول مرفوض",
+    "notFound": "المورد غير موجود",
+    "validation": "يرجى التحقق من المدخلات والمحاولة مرة أخرى",
+    "bankAccount14Digits": "رقم الحساب البنكي يجب أن يكون 14 رقمًا.",
+    "bankAccount17Digits": "رقم الحساب البنكي يجب أن يكون 17 رقمًا."
   }
 }

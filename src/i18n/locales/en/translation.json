@@ -208,21 +208,18 @@
       "required": "Phone is required"
     }
   },
-  "errors": {
-    "required": "This field is required",
-    "invalid": "Invalid value",
-    "networkError": "Network error. Please try again.",
-    "serverError": "Server error. Please try again later.",
-    "unauthorized": "Unauthorized access",
-    "forbidden": "Access denied",
-    "notFound": "Resource not found",
-    "validation": "Please check your input and try again"
-  },
   "success": {
     "saved": "Saved successfully",
     "updated": "Updated successfully",
     "deleted": "Deleted successfully",
     "created": "Created successfully"
+  },
+  "bank": {
+    "status": {
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
   },
   "pages": {
     "home": {
@@ -281,7 +278,14 @@
       "subtitle": "Manage your account information",
       "personalInfo": "Personal Information",
       "preferences": "Preferences",
-      "security": "Security"
+      "security": "Security",
+      "bankSectionTitle": "Bank information",
+      "bankAccountNumber": "Bank account number",
+      "bankAccountNumberPlaceholder": "Enter 17-digit account number",
+      "saving": "Saving...",
+      "bankAccountAdded": "Bank account added successfully",
+      "bankAccountUpdated": "Bank account updated successfully",
+      "bankAccountSaveError": "Unable to save bank account. Please try again."
     },
     "dashboard": {
       "title": "Dashboard",
@@ -332,5 +336,17 @@
     "rejected": "Rejected",
     "completed": "Completed",
     "inProgress": "In Progress"
+  },
+  "errors": {
+    "required": "This field is required",
+    "invalid": "Invalid value",
+    "networkError": "Network error. Please try again.",
+    "serverError": "Server error. Please try again later.",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access denied",
+    "notFound": "Resource not found",
+    "validation": "Please check your input and try again",
+    "bankAccount14Digits": "Bank account number must be 14 digits.",
+    "bankAccount17Digits": "Bank account number must be 17 digits."
   }
 }
