@@ -14,7 +14,7 @@ INSTRUCTOR,DATA -- 5 (UserDetailPage and UsersPage and FormsPage only, FormsPage
 TRAINEE -- 8 (FormsPage only, is home)
 SUPPORT -- 9 (AttendancePage only, is home)
 */
-const defaultBaseUrl = "https://tgp.tatweer.dev/";
+const defaultBaseUrl = "https://tgp.tatweer.dev/api/v1";
 
 const metaEnv =
   (
