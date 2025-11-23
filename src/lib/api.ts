@@ -1846,3 +1846,33 @@ export async function submitModuleTraineeOrders(
     }
   );
 }
+
+// --- Trainee Orders Leaderboard (Top of Week per Track) ---
+export type TraineeOrdersLeaderboardTrainee = {
+  user_id: number;
+  name: string;
+  full_name: string;
+  email: string;
+  avatar: string | null;
+  note: string;
+  module_order_id: number;
+};
+
+export type TraineeOrdersLeaderboardItem = {
+  track_id: number;
+  track_name: string;
+  module_id: number;
+  module_title: string;
+  last_submitted_at: string;
+  trainees: TraineeOrdersLeaderboardTrainee[];
+};
+
+export type TraineeOrdersLeaderboardResponse = {
+  results: TraineeOrdersLeaderboardItem[];
+};
+
+export async function getTraineeOrdersLeaderboard(): Promise<TraineeOrdersLeaderboardResponse> {
+  return apiFetch<TraineeOrdersLeaderboardResponse>(
+    `/trainee-orders/leaderboard/`
+  );
+}

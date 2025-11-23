@@ -13,15 +13,25 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
   getPortalTracks,
+  getTraineeOrdersLeaderboard,
   type Announcement,
   type Poll,
   type ReactionCount,
   type PortalTrack,
+  type TraineeOrdersLeaderboardItem,
 } from "@/lib/api";
 import { Loader } from "@/components/ui/loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconBell, IconChartBar, IconPlus, IconEdit, IconTrash, IconTrophy, IconMedal } from "@tabler/icons-react";
+import {
+  IconBell,
+  IconChartBar,
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconTrophy,
+  IconMedal,
+} from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useAuth } from "@/context/AuthContext";
@@ -53,8 +63,9 @@ function formatDate(dateString: string): string {
   if (diffInSeconds < 60) return "Just now";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  
+  if (diffInSeconds < 604800)
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
   return date.toLocaleDateString();
 }
 
@@ -80,14 +91,14 @@ const COMMON_REACTIONS = [
   { emoji: "🔥", label: "Fire" },
 ];
 
-function AnnouncementCard({ 
-  announcement, 
-  onEdit, 
+function AnnouncementCard({
+  announcement,
+  onEdit,
   onDelete,
   canEdit,
   currentUserId,
   isStaffUser,
-}: { 
+}: {
   announcement: Announcement;
   onEdit?: (announcement: Announcement) => void;
   onDelete?: (id: number) => void;
@@ -166,7 +177,7 @@ function AnnouncementCard({
   const visibleReactionsFromCounts = reactionCounts
     .filter((r) => r.count > 0)
     .map((r) => r.reaction);
-  
+
   // Ensure "💯" is always visible
   const visibleReactions = [
     ...new Set([...visibleReactionsFromCounts, perfectEmoji]),
@@ -177,7 +188,9 @@ function AnnouncementCard({
     .filter((r) => r.count === 0)
     .map((r) => ({
       emoji: r.reaction,
-      label: COMMON_REACTIONS.find((cr) => cr.emoji === r.reaction)?.label || r.reaction,
+      label:
+        COMMON_REACTIONS.find((cr) => cr.emoji === r.reaction)?.label ||
+        r.reaction,
     }));
 
   // Get all common reactions that aren't in visible reactions
@@ -244,36 +257,46 @@ function AnnouncementCard({
                 {/* Show edit/delete buttons only if:
                     - User is staff (can edit/delete all), OR
                     - User is instructor AND created this announcement */}
-                {canEdit && (isStaffUser || (currentUserId && announcement.created_by === currentUserId)) && (
-                  <div className="flex items-center gap-1">
-                    {onEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => onEdit(announcement)}
-                        title={t("common.edit", { defaultValue: "Edit" })}
-                      >
-                        <IconEdit className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          if (confirm(t("common.confirmDelete", { defaultValue: "Are you sure you want to delete this announcement?" }))) {
-                            onDelete(announcement.id);
-                          }
-                        }}
-                        title={t("common.delete", { defaultValue: "Delete" })}
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {canEdit &&
+                  (isStaffUser ||
+                    (currentUserId &&
+                      announcement.created_by === currentUserId)) && (
+                    <div className="flex items-center gap-1">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => onEdit(announcement)}
+                          title={t("common.edit", { defaultValue: "Edit" })}
+                        >
+                          <IconEdit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                t("common.confirmDelete", {
+                                  defaultValue:
+                                    "Are you sure you want to delete this announcement?",
+                                })
+                              )
+                            ) {
+                              onDelete(announcement.id);
+                            }
+                          }}
+                          title={t("common.delete", { defaultValue: "Delete" })}
+                        >
+                          <IconTrash className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
               </div>
             </div>
             <p className="text-base text-muted-foreground whitespace-pre-wrap break-words">
@@ -289,8 +312,8 @@ function AnnouncementCard({
                     const count = getReactionCount(reaction);
                     const isReacted = myReactions.includes(reaction);
                     const reactionLabel =
-                      COMMON_REACTIONS.find((r) => r.emoji === reaction)?.label ||
-                      reaction;
+                      COMMON_REACTIONS.find((r) => r.emoji === reaction)
+                        ?.label || reaction;
 
                     return (
                       <button
@@ -342,7 +365,7 @@ function AnnouncementCard({
                     {availableReactions.map((reaction) => {
                       const isReacted = myReactions.includes(reaction.emoji);
                       const count = getReactionCount(reaction.emoji);
-                      
+
                       return (
                         <button
                           key={reaction.emoji}
@@ -377,24 +400,44 @@ function AnnouncementCard({
   );
 }
 
-function PollCard({ poll, onVote }: { poll: Poll; onVote: (pollId: number, choiceId: number) => void }) {
+function PollCard({
+  poll,
+  onVote,
+}: {
+  poll: Poll;
+  onVote: (pollId: number, choiceId: number) => void;
+}) {
   const { t } = useTranslation();
-  const [selectedChoice, setSelectedChoice] = useState<number | null>(poll.my_vote_choice_id);
+  const [selectedChoice, setSelectedChoice] = useState<number | null>(
+    poll.my_vote_choice_id
+  );
   const [isVoting, setIsVoting] = useState(false);
-  const totalVotes = poll.choices.reduce((sum, choice) => sum + choice.votes, 0);
+  const totalVotes = poll.choices.reduce(
+    (sum, choice) => sum + choice.votes,
+    0
+  );
 
   const handleVote = async (choiceId: number) => {
-    if (poll.my_vote_choice_id !== null || isVoting || selectedChoice === choiceId) return;
-    
+    if (
+      poll.my_vote_choice_id !== null ||
+      isVoting ||
+      selectedChoice === choiceId
+    )
+      return;
+
     setIsVoting(true);
     setSelectedChoice(choiceId);
-    
+
     try {
       await voteOnPoll(poll.id, { choice: choiceId });
-      toast.success(t("pages.home.pollVoted", { defaultValue: "Vote submitted!" }));
+      toast.success(
+        t("pages.home.pollVoted", { defaultValue: "Vote submitted!" })
+      );
       onVote(poll.id, choiceId);
     } catch (err) {
-      toast.error(t("pages.home.pollVoteError", { defaultValue: "Failed to submit vote" }));
+      toast.error(
+        t("pages.home.pollVoteError", { defaultValue: "Failed to submit vote" })
+      );
       setSelectedChoice(poll.my_vote_choice_id);
     } finally {
       setIsVoting(false);
@@ -410,20 +453,22 @@ function PollCard({ poll, onVote }: { poll: Poll; onVote: (pollId: number, choic
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-semibold text-base sm:text-lg">{poll.question}</h3>
+              <h3 className="font-semibold text-base sm:text-lg">
+                {poll.question}
+              </h3>
             </div>
-            
+
             <div className="space-y-2">
               {poll.choices.map((choice) => {
-                const percentage = totalVotes > 0 ? (choice.votes / totalVotes) * 100 : 0;
-                const isSelected = selectedChoice === choice.id || poll.my_vote_choice_id === choice.id;
+                const percentage =
+                  totalVotes > 0 ? (choice.votes / totalVotes) * 100 : 0;
+                const isSelected =
+                  selectedChoice === choice.id ||
+                  poll.my_vote_choice_id === choice.id;
                 const canVote = poll.my_vote_choice_id === null;
 
                 return (
-                  <div
-                    key={choice.id}
-                    className="relative"
-                  >
+                  <div key={choice.id} className="relative">
                     {totalVotes > 0 && (
                       <div
                         className="absolute inset-y-0 left-0 bg-purple-200 dark:bg-purple-700/60 rounded-md transition-all duration-300 z-0"
@@ -442,7 +487,9 @@ function PollCard({ poll, onVote }: { poll: Poll; onVote: (pollId: number, choic
                       } ${isVoting ? "cursor-wait" : ""}`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-base font-medium">{choice.text}</span>
+                        <span className="text-base font-medium">
+                          {choice.text}
+                        </span>
                         {isSelected && (
                           <span className="text-sm text-purple-600 dark:text-purple-400">
                             ✓
@@ -450,14 +497,15 @@ function PollCard({ poll, onVote }: { poll: Poll; onVote: (pollId: number, choic
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {choice.votes} {choice.votes === 1 ? "vote" : "votes"} ({percentage.toFixed(0)}%)
+                        {choice.votes} {choice.votes === 1 ? "vote" : "votes"} (
+                        {percentage.toFixed(0)}%)
                       </div>
                     </button>
                   </div>
                 );
               })}
             </div>
-            
+
             {totalVotes > 0 && (
               <p className="text-sm text-muted-foreground mt-2">
                 {totalVotes} {totalVotes === 1 ? "total vote" : "total votes"}
@@ -474,7 +522,7 @@ export function HomePage() {
   const { t } = useTranslation();
   const { groupId, isStaff, hasInstructor } = useUserGroups();
   const { user } = useAuth();
-  
+
   // Ensure we have valid boolean values
   const isStaffUser = Boolean(isStaff);
   const isInstructorUser = Boolean(hasInstructor);
@@ -482,10 +530,14 @@ export function HomePage() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] =
+    useState<Announcement | null>(null);
   const [tracks, setTracks] = useState<PortalTrack[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(false);
-  
+  const [leaderboard, setLeaderboard] = useState<TraineeOrdersLeaderboardItem[]>(
+    []
+  );
+
   // Form state
   const [formTitle, setFormTitle] = useState("");
   const [formBody, setFormBody] = useState("");
@@ -518,17 +570,23 @@ export function HomePage() {
       try {
         console.log("Loading announcements and polls...");
         console.log("User group ID:", groupId);
-        const [announcementsData, pollsData] = await Promise.all([
-          getAnnouncements(),
-          getPolls({ group: groupId?.toString() }),
-        ]);
+        const [announcementsData, pollsData, leaderboardData] = await Promise.all(
+          [
+            getAnnouncements(),
+            getPolls({ group: groupId?.toString() }),
+            getTraineeOrdersLeaderboard(),
+          ]
+        );
         console.log("Announcements data:", announcementsData);
         console.log("Polls data:", pollsData);
         setAnnouncements(announcementsData.results || []);
         setPolls(pollsData || []);
+        setLeaderboard(leaderboardData.results || []);
       } catch (err) {
         console.error("Failed to load home data:", err);
-        toast.error(t("pages.home.loadError", { defaultValue: "Failed to load content" }));
+        toast.error(
+          t("pages.home.loadError", { defaultValue: "Failed to load content" })
+        );
       } finally {
         setIsLoading(false);
       }
@@ -558,36 +616,54 @@ export function HomePage() {
     setFormScope(announcement.scope);
     setFormTrack(announcement.track?.toString() || "");
     setFormPublishAt(announcement.publish_at.slice(0, 16));
-    setFormExpireAt(announcement.expire_at ? announcement.expire_at.slice(0, 16) : "");
+    setFormExpireAt(
+      announcement.expire_at ? announcement.expire_at.slice(0, 16) : ""
+    );
     setShowAnnouncementDialog(true);
   };
 
   const handleDeleteAnnouncement = async (id: number) => {
     try {
       await deleteAnnouncement(id);
-      toast.success(t("pages.home.announcementDeleted", { defaultValue: "Announcement deleted" }));
+      toast.success(
+        t("pages.home.announcementDeleted", {
+          defaultValue: "Announcement deleted",
+        })
+      );
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     } catch (err) {
       console.error("Failed to delete announcement:", err);
-      toast.error(t("pages.home.announcementDeleteError", { defaultValue: "Failed to delete announcement" }));
+      toast.error(
+        t("pages.home.announcementDeleteError", {
+          defaultValue: "Failed to delete announcement",
+        })
+      );
     }
   };
 
   const handleSubmitAnnouncement = async () => {
     if (!formTitle.trim() || !formBody.trim() || !formPublishAt) {
-      toast.error(t("pages.home.fillRequiredFields", { defaultValue: "Please fill all required fields" }));
+      toast.error(
+        t("pages.home.fillRequiredFields", {
+          defaultValue: "Please fill all required fields",
+        })
+      );
       return;
     }
 
     if (formScope === "TRACK" && isStaffUser && !formTrack) {
-      toast.error(t("pages.home.selectTrack", { defaultValue: "Please select a track" }));
+      toast.error(
+        t("pages.home.selectTrack", { defaultValue: "Please select a track" })
+      );
       return;
     }
 
     setIsSubmitting(true);
     try {
       const publishAt = new Date(formPublishAt).toISOString();
-      const expireAt = formExpireAt ? new Date(formExpireAt).toISOString() : null;
+      const expireAt = formExpireAt
+        ? new Date(formExpireAt).toISOString()
+        : null;
 
       if (editingAnnouncement) {
         // Update existing announcement
@@ -597,7 +673,7 @@ export function HomePage() {
           publish_at: publishAt,
           expire_at: expireAt,
         };
-        
+
         if (isStaffUser) {
           payload.scope = formScope;
           if (formScope === "TRACK") {
@@ -605,8 +681,15 @@ export function HomePage() {
           }
         }
 
-        const updated = await updateAnnouncement(editingAnnouncement.id, payload);
-        toast.success(t("pages.home.announcementUpdated", { defaultValue: "Announcement updated" }));
+        const updated = await updateAnnouncement(
+          editingAnnouncement.id,
+          payload
+        );
+        toast.success(
+          t("pages.home.announcementUpdated", {
+            defaultValue: "Announcement updated",
+          })
+        );
         setAnnouncements((prev) =>
           prev.map((a) => (a.id === updated.id ? updated : a))
         );
@@ -620,14 +703,18 @@ export function HomePage() {
             publish_at: publishAt,
             expire_at: expireAt,
           };
-          
+
           // Only include track if instructor trains multiple tracks
           if (formTrack) {
             payload.track = parseInt(formTrack);
           }
 
           const created = await createInstructorAnnouncement(payload);
-          toast.success(t("pages.home.announcementCreated", { defaultValue: "Announcement created" }));
+          toast.success(
+            t("pages.home.announcementCreated", {
+              defaultValue: "Announcement created",
+            })
+          );
           setAnnouncements((prev) => [created, ...prev]);
         } else {
           // Staff uses regular endpoint
@@ -638,13 +725,17 @@ export function HomePage() {
             publish_at: publishAt,
             expire_at: expireAt,
           };
-          
+
           if (formScope === "TRACK") {
             payload.track = parseInt(formTrack);
           }
 
           const created = await createAnnouncement(payload);
-          toast.success(t("pages.home.announcementCreated", { defaultValue: "Announcement created" }));
+          toast.success(
+            t("pages.home.announcementCreated", {
+              defaultValue: "Announcement created",
+            })
+          );
           setAnnouncements((prev) => [created, ...prev]);
         }
       }
@@ -652,8 +743,10 @@ export function HomePage() {
     } catch (err: any) {
       console.error("Failed to save announcement:", err);
       toast.error(
-        err?.data?.detail || 
-        t("pages.home.announcementSaveError", { defaultValue: "Failed to save announcement" })
+        err?.data?.detail ||
+          t("pages.home.announcementSaveError", {
+            defaultValue: "Failed to save announcement",
+          })
       );
     } finally {
       setIsSubmitting(false);
@@ -688,7 +781,8 @@ export function HomePage() {
     );
   }
 
-  const hasContent = announcements.length > 0 || polls.length > 0;
+  const hasContent =
+    announcements.length > 0 || polls.length > 0 || leaderboard.length > 0;
 
   // Map track names to colors (matching TrackPage.tsx)
   function getTrackTheme(trackName?: string) {
@@ -700,7 +794,8 @@ export function HomePage() {
         borderColor: "#34d399",
         ring: "ring-[#34d399]/50",
         glow: "shadow-[#34d399]/50",
-        badge: "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
+        badge:
+          "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
         text: "text-[#34d399] dark:text-[#34d399]",
       };
     }
@@ -715,7 +810,8 @@ export function HomePage() {
         borderColor: "#6366f1",
         ring: "ring-[#6366f1]/50",
         glow: "shadow-[#6366f1]/50",
-        badge: "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
+        badge:
+          "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
         text: "text-[#6366f1] dark:text-[#6366f1]",
       };
     }
@@ -726,7 +822,8 @@ export function HomePage() {
         borderColor: "#0ea5e9",
         ring: "ring-[#0ea5e9]/50",
         glow: "shadow-[#0ea5e9]/50",
-        badge: "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
+        badge:
+          "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
         text: "text-[#0ea5e9] dark:text-[#0ea5e9]",
       };
     }
@@ -737,38 +834,36 @@ export function HomePage() {
       borderColor: "#eab308",
       ring: "ring-yellow-400/50",
       glow: "shadow-yellow-500/50",
-      badge: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+      badge:
+        "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
       text: "text-yellow-700 dark:text-yellow-300",
     };
   }
 
-  // Hardcoded leaderboard data for past week
-  const leaderboardData = [
-    {
-      track: "Software & App Development",
-      trackAr: "تطوير البرمجيات والتطبيقات",
-      name: "Abdalrhman",
-      nameAr: "عبدالرحمن محمد بلعم",
-      email: "",
-      image: "/assets/TraineePictures/عبدالرحمن بلعم.jpg",
-    },
-    {
-      track: "AI & Data Analysis",
-      trackAr: "الذكاء الاصطناعي وتحليل البيانات",
-      name: "Mohammed Ali Shawish",
-      nameAr: "محمد علي شاوش",
-      email: "",
-      image: "/assets/TraineePictures/محمد الشاوش.jpg",
-    },
-    {
-      track: "Networking & Telecommunications",
-      trackAr: "الشبكات والاتصالات",
-      name: "Ahmed Mohammed Alfakhry",
-      nameAr: "أحمد محمد الفاخري",
-      email: "",
-      image: "/assets/TraineePictures/أحمد محمد خليفة الفاخري.jpg",
-    },
-  ];
+  // Helper to extract week label and topic from module title (e.g. "Week 3: UI UX")
+  function parseModuleTitle(moduleTitle: string): {
+    weekLabel: string;
+    topic: string;
+  } {
+    const match = moduleTitle.match(/Week\s*(\d+)\s*:?\s*(.*)/i);
+    if (match) {
+      const weekNumber = match[1];
+      const topic = match[2]?.trim() ?? "";
+      return {
+        weekLabel: `Week ${weekNumber}`,
+        topic,
+      };
+    }
+    return {
+      weekLabel: "",
+      topic: moduleTitle,
+    };
+  }
+
+  const leaderboardWeekLabel =
+    leaderboard.length > 0
+      ? parseModuleTitle(leaderboard[0].module_title).weekLabel
+      : "";
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
@@ -779,124 +874,164 @@ export function HomePage() {
       </div>
 
       {/* Leaderboard Section */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <IconTrophy className="w-5 h-5 text-yellow-500" />
-          {t("pages.home.leaderboard", { defaultValue: "Leaderboard - Best of the Week" })}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {leaderboardData.map((winner, index) => {
-            // Get track-specific theme colors
-            const trackTheme = getTrackTheme(winner.track);
-            
-            return (
-              <Card 
-                key={index} 
-                className={cn(
-                  "relative overflow-hidden transition-all duration-300 hover:shadow-lg",
-                  "ring-2",
-                  trackTheme.ring
-                )}
-              >
-                {/* Confetti effect for all winners */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-                  {[...Array(30)].map((_, i) => {
-                    const colors = ["bg-yellow-400", "bg-red-400", "bg-blue-400", "bg-green-400", "bg-purple-400", "bg-pink-400"];
-                    const color = colors[i % colors.length];
-                    const size = Math.random() * 4 + 2;
-                    const left = Math.random() * 100;
-                    const delay = Math.random() * 2;
-                    const duration = Math.random() * 2 + 1;
-                    
-                    return (
-                      <div
-                        key={i}
-                        className={cn("absolute rounded-full", color)}
-                        style={{
-                          width: `${size}px`,
-                          height: `${size}px`,
-                          left: `${left}%`,
-                          top: "-10px",
-                          animation: `confetti-fall ${duration}s ${delay}s infinite`,
-                          opacity: 0.8,
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-                
-                {/* Shine effect */}
-                <div 
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
-                  style={{
-                    animation: "shine 3s infinite",
-                    transform: "translateX(-100%)",
-                  }}
-                />
-                
-                <CardContent className="p-5 relative z-10">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    {/* Winner's picture */}
-                    <div className="relative">
-                      <div 
-                        className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg"
-                        style={{ borderColor: trackTheme.borderColor }}
-                      >
-                        <img
-                          src={winner.image}
-                          alt={winner.name}
-                          className="w-full h-full object-cover"
-                          style={{ 
-                            objectPosition: 
-                              winner.name === "Mohammed Ali Shawish" || winner.name === "Ahmed Mohammed Alfakhry"
-                                ? "55% 35%"
-                                : "center 35%",
-                            transform: "scale(1.1)"
+      {leaderboard.length > 0 && (
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <IconTrophy className="w-5 h-5 text-yellow-500" />
+              {t("pages.home.leaderboard", {
+                defaultValue: leaderboardWeekLabel
+                  ? `Leaderboard - Best of ${leaderboardWeekLabel}`
+                  : "Leaderboard - Best of the Week",
+              })}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {leaderboard.map((item) => {
+              const topTrainee = item.trainees[0];
+              if (!topTrainee) return null;
+
+              const trackTheme = getTrackTheme(item.track_name);
+              const { topic } = parseModuleTitle(item.module_title);
+
+              return (
+                <Card
+                  key={item.track_id}
+                  className={cn(
+                    "relative overflow-hidden transition-all duration-300 hover:shadow-lg",
+                    "ring-2",
+                    trackTheme.ring
+                  )}
+                >
+                  {/* Confetti effect for all winners */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                    {[...Array(30)].map((_, i) => {
+                      const colors = [
+                        "bg-yellow-400",
+                        "bg-red-400",
+                        "bg-blue-400",
+                        "bg-green-400",
+                        "bg-purple-400",
+                        "bg-pink-400",
+                      ];
+                      const color = colors[i % colors.length];
+                      const size = Math.random() * 4 + 2;
+                      const left = Math.random() * 100;
+                      const delay = Math.random() * 2;
+                      const duration = Math.random() * 2 + 1;
+
+                      return (
+                        <div
+                          key={i}
+                          className={cn("absolute rounded-full", color)}
+                          style={{
+                            width: `${size}px`,
+                            height: `${size}px`,
+                            left: `${left}%`,
+                            top: "-10px",
+                            animation: `confetti-fall ${duration}s ${delay}s infinite`,
+                            opacity: 0.8,
                           }}
                         />
-                      </div>
-                      {/* Trophy icon overlay */}
-                      <div className={cn(
-                        "absolute -bottom-1 -right-1 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-background",
-                        trackTheme.gradient,
-                        trackTheme.glow
-                      )}>
-                        <IconTrophy className="w-5 h-5 text-white" />
-                      </div>
-                      {/* Position emoji badge - all are 1st place */}
-                      <div className="absolute top-0 right-0 text-2xl animate-bounce z-10">
-                        🥇
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 w-full">
-                      <div className="mb-2">
-                        <Badge 
-                          variant="secondary" 
-                          className={cn("text-xs mb-2 font-semibold", trackTheme.badge)}
-                        >
-                          {winner.track}
-                        </Badge>
-                        <h3 className={cn("font-bold text-lg mt-2", trackTheme.text)}>
-                          {winner.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">
-                          {winner.nameAr}
-                        </p>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                  {/* Shine effect */}
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+                    style={{
+                      animation: "shine 3s infinite",
+                      transform: "translateX(-100%)",
+                    }}
+                  />
+
+                  <CardContent className="p-5 relative z-10">
+                    <div className="flex flex-col items-center text-center gap-4">
+                      {/* Winner's picture */}
+                      <div className="relative">
+                        <div
+                          className="w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg bg-muted flex items-center justify-center"
+                          style={{ borderColor: trackTheme.borderColor }}
+                        >
+                          {topTrainee.avatar ? (
+                            <img
+                              src={topTrainee.avatar}
+                              alt={topTrainee.name}
+                              className="w-full h-full object-cover"
+                              style={{
+                                objectPosition: "center 35%",
+                                transform: "scale(1.1)",
+                              }}
+                            />
+                          ) : (
+                            <span className="text-3xl font-semibold">
+                              {topTrainee.name.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        {/* Trophy icon overlay */}
+                        <div
+                          className={cn(
+                            "absolute -bottom-1 -right-1 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-background",
+                            trackTheme.gradient,
+                            trackTheme.glow
+                          )}
+                        >
+                          <IconTrophy className="w-5 h-5 text-white" />
+                        </div>
+                        {/* Position emoji badge - all are 1st place */}
+                        <div className="absolute top-0 right-0 text-2xl animate-bounce z-10">
+                          🥇
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0 w-full">
+                        <div className="mb-2">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-xs mb-2 font-semibold",
+                              trackTheme.badge
+                            )}
+                          >
+                            {item.track_name}
+                          </Badge>
+                          <h3
+                            className={cn(
+                              "font-bold text-lg mt-2",
+                              trackTheme.text
+                            )}
+                          >
+                            {topTrainee.full_name || topTrainee.name}
+                          </h3>
+                          {topTrainee.name && (
+                            <p className="text-sm text-muted-foreground mt-1 font-medium">
+                              {topTrainee.name}
+                            </p>
+                          )}
+                          {topic && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {topic}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {!hasContent && (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              {t("pages.home.noContent", { defaultValue: "No announcements or polls available" })}
+              {t("pages.home.noContent", {
+                defaultValue: "No announcements or polls available",
+              })}
             </p>
           </CardContent>
         </Card>
@@ -912,7 +1047,9 @@ export function HomePage() {
             {canEditAnnouncements && (
               <Button onClick={handleCreateAnnouncement} size="sm">
                 <IconPlus className="h-4 w-4 mr-2" />
-                {t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+                {t("pages.home.createAnnouncement", {
+                  defaultValue: "Create Announcement",
+                })}
               </Button>
             )}
           </div>
@@ -921,7 +1058,9 @@ export function HomePage() {
               key={announcement.id}
               announcement={announcement}
               onEdit={canEditAnnouncements ? handleEditAnnouncement : undefined}
-              onDelete={canEditAnnouncements ? handleDeleteAnnouncement : undefined}
+              onDelete={
+                canEditAnnouncements ? handleDeleteAnnouncement : undefined
+              }
               canEdit={canEditAnnouncements}
               currentUserId={user?.id}
               isStaffUser={isStaffUser}
@@ -939,7 +1078,9 @@ export function HomePage() {
             </h2>
             <Button onClick={handleCreateAnnouncement} size="sm">
               <IconPlus className="h-4 w-4 mr-2" />
-              {t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+              {t("pages.home.createAnnouncement", {
+                defaultValue: "Create Announcement",
+              })}
             </Button>
           </div>
         </div>
@@ -958,18 +1099,29 @@ export function HomePage() {
       )}
 
       {/* Announcement Form Dialog */}
-      <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
+      <Dialog
+        open={showAnnouncementDialog}
+        onOpenChange={setShowAnnouncementDialog}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingAnnouncement
-                ? t("pages.home.editAnnouncement", { defaultValue: "Edit Announcement" })
-                : t("pages.home.createAnnouncement", { defaultValue: "Create Announcement" })}
+                ? t("pages.home.editAnnouncement", {
+                    defaultValue: "Edit Announcement",
+                  })
+                : t("pages.home.createAnnouncement", {
+                    defaultValue: "Create Announcement",
+                  })}
             </DialogTitle>
             <DialogDescription>
               {editingAnnouncement
-                ? t("pages.home.editAnnouncementDesc", { defaultValue: "Update the announcement details" })
-                : t("pages.home.createAnnouncementDesc", { defaultValue: "Create a new announcement for your track" })}
+                ? t("pages.home.editAnnouncementDesc", {
+                    defaultValue: "Update the announcement details",
+                  })
+                : t("pages.home.createAnnouncementDesc", {
+                    defaultValue: "Create a new announcement for your track",
+                  })}
             </DialogDescription>
           </DialogHeader>
 
@@ -982,7 +1134,9 @@ export function HomePage() {
                 id="title"
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
-                placeholder={t("pages.home.announcementTitlePlaceholder", { defaultValue: "Enter announcement title" })}
+                placeholder={t("pages.home.announcementTitlePlaceholder", {
+                  defaultValue: "Enter announcement title",
+                })}
                 disabled={isSubmitting}
               />
             </div>
@@ -995,7 +1149,9 @@ export function HomePage() {
                 id="body"
                 value={formBody}
                 onChange={(e) => setFormBody(e.target.value)}
-                placeholder={t("pages.home.announcementBodyPlaceholder", { defaultValue: "Enter announcement content" })}
+                placeholder={t("pages.home.announcementBodyPlaceholder", {
+                  defaultValue: "Enter announcement content",
+                })}
                 rows={6}
                 disabled={isSubmitting}
               />
@@ -1043,11 +1199,15 @@ export function HomePage() {
                   disabled={isSubmitting || isLoadingTracks}
                 >
                   <SelectTrigger id="track">
-                    <SelectValue placeholder={
-                      isLoadingTracks
-                        ? t("common.loading", { defaultValue: "Loading..." })
-                        : t("pages.home.selectTrack", { defaultValue: "Select a track" })
-                    } />
+                    <SelectValue
+                      placeholder={
+                        isLoadingTracks
+                          ? t("common.loading", { defaultValue: "Loading..." })
+                          : t("pages.home.selectTrack", {
+                              defaultValue: "Select a track",
+                            })
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {tracks.map((track) => (
@@ -1059,7 +1219,9 @@ export function HomePage() {
                 </Select>
                 {!isStaffUser && isInstructorUser && (
                   <p className="text-xs text-muted-foreground">
-                    {t("pages.home.trackOptional", { defaultValue: "Optional if you train only one track" })}
+                    {t("pages.home.trackOptional", {
+                      defaultValue: "Optional if you train only one track",
+                    })}
                   </p>
                 )}
               </div>
