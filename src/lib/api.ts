@@ -245,6 +245,7 @@ export type CurrentUserResponse = {
   is_staff?: boolean;
   groups: string[];
   group_id?: number; // Add group_id field for permission system
+  avatar?: string | null;
 };
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {

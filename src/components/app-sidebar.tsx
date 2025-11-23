@@ -193,7 +193,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         {user ? (
-          <NavUser user={{ name: user.name, email: user.email }} />
+          <NavUser
+            user={{
+              name: user.name,
+              email: user.email,
+              avatar: (user as any).avatar ?? undefined,
+            }}
+          />
         ) : null}
       </SidebarFooter>
     </Sidebar>

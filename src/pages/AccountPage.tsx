@@ -167,7 +167,11 @@ export function AccountPage() {
         <CardContent className="flex flex-col gap-8">
           <div className="flex items-center gap-6">
             <ConsistentAvatar
-              user={{ name: user.name, email: user.email }}
+              user={{
+                name: user.name,
+                email: user.email,
+                avatar: (user as any).avatar,
+              }}
               className="size-16 text-xl"
             />
             <div className="flex flex-col gap-1">
