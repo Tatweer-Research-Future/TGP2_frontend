@@ -213,8 +213,7 @@ export function TraineeMonitoringPage() {
   // Filter logic
   const filteredTrainees = useMemo(() => {
     const filtered = trainees.filter((trainee) => {
-      const matchesTrack =
-        !selectedTrack || trainee.track === selectedTrack;
+      const matchesTrack = !selectedTrack || trainee.track === selectedTrack;
 
       return matchesTrack;
     });
@@ -305,9 +304,7 @@ export function TraineeMonitoringPage() {
               <div className="flex flex-col items-center justify-center py-8 gap-4">
                 <div className="text-muted-foreground">{error}</div>
                 <Button
-                  onClick={() =>
-                    fetchTraineePerformance()
-                  }
+                  onClick={() => fetchTraineePerformance()}
                   variant="outline"
                 >
                   <IconRefresh className="size-4 mr-2" />
@@ -513,9 +510,6 @@ export function TraineeMonitoringPage() {
                       <TableCell className="text-center">
                         {trainee.module_orders.length > 0 ? (
                           <div className="flex flex-col gap-1 items-center">
-                            <div className="text-sm font-medium">
-                              Sum: {trainee.order_sum}
-                            </div>
                             <div className="text-xs text-muted-foreground space-y-0.5">
                               {trainee.module_orders.map((order) => (
                                 <div key={order.module_id}>
