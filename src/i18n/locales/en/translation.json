@@ -315,7 +315,8 @@
       "phone": "Phone",
       "status": "Status",
       "date": "Date",
-      "actions": "Actions"
+      "actions": "Actions",
+      "rank": "Rank"
     },
     "pagination": {
       "previous": "Previous",

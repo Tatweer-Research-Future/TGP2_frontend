@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IconSearch, IconCopy, IconRefresh } from "@tabler/icons-react";
+import { IconCopy, IconRefresh } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 
@@ -44,20 +43,17 @@ type Trainee = {
 
 export function TraineeMonitoringPage() {
   const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTrack, setSelectedTrack] = useState<string>("all");
+  const [selectedTrack, setSelectedTrack] = useState<string>("");
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch trainee performance data from backend
-  const fetchTraineePerformance = useCallback(async (track?: string) => {
+  const fetchTraineePerformance = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getTraineePerformance(
-        track === "all" ? undefined : track
-      );
+      const response = await getTraineePerformance();
 
       // Flatten the tracks array into a single array of trainees with track info
       const allTrainees: Trainee[] = [];
@@ -72,6 +68,12 @@ export function TraineeMonitoringPage() {
       });
 
       setTrainees(allTrainees);
+      setSelectedTrack((current) => {
+        if (current) {
+          return current;
+        }
+        return response.tracks[0]?.track || "";
+      });
     } catch (err) {
       console.error("Failed to fetch trainee performance:", err);
       const error = err as { status?: number; message?: string };
@@ -87,12 +89,6 @@ export function TraineeMonitoringPage() {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchTraineePerformance(
-      selectedTrack === "all" ? undefined : selectedTrack
-    );
-  }, [selectedTrack, fetchTraineePerformance]);
 
   // Get track color function (same as AttendancePage)
   const getTrackColor = (track: string) => {
@@ -120,8 +116,24 @@ export function TraineeMonitoringPage() {
     );
   };
 
-  // Get available tracks for filter
-  const getAvailableTracks = () => {
+  const getRankBadgeClasses = (rank?: number) => {
+    if (!rank) {
+      return "bg-muted/30 text-muted-foreground border-border/50";
+    }
+    if (rank === 1) {
+      return "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-500/40";
+    }
+    if (rank === 2) {
+      return "bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-500/20 dark:text-slate-100 dark:border-slate-500/40";
+    }
+    if (rank === 3) {
+      return "bg-orange-100 text-orange-900 border-orange-200 dark:bg-orange-500/20 dark:text-orange-100 dark:border-orange-500/40";
+    }
+    return "bg-muted/20 text-foreground border-border/60";
+  };
+
+  // Available tracks derived from current data
+  const availableTracks = useMemo(() => {
     const tracks = new Set<string>();
     trainees.forEach((trainee) => {
       if (trainee.track) {
@@ -129,27 +141,95 @@ export function TraineeMonitoringPage() {
       }
     });
     return Array.from(tracks).sort();
-  };
+  }, [trainees]);
 
-  // Filter and search logic
-  const filteredTrainees = useMemo(() => {
-    return trainees.filter((trainee) => {
-      const matchesSearch =
-        trainee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trainee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        trainee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (trainee.full_name && trainee.full_name.includes(searchTerm));
+  useEffect(() => {
+    fetchTraineePerformance();
+  }, [fetchTraineePerformance]);
 
-      const matchesTrack =
-        selectedTrack === "all" || trainee.track === selectedTrack;
+  useEffect(() => {
+    if (!availableTracks.length) {
+      if (selectedTrack) {
+        setSelectedTrack("");
+      }
+      return;
+    }
+    if (!selectedTrack) {
+      setSelectedTrack(availableTracks[0]);
+      return;
+    }
+    if (!availableTracks.includes(selectedTrack)) {
+      setSelectedTrack(availableTracks[0] || "");
+    }
+  }, [availableTracks, selectedTrack]);
 
-      return matchesSearch && matchesTrack;
+  const trackRankings = useMemo(() => {
+    const rankingMap = new Map<number, number>();
+    const trackGroups = trainees.reduce<Record<string, Trainee[]>>(
+      (acc, trainee) => {
+        if (!trainee.track) {
+          return acc;
+        }
+        if (!acc[trainee.track]) {
+          acc[trainee.track] = [];
+        }
+        acc[trainee.track].push(trainee);
+        return acc;
+      },
+      {}
+    );
+
+    const getOrderValue = (trainee: Trainee) =>
+      trainee.module_orders.length > 0
+        ? trainee.order_sum
+        : Number.MAX_SAFE_INTEGER;
+
+    Object.values(trackGroups).forEach((group) => {
+      group
+        .slice()
+        .sort((a, b) => {
+          const orderDiff = getOrderValue(a) - getOrderValue(b);
+          if (orderDiff !== 0) {
+            return orderDiff;
+          }
+          if (b.post_score_sum !== a.post_score_sum) {
+            return b.post_score_sum - a.post_score_sum;
+          }
+          if (b.attendance_days !== a.attendance_days) {
+            return b.attendance_days - a.attendance_days;
+          }
+          const nameA = a.full_name || a.name || "";
+          const nameB = b.full_name || b.name || "";
+          return nameA.localeCompare(nameB);
+        })
+        .forEach((trainee, index) => {
+          rankingMap.set(trainee.user_id, index + 1);
+        });
     });
-  }, [trainees, searchTerm, selectedTrack]);
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-  };
+    return rankingMap;
+  }, [trainees]);
+
+  // Filter logic
+  const filteredTrainees = useMemo(() => {
+    const filtered = trainees.filter((trainee) => {
+      const matchesTrack =
+        !selectedTrack || trainee.track === selectedTrack;
+
+      return matchesTrack;
+    });
+
+    const getRank = (trainee: Trainee) =>
+      trackRankings.get(trainee.user_id) ?? Number.MAX_SAFE_INTEGER;
+
+    return filtered.sort((a, b) => {
+      const rankDiff = getRank(a) - getRank(b);
+      if (rankDiff !== 0) {
+        return rankDiff;
+      }
+      return (a.full_name || a.name).localeCompare(b.full_name || b.name);
+    });
+  }, [trainees, selectedTrack, trackRankings]);
 
   // Copy all visible names (all filtered trainees) to clipboard
   const handleCopyVisibleNames = async () => {
@@ -226,9 +306,7 @@ export function TraineeMonitoringPage() {
                 <div className="text-muted-foreground">{error}</div>
                 <Button
                   onClick={() =>
-                    fetchTraineePerformance(
-                      selectedTrack === "all" ? undefined : selectedTrack
-                    )
+                    fetchTraineePerformance()
                   }
                   variant="outline"
                 >
@@ -257,64 +335,28 @@ export function TraineeMonitoringPage() {
             </p>
           </div>
           <div className="flex flex-col gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder={t("common.placeholders.searchPlaceholder")}
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Track Filter */}
-              <div className="flex gap-2 flex-wrap">
+            {/* Track Filter */}
+            <div className="flex gap-2 flex-wrap">
+              {availableTracks.map((track) => (
                 <Button
-                  variant={selectedTrack === "all" ? "default" : "outline"}
+                  key={track}
+                  variant={selectedTrack === track ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedTrack("all")}
+                  onClick={() => setSelectedTrack(track)}
+                  className={
+                    selectedTrack === track
+                      ? ""
+                      : `border-2 ${getTrackColor(track).split(" ")[2]}`
+                  }
                 >
-                  All Tracks
+                  <div
+                    className={`w-2 h-2 rounded-full mr-2 ${
+                      getTrackColor(track).split(" ")[0]
+                    }`}
+                  />
+                  {track}
                 </Button>
-                {getAvailableTracks().map((track) => (
-                  <Button
-                    key={track}
-                    variant={selectedTrack === track ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedTrack(track)}
-                    className={
-                      selectedTrack === track
-                        ? ""
-                        : `border-2 ${getTrackColor(track).split(" ")[2]}`
-                    }
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full mr-2 ${
-                        getTrackColor(track).split(" ")[0]
-                      }`}
-                    />
-                    {track}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Clear Filters Button */}
-              {(searchTerm || selectedTrack !== "all") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedTrack("all");
-                  }}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Clear Filters
-                </Button>
-              )}
+              ))}
             </div>
           </div>
         </div>
@@ -327,14 +369,6 @@ export function TraineeMonitoringPage() {
             <div>
               {t("pages.trainee_monitoring.title")} {t("common.labels.list")}
             </div>
-            {(searchTerm || selectedTrack !== "all") && (
-              <div className="text-sm text-muted-foreground font-normal">
-                {searchTerm && (
-                  <span className="mr-2">Search: "{searchTerm}"</span>
-                )}
-                {selectedTrack !== "all" && <span>Track: {selectedTrack}</span>}
-              </div>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -342,7 +376,7 @@ export function TraineeMonitoringPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-center">
-                  {t("pages.trainee_monitoring.track")}
+                  {t("table.headers.rank")}
                 </TableHead>
                 {/* Name column: left-align header and cells for better visual consistency */}
                 <TableHead className="text-left">
@@ -391,22 +425,21 @@ export function TraineeMonitoringPage() {
                     (sum, score) => sum + score.score_max,
                     0
                   );
+                  const rank = trackRankings.get(trainee.user_id);
 
                   return (
                     <TableRow key={trainee.user_id}>
-                      <TableCell className="text-center">
-                        {trainee.track ? (
+                      <TableCell className="text-center font-semibold">
+                        {rank ? (
                           <div
-                            className={`text-xs font-medium px-2 py-1 rounded-full border inline-block ${getTrackColor(
-                              trainee.track
+                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full border text-sm ${getRankBadgeClasses(
+                              rank
                             )}`}
                           >
-                            {trainee.track}
+                            #{rank}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-xs">
-                            -
-                          </span>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       {/* Name column cells aligned with header (left) */}
