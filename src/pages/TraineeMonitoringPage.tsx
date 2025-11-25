@@ -27,6 +27,9 @@ type Trainee = {
   absent_days: number;
   post_score_sum: number;
   order_sum: number;
+  total_break_time?: number | string | null;
+  total_break_hours?: number | string | null;
+  break_hours?: number | string | null;
   post_scores: Array<{
     module_id: number;
     module_title: string;
@@ -114,6 +117,21 @@ export function TraineeMonitoringPage() {
       colorMap[track] ||
       "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30"
     );
+  };
+
+  const formatBreakHours = (value?: number | string | null) => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (typeof value === "number") {
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+      const formatted = value % 1 === 0 ? value.toString() : value.toFixed(2);
+      return `${formatted}h`;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
   };
 
   const getRankBadgeClasses = (rank?: number) => {
@@ -395,6 +413,9 @@ export function TraineeMonitoringPage() {
                 <TableHead className="text-center">
                   {t("pages.trainee_monitoring.attendanceStats")}
                 </TableHead>
+                <TableHead className="text-center">
+                  {t("pages.trainee_monitoring.breakHours")}
+                </TableHead>
                 <TableHead className="text-center">Post Exam Scores</TableHead>
                 <TableHead className="text-center">Module Orders</TableHead>
               </TableRow>
@@ -402,7 +423,7 @@ export function TraineeMonitoringPage() {
             <TableBody>
               {filteredTrainees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <div className="text-muted-foreground">
                       {t("pages.trainee_monitoring.noCandidates")}
                     </div>
@@ -423,6 +444,12 @@ export function TraineeMonitoringPage() {
                     0
                   );
                   const rank = trackRankings.get(trainee.user_id);
+                  const breakHours = formatBreakHours(
+                    trainee.total_break_time ??
+                      trainee.total_break_hours ??
+                      trainee.break_hours ??
+                      null
+                  );
 
                   return (
                     <TableRow key={trainee.user_id}>
@@ -479,6 +506,17 @@ export function TraineeMonitoringPage() {
                             {attendanceRate}%
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {breakHours ? (
+                          <span className="text-sm font-medium">
+                            {breakHours}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {trainee.post_scores.length > 0 ? (

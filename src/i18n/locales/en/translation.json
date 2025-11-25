@@ -256,7 +256,8 @@
       "absent": "Absent",
       "totalDays": "Total Days",
       "allTracks": "All Tracks",
-      "track": "Track"
+      "track": "Track",
+      "breakHours": "Break Hours"
     },
     "attendance": {
       "title": "Attendance",

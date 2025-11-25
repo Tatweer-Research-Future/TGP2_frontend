@@ -255,7 +255,8 @@
       "absent": "غائب",
       "totalDays": "إجمالي الأيام",
       "allTracks": "جميع المسارات",
-      "track": "المسار"
+      "track": "المسار",
+      "breakHours": "ساعات الاستراحة"
     },
     "attendance": {
       "title": "الحضور",

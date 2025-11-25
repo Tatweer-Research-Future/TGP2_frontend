@@ -389,6 +389,9 @@ export type TraineePerformanceResponse = {
       absent_days: number;
       post_score_sum: number;
       order_sum: number;
+      total_break_time?: number | string | null;
+      total_break_hours?: number | string | null;
+      break_hours?: number | string | null;
       post_scores: Array<{
         module_id: number;
         module_title: string;
