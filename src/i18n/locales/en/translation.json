@@ -257,7 +257,9 @@
       "totalDays": "Total Days",
       "allTracks": "All Tracks",
       "track": "Track",
-      "breakHours": "Break Hours"
+      "breakHours": "Break Hours",
+      "weekFilter": "Week Filter",
+      "allWeeks": "All Weeks"
     },
     "attendance": {
       "title": "Attendance",

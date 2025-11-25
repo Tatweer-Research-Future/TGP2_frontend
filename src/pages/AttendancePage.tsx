@@ -100,9 +100,17 @@ function getTraineeId(log: AttendanceLog): number | null {
 
 function getTraineeName(log: AttendanceLog): string | null {
   if (typeof log.trainee !== "number") {
-    return log.trainee.name || log.trainee_email || null;
+    return (
+      (typeof log.trainee.full_name === "string" &&
+        log.trainee.full_name.trim().length > 0 &&
+        log.trainee.full_name) ||
+      log.trainee.name ||
+      log.trainee.email ||
+      log.trainee_email ||
+      null
+    );
   }
-  return log.trainee_name || log.trainee_email || null;
+  return log.trainee_full_name || log.trainee_name || log.trainee_email || null;
 }
 
 function getTraineeEmail(log: AttendanceLog): string | null {
@@ -192,9 +200,13 @@ function buildOverviewFromLogs({
   const usersMap = new Map<number, OverviewUserWithMeta>();
 
   candidates.forEach((candidate) => {
+    const preferredName =
+      (candidate.full_name && candidate.full_name.trim()) ||
+      candidate.name ||
+      candidate.email;
     const user: OverviewUserWithMeta = {
       user_id: candidate.id,
-      user_name: candidate.name || candidate.full_name || candidate.email,
+      user_name: preferredName,
       user_email: candidate.email,
       events: createEmptyEventEntries(),
       track: deriveTrackName(candidate),

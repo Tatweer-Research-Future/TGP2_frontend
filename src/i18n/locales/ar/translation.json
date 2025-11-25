@@ -256,7 +256,9 @@
       "totalDays": "إجمالي الأيام",
       "allTracks": "جميع المسارات",
       "track": "المسار",
-      "breakHours": "ساعات الاستراحة"
+      "breakHours": "ساعات الاستراحة",
+      "weekFilter": "تصفية حسب الأسبوع",
+      "allWeeks": "جميع الأسابيع"
     },
     "attendance": {
       "title": "الحضور",

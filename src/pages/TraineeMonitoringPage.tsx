@@ -10,6 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { IconCopy, IconRefresh } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
@@ -47,6 +54,7 @@ type Trainee = {
 export function TraineeMonitoringPage() {
   const { t } = useTranslation();
   const [selectedTrack, setSelectedTrack] = useState<string>("");
+  const [selectedWeek, setSelectedWeek] = useState<string>("all");
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,31 +101,52 @@ export function TraineeMonitoringPage() {
     }
   }, []);
 
-  // Get track color function (same as AttendancePage)
-  const getTrackColor = (track: string) => {
-    const colorMap: Record<string, string> = {
-      "Software & App Development":
-        "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:border-blue-500/30",
-      "Networking & Telecommunications":
-        "bg-green-100 text-green-800 border-green-200 dark:bg-green-500/20 dark:text-green-200 dark:border-green-500/30",
-      "AI & Data Analysis":
-        "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-200 dark:border-purple-500/30",
-      Cybersecurity:
-        "bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-200 dark:border-red-500/30",
-      "Digital Marketing":
-        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-200 dark:border-yellow-500/30",
-      "Cloud Computing":
-        "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/30",
-      "IoT & Embedded Systems":
-        "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-500/20 dark:text-pink-200 dark:border-pink-500/30",
-      "Blockchain & Cryptocurrency":
-        "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/30",
-    };
-    return (
-      colorMap[track] ||
-      "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-500/20 dark:text-gray-200 dark:border-gray-500/30"
-    );
+  const trackStyleMap: Record<
+    string,
+    {
+      dot: string;
+      border: string;
+    }
+  > = {
+    "Software & App Development": {
+      dot: "bg-blue-500 dark:bg-blue-400",
+      border: "border-blue-400/70",
+    },
+    "Networking & Telecommunications": {
+      dot: "bg-green-500 dark:bg-green-400",
+      border: "border-green-400/70",
+    },
+    "AI & Data Analysis": {
+      dot: "bg-purple-500 dark:bg-purple-400",
+      border: "border-purple-400/70",
+    },
+    Cybersecurity: {
+      dot: "bg-red-500 dark:bg-red-400",
+      border: "border-red-400/70",
+    },
+    "Digital Marketing": {
+      dot: "bg-yellow-400 dark:bg-yellow-300",
+      border: "border-yellow-400/70",
+    },
+    "Cloud Computing": {
+      dot: "bg-indigo-500 dark:bg-indigo-400",
+      border: "border-indigo-400/70",
+    },
+    "IoT & Embedded Systems": {
+      dot: "bg-pink-500 dark:bg-pink-400",
+      border: "border-pink-400/70",
+    },
+    "Blockchain & Cryptocurrency": {
+      dot: "bg-orange-500 dark:bg-orange-400",
+      border: "border-orange-400/70",
+    },
   };
+
+  const getTrackStyle = (track: string) =>
+    trackStyleMap[track] || {
+      dot: "bg-gray-400 dark:bg-gray-500",
+      border: "border-gray-300/80",
+    };
 
   const formatBreakHours = (value?: number | string | null) => {
     if (value === null || value === undefined) {
@@ -161,6 +190,28 @@ export function TraineeMonitoringPage() {
     return Array.from(tracks).sort();
   }, [trainees]);
 
+  const availableWeeks = useMemo(() => {
+    const weeks = new Set<string>();
+    trainees.forEach((trainee) => {
+      if (selectedTrack && trainee.track !== selectedTrack) {
+        return;
+      }
+      trainee.post_scores.forEach((score) => {
+        if (score.module_title) {
+          weeks.add(score.module_title);
+        }
+      });
+      trainee.module_orders.forEach((order) => {
+        if (order.module_title) {
+          weeks.add(order.module_title);
+        }
+      });
+    });
+    return Array.from(weeks).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  }, [trainees, selectedTrack]);
+
   useEffect(() => {
     fetchTraineePerformance();
   }, [fetchTraineePerformance]);
@@ -180,6 +231,15 @@ export function TraineeMonitoringPage() {
       setSelectedTrack(availableTracks[0] || "");
     }
   }, [availableTracks, selectedTrack]);
+
+  useEffect(() => {
+    if (selectedWeek === "all") {
+      return;
+    }
+    if (!availableWeeks.includes(selectedWeek)) {
+      setSelectedWeek("all");
+    }
+  }, [availableWeeks, selectedWeek]);
 
   const trackRankings = useMemo(() => {
     const rankingMap = new Map<number, number>();
@@ -228,12 +288,22 @@ export function TraineeMonitoringPage() {
     return rankingMap;
   }, [trainees]);
 
+  const traineeHasWeekData = (trainee: Trainee, week: string) => {
+    return (
+      trainee.post_scores.some((score) => score.module_title === week) ||
+      trainee.module_orders.some((order) => order.module_title === week)
+    );
+  };
+
   // Filter logic
   const filteredTrainees = useMemo(() => {
     const filtered = trainees.filter((trainee) => {
       const matchesTrack = !selectedTrack || trainee.track === selectedTrack;
 
-      return matchesTrack;
+      const matchesWeek =
+        selectedWeek === "all" || traineeHasWeekData(trainee, selectedWeek);
+
+      return matchesTrack && matchesWeek;
     });
 
     const getRank = (trainee: Trainee) =>
@@ -246,7 +316,7 @@ export function TraineeMonitoringPage() {
       }
       return (a.full_name || a.name).localeCompare(b.full_name || b.name);
     });
-  }, [trainees, selectedTrack, trackRankings]);
+  }, [trainees, selectedTrack, selectedWeek, trackRankings]);
 
   // Copy all visible names (all filtered trainees) to clipboard
   const handleCopyVisibleNames = async () => {
@@ -352,26 +422,53 @@ export function TraineeMonitoringPage() {
           <div className="flex flex-col gap-4">
             {/* Track Filter */}
             <div className="flex gap-2 flex-wrap">
-              {availableTracks.map((track) => (
-                <Button
-                  key={track}
-                  variant={selectedTrack === track ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedTrack(track)}
-                  className={
-                    selectedTrack === track
-                      ? ""
-                      : `border-2 ${getTrackColor(track).split(" ")[2]}`
-                  }
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      getTrackColor(track).split(" ")[0]
-                    }`}
+              {availableTracks.map((track) => {
+                const trackStyle = getTrackStyle(track);
+                return (
+                  <Button
+                    key={track}
+                    variant={selectedTrack === track ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedTrack(track)}
+                    className={
+                      selectedTrack === track
+                        ? ""
+                        : `border-2 ${trackStyle.border}`
+                    }
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full mr-2 ${trackStyle.dot}`}
+                    />
+                    {track}
+                  </Button>
+                );
+              })}
+            </div>
+            {/* Week Filter */}
+            <div className="flex flex-col gap-2">
+              <span className="text-sm text-muted-foreground">
+                {t("pages.trainee_monitoring.weekFilter")}
+              </span>
+              <Select
+                value={selectedWeek}
+                onValueChange={(value) => setSelectedWeek(value)}
+              >
+                <SelectTrigger className="min-w-[220px]">
+                  <SelectValue
+                    placeholder={t("pages.trainee_monitoring.allWeeks")}
                   />
-                  {track}
-                </Button>
-              ))}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t("pages.trainee_monitoring.allWeeks")}
+                  </SelectItem>
+                  {availableWeeks.map((week) => (
+                    <SelectItem key={week} value={week}>
+                      {week}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

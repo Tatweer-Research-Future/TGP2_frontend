@@ -586,8 +586,16 @@ export type AttendanceEvent = {
 
 export type AttendanceLog = {
   id: number;
-  trainee: { id: number; name: string; email: string } | number;
+  trainee:
+    | {
+        id: number;
+        name: string;
+        email: string;
+        full_name?: string | null;
+      }
+    | number;
   trainee_name?: string | null;
+  trainee_full_name?: string | null;
   trainee_email?: string | null;
   event: AttendanceEvent | number;
   event_title?: string | null;
