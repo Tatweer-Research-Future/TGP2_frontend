@@ -35,6 +35,7 @@ import ModulePrePostExamResultsPage from "@/pages/ModulePrePostExamResultsPage";
 import WeekRankingPage from "@/pages/WeekRankingPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import AssignmentsPage from "@/pages/AssignmentsPage";
+import { TraineeStatsPage } from "@/pages/TraineeStatsPage";
 import i18n from "./i18n/config";
 
 export default function App() {
@@ -139,6 +140,15 @@ export default function App() {
                         element={
                           <PermissionProtectedRoute requiredPage="/modules">
                             <TrackPage />
+                          </PermissionProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/my-stats"
+                        element={
+                          <PermissionProtectedRoute requiredPage="/my-stats">
+                            <TraineeStatsPage />
                           </PermissionProtectedRoute>
                         }
                       />

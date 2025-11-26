@@ -1915,3 +1915,106 @@ export async function getTraineeOrdersLeaderboard(): Promise<TraineeOrdersLeader
     `/trainee-orders/leaderboard/`
   );
 }
+
+// --- Trainee Stats ---
+export type TraineeStatsTechnicalSkill = {
+  skill: string;
+  medium: string;
+  proficiency: string;
+};
+
+export type TraineeStatsWorkExperience = {
+  company: string;
+  project: string;
+  duration: string;
+};
+
+export type TraineeStatsCourse = {
+  date: string;
+  name: string;
+  entity: string;
+};
+
+export type TraineeStatsAdditionalInformation = {
+  gpa?: string | null;
+  city?: string | null;
+  gender?: string | null;
+  birthdate?: string | null;
+  resumeUrl?: string | null;
+  coursesTaken?: TraineeStatsCourse[];
+  fieldOfStudy?: string | null;
+  fieldsChosen?: string[];
+  qualification?: string | null;
+  workExperience?: TraineeStatsWorkExperience[];
+  institutionName?: string | null;
+  technicalSkills?: TraineeStatsTechnicalSkill[];
+  arabicProficiency?: string | null;
+  englishProficiency?: string | null;
+} | null;
+
+export type TraineeStatsAdditionalFields = {
+  cert?: string | null;
+  lang?: string | null;
+  Track?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  github?: string | null;
+  phone2?: string | null;
+  "IQ Score"?: string | null;
+  linkedin?: string | null;
+  full_name?: string | null;
+  reached_by?: string | null;
+  nationality?: string | null;
+  other_files?: unknown[];
+  "English Test"?: string | null;
+  full_name_en?: string | null;
+  aditional_info?: string | null;
+  graduation_year?: string | null;
+  city_job_commitment?: string | null;
+  full_time_commitment?: string | null;
+  other_specialization?: string | null;
+  statement_of_purpose?: string | null;
+  additional_information?: TraineeStatsAdditionalInformation;
+  [key: string]: unknown;
+};
+
+export type TraineeStatsUser = {
+  id: number;
+  email: string;
+  name: string;
+  avatar: string | null;
+  additional_fields: TraineeStatsAdditionalFields;
+};
+
+export type TraineeStatsModule = {
+  module_id: number;
+  module_title: string;
+  module_order: number;
+  track: string;
+  pre_score_total: number;
+  pre_score_max: number;
+  post_score_total: number;
+  post_score_max: number;
+  improvement: number;
+  improvement_percentage: number;
+};
+
+export type TraineeStatsCurrentWeek = {
+  week_start: string;
+  week_end: string;
+  break_hours: number;
+} | null;
+
+export type TraineeStatsResponse = {
+  user: TraineeStatsUser;
+  pre_score_sum: number;
+  post_score_sum: number;
+  total_post_score: number;
+  improvement_sum: number;
+  modules: TraineeStatsModule[];
+  current_week: TraineeStatsCurrentWeek;
+};
+
+export async function getTraineeStats(): Promise<TraineeStatsResponse> {
+  return apiFetch<TraineeStatsResponse>(`/trainee-stats/`);
+}

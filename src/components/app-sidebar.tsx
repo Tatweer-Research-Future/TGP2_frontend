@@ -7,6 +7,7 @@ import {
   IconBook,
   IconHome,
   IconFileText,
+  IconReportAnalytics,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import logoImage from "@/assets/logo.png";
@@ -39,6 +40,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/overview": IconChartBar,
     "/modules": IconBook,
     "/assignments": IconFileText,
+    "/my-stats": IconReportAnalytics,
   };
 
   const titleMap: Record<string, string> = {
@@ -51,6 +53,7 @@ const getNavItemDetails = (url: string, t: any) => {
     "/overview": t("navigation.overview"),
     "/modules": t("navigation.my_track"),
     "/assignments": t("navigation.assignments"),
+    "/my-stats": t("navigation.my_stats", { defaultValue: "My Stats" }),
   };
 
   return {
@@ -142,7 +145,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     // Analytics/Tracking section
-    const analyticsItems = items.filter((item) => item.url === "/attendance");
+    const analyticsItems = items.filter(
+      (item) => item.url === "/attendance" || item.url === "/my-stats"
+    );
     if (analyticsItems.length > 0) {
       groups.push({
         label: t("navigation.groups.analytics", "Analytics"),

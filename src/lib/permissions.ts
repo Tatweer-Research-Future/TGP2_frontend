@@ -17,6 +17,7 @@ export type PageRoute =
   | "/overview" // DashboardPage
   | "/modules" // My Track (modules list)
   | "/assignments" // AssignmentsPage
+  | "/my-stats" // Trainee stats page
   | "/modules/session/:id" // SessionViewPage (read-only)
   | "/modules/session/:id/edit" // SessionEditPage
   | "/modules/:id/exam/create"
@@ -56,6 +57,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/forms",
       "/modules",
       "/assignments",
+      "/my-stats",
       "/modules/session/:id",
       "/modules/session/:id/edit",
       "/modules/:id/exam/create",
@@ -71,6 +73,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/forms",
       "/modules",
+      "/my-stats",
       "/modules/session/:id",
       "/modules/:id/exam/take",
     ],
@@ -82,6 +85,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/forms",
       "/modules",
+      "/my-stats",
       "/modules/session/:id",
       "/modules/:id/exam/take",
     ],
@@ -93,6 +97,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/forms",
       "/modules",
+      "/my-stats",
       "/modules/session/:id",
       "/modules/:id/exam/take",
     ],
@@ -104,6 +109,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/home",
       "/forms",
       "/modules",
+      "/my-stats",
       "/modules/session/:id",
       "/modules/:id/exam/take",
     ],
@@ -310,6 +316,7 @@ export function getNavigationItems(
     "/overview": { title: "navigation.overview" },
     "/modules": { title: "navigation.my_track" },
     "/assignments": { title: "navigation.assignments" },
+    "/my-stats": { title: "navigation.my_stats" },
     "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
     "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
     "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav
@@ -368,6 +375,7 @@ export function getNavigationItemsFromGroups(
     "/overview": { title: "navigation.overview" },
     "/modules": { title: "navigation.my_track" },
     "/assignments": { title: "navigation.assignments" },
+    "/my-stats": { title: "navigation.my_stats" },
     "/modules/session/:id": { title: "navigation.track_session_view" }, // Not shown in nav
     "/modules/session/:id/edit": { title: "navigation.track_session_edit" }, // Not shown in nav
     "/modules/:id/exam/create": { title: "navigation.exam" }, // Not shown in nav
