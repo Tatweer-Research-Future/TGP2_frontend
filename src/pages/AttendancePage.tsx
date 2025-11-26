@@ -755,6 +755,17 @@ export function AttendancePage() {
     );
   };
 
+  const currentEvent =
+    selectedEvent && data
+      ? data.events.find((event) => event.id === selectedEvent) ?? null
+      : null;
+
+  const handleStatusButtonClick = (
+    value: Exclude<typeof statusFilter, "all">
+  ) => {
+    setStatusFilter((prev) => (prev === value ? "all" : value));
+  };
+
   // Calculate attendance statistics
   const getAttendanceStats = () => {
     if (!data || !selectedEvent) {
@@ -787,9 +798,7 @@ export function AttendancePage() {
     }
 
     const filteredUsers = getSortedUsers();
-    const selectedEventData = data.events.find((e) => e.id === selectedEvent);
-
-    if (!selectedEventData) {
+    if (!currentEvent) {
       toast.error("Event not found");
       return;
     }
@@ -853,7 +862,7 @@ export function AttendancePage() {
         checkInTime,
         checkOutTime,
         formatDateForExcel(selectedDate),
-        sanitizeText(selectedEventData.title),
+        sanitizeText(currentEvent.title),
       ];
     });
 
@@ -878,7 +887,7 @@ export function AttendancePage() {
 
     // Generate filename with date and filters
     const dateStr = selectedDate.replace(/-/g, "");
-    const eventStr = selectedEventData.title.replace(/[^a-zA-Z0-9]/g, "_");
+    const eventStr = currentEvent.title.replace(/[^a-zA-Z0-9]/g, "_");
     const filterStr = statusFilter !== "all" ? `_${statusFilter}` : "";
     const trackStr =
       selectedTrack !== "all"
@@ -1185,33 +1194,7 @@ export function AttendancePage() {
               />
             </div>
 
-            {/* Event Select */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Event</label>
-              <Select
-                value={selectedEvent?.toString() || ""}
-                onValueChange={(value) => {
-                  const parsed = Number(value);
-                  setSelectedEvent(Number.isFinite(parsed) ? parsed : null);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an event" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(data?.events ?? [])
-                    .filter(
-                      (event): event is AttendanceEvent =>
-                        Boolean(event) && typeof event.id === "number"
-                    )
-                    .map((event) => (
-                      <SelectItem key={event.id} value={event.id.toString()}>
-                        {event.title || `Event ${event.id}`}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div />
           </div>
 
           {/* Bulk Actions */}
@@ -1318,105 +1301,71 @@ export function AttendancePage() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Track Filter */}
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    variant={selectedTrack === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedTrack("all")}
-                  >
-                    All Tracks
-                  </Button>
-                  {getAvailableTracks().map((track) => (
-                    <Button
-                      key={track}
-                      variant={selectedTrack === track ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedTrack(track)}
-                      className={
-                        selectedTrack === track
-                          ? ""
-                          : `border-2 ${getTrackColor(track).split(" ")[2]}`
-                      }
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {getAvailableTracks().length > 0 && (
+                  <div>
+                    <Select
+                      value={selectedTrack}
+                      onValueChange={(value) => setSelectedTrack(value)}
                     >
-                      <div
-                        className={`w-2 h-2 rounded-full mr-2 ${
-                          getTrackColor(track).split(" ")[0]
-                        }`}
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by track" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableTracks().map((track) => (
+                          <SelectItem key={track} value={track}>
+                            {track}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="all">Clear filter</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "Present", value: "present", color: "bg-green-500" },
+                    { label: "On Break", value: "break", color: "bg-amber-500" },
+                    { label: "Absent", value: "absent", color: "bg-red-500" },
+                  ].map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      size="sm"
+                      variant={
+                        statusFilter === option.value ? "default" : "outline"
+                      }
+                      onClick={() =>
+                        handleStatusButtonClick(
+                          option.value as Exclude<typeof statusFilter, "all">
+                        )
+                      }
+                      className="flex items-center gap-2"
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${option.color}`}
                       />
-                      {track}
+                      {option.label}
                     </Button>
                   ))}
                 </div>
-
-                {/* Status Filter */}
-                <div className="flex gap-2">
-                  <Button
-                    variant={statusFilter === "all" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatusFilter("all")}
-                  >
-                    All Status
-                  </Button>
-                  <Button
-                    variant={statusFilter === "present" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatusFilter("present")}
-                    className={
-                      statusFilter === "present"
-                        ? ""
-                        : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-500/30 dark:text-green-200 dark:hover:bg-green-500/10"
-                    }
-                  >
-                    <div className="w-2 h-2 rounded-full mr-2 bg-green-500" />
-                    Present
-                  </Button>
-                  <Button
-                    variant={statusFilter === "break" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatusFilter("break")}
-                    className={
-                      statusFilter === "break"
-                        ? ""
-                        : "border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-200 dark:hover:bg-amber-500/10"
-                    }
-                  >
-                    <div className="w-2 h-2 rounded-full mr-2 bg-amber-500" />
-                    On Break
-                  </Button>
-                  <Button
-                    variant={statusFilter === "absent" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatusFilter("absent")}
-                    className={
-                      statusFilter === "absent"
-                        ? ""
-                        : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"
-                    }
-                  >
-                    <div className="w-2 h-2 rounded-full mr-2 bg-red-500" />
-                    Absent
-                  </Button>
+                <div className="flex items-center justify-end">
+                  {(searchQuery ||
+                    statusFilter !== "all" ||
+                    selectedTrack !== "all") && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setStatusFilter("all");
+                        setSelectedTrack("all");
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
-
-                {/* Clear Filters Button */}
-                {(searchQuery ||
-                  statusFilter !== "all" ||
-                  selectedTrack !== "all") && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setStatusFilter("all");
-                      setSelectedTrack("all");
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Clear Filters
-                  </Button>
-                )}
               </div>
             </div>
 
@@ -1458,7 +1407,7 @@ export function AttendancePage() {
                       />
                     </TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="w-48 text-center">Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1556,7 +1505,7 @@ export function AttendancePage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="w-48 text-center align-middle">
                           <div className="inline-flex items-center gap-2">
                             <AttendanceStatusBadge
                               checkInTime={checkInTime}

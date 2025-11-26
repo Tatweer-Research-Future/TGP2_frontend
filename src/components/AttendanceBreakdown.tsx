@@ -913,24 +913,6 @@ function formatWeekDate(date: Date): string {
                 Break & Attendance Alerts
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {weekOptions.length > 0 && (
-                  <Select
-                    value={selectedWeek}
-                    onValueChange={setSelectedWeek}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="All weeks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All weeks</SelectItem>
-                      {weekOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
                 {flaggedBreakDays.length > 0 && (
                   <Button
                     variant="ghost"
@@ -955,6 +937,26 @@ function formatWeekDate(date: Date): string {
             </div>
             {(weekOptions.length > 0 || totalFlaggedBreakHours > 0) && (
               <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-xs sm:text-sm flex flex-wrap items-center gap-4">
+                {weekOptions.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={selectedWeek}
+                      onValueChange={setSelectedWeek}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="All weeks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All weeks</SelectItem>
+                        {weekOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {weekOptions.length > 0 && (
                   <div>
                     <div className="text-muted-foreground uppercase tracking-wide text-[10px] font-semibold">
@@ -1039,9 +1041,6 @@ function formatWeekDate(date: Date): string {
                         <div>
                           <div className="text-sm font-semibold">
                             {formatDate(entry.date)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {entry.eventTitle}
                           </div>
                         </div>
                         <div className="inline-flex items-center gap-2 text-xs">
