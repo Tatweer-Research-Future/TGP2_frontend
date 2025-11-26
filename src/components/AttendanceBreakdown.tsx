@@ -226,9 +226,7 @@ export function AttendanceBreakdown({
   }, [flaggedBreakDays, selectedWeek]);
 
   const selectedWeekTotalHours =
-    selectedWeek !== "all"
-      ? weeklyBreakTotals.get(selectedWeek) ?? 0
-      : null;
+    selectedWeek !== "all" ? weeklyBreakTotals.get(selectedWeek) ?? 0 : null;
   const selectedWeekLabel =
     selectedWeekTotalHours != null
       ? formatDecimalHours(selectedWeekTotalHours) ?? "-"
@@ -236,7 +234,9 @@ export function AttendanceBreakdown({
 
   useEffect(() => {
     if (selectedWeek === "all") return;
-    const stillExists = weekOptions.some((option) => option.value === selectedWeek);
+    const stillExists = weekOptions.some(
+      (option) => option.value === selectedWeek
+    );
     if (!stillExists) {
       setSelectedWeek("all");
     }
@@ -399,9 +399,7 @@ export function AttendanceBreakdown({
     setFlaggedBreakDays(
       flaggedBreakAlerts
         .slice()
-        .sort(
-          (a, b) => getSortableTime(b.date) - getSortableTime(a.date)
-        )
+        .sort((a, b) => getSortableTime(b.date) - getSortableTime(a.date))
     );
 
     // Calculate statistics using backend values
@@ -763,28 +761,25 @@ export function AttendanceBreakdown({
     if (entries.length === 0) return [];
     const sorted = entries
       .slice()
-      .sort(
-        (a, b) =>
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     // Limit to most recent 6 entries for readability
     return sorted.slice(-6).reverse();
   }
 
-function getWeekStart(date: Date): Date {
-  const start = new Date(date);
-  const day = start.getDay();
-  start.setDate(start.getDate() - day);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
+  function getWeekStart(date: Date): Date {
+    const start = new Date(date);
+    const day = start.getDay();
+    start.setDate(start.getDate() - day);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
 
-function formatWeekDate(date: Date): string {
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
+  function formatWeekDate(date: Date): string {
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  }
 
   if (isLoading) {
     return (
@@ -837,10 +832,13 @@ function formatWeekDate(date: Date): string {
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {totalBreakHoursLabel ?? "-"}
             </div>
-            <div className="text-sm text-muted-foreground">Total Break Hours</div>
+            <div className="text-sm text-muted-foreground">
+              Total Break Hours
+            </div>
             {flaggedDaysCount != null && (
               <div className="text-xs text-muted-foreground">
-                {flaggedDaysCount} day{flaggedDaysCount === 1 ? "" : "s"} flagged
+                {flaggedDaysCount} day{flaggedDaysCount === 1 ? "" : "s"}{" "}
+                flagged
               </div>
             )}
           </div>
@@ -994,16 +992,14 @@ function formatWeekDate(date: Date): string {
           ) : !isExpanded ? (
             <div className="text-xs text-muted-foreground border rounded-md px-4 py-3">
               {flaggedBreakDays.length} alert
-              {flaggedBreakDays.length === 1 ? "" : "s"} detected. Use "Show details" to review break or absence notes.
+              {flaggedBreakDays.length === 1 ? "" : "s"} detected. Use "Show
+              details" to review break or absence notes.
             </div>
           ) : (
             <>
               {weekOptions.length > 1 && (
                 <div className="flex justify-end">
-                  <Select
-                    value={selectedWeek}
-                    onValueChange={setSelectedWeek}
-                  >
+                  <Select value={selectedWeek} onValueChange={setSelectedWeek}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="All weeks" />
                     </SelectTrigger>
@@ -1093,6 +1089,27 @@ function formatWeekDate(date: Date): string {
                           </div>
                         )}
                       </div>
+                      {entry.breakIntervals &&
+                        entry.breakIntervals.length > 0 && (
+                          <div className="rounded-md border border-border/50 bg-muted/20 p-2 text-xs text-muted-foreground space-y-1">
+                            {entry.breakIntervals.map(
+                              (interval, intervalIndex) => (
+                                <div
+                                  key={`${entry.date}-${interval.start}-${intervalIndex}`}
+                                  className="flex items-center justify-between"
+                                >
+                                  <span>Break {intervalIndex + 1}</span>
+                                  <span className="font-medium text-foreground">
+                                    {formatTimeLabel(interval.start)} –{" "}
+                                    {interval.end
+                                      ? formatTimeLabel(interval.end)
+                                      : "Ongoing"}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
                       {entry.notes && entry.notes.trim() && (
                         <div className="text-xs italic text-muted-foreground">
                           Notes: {entry.notes}

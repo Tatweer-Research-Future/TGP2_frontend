@@ -1,4 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,7 +161,9 @@ export function TraineeMonitoringPage() {
         setTrainees(allTrainees);
 
         const selectedTrackData = options?.track
-          ? response.tracks.find((trackData) => trackData.track === options.track)
+          ? response.tracks.find(
+              (trackData) => trackData.track === options.track
+            )
           : response.tracks[0];
         const periodFrom =
           selectedTrackData?.period_from ?? response.period_from ?? null;
@@ -284,7 +292,7 @@ export function TraineeMonitoringPage() {
 
   type RankBadgeMeta = {
     badge: string;
-    icon?: JSX.Element | null;
+    icon?: ReactNode;
   };
 
   const getRankBadgeMeta = (rank?: number): RankBadgeMeta => {
@@ -794,11 +802,7 @@ export function TraineeMonitoringPage() {
                 {/* Name column: left-align header and cells for better visual consistency */}
                 <TableHead className="text-left">
                   <div className="flex items-center justify-start gap-2">
-                    {renderSortButton(
-                      t("table.headers.name"),
-                      "name",
-                      "left"
-                    )}
+                    {renderSortButton(t("table.headers.name"), "name", "left")}
                     <Button
                       type="button"
                       variant="ghost"
@@ -864,7 +868,8 @@ export function TraineeMonitoringPage() {
                     trainee.total_break_hours ??
                     trainee.break_hours ??
                     null;
-                  const breakHoursNumeric = getBreakHoursNumeric(breakHoursValue);
+                  const breakHoursNumeric =
+                    getBreakHoursNumeric(breakHoursValue);
                   const breakHours = formatBreakHours(breakHoursValue);
                   const isBreakHoursOverLimit =
                     breakHoursNumeric !== null && breakHoursNumeric > 4;
@@ -878,8 +883,7 @@ export function TraineeMonitoringPage() {
                             <div
                               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold tracking-tight ${badgeMeta.badge}`}
                             >
-                              {badgeMeta.icon}
-                              #{rank}
+                              {badgeMeta.icon}#{rank}
                             </div>
                           </div>
                         ) : (
@@ -891,7 +895,9 @@ export function TraineeMonitoringPage() {
                         <Link
                           to={`/candidates/${trainee.user_id}`}
                           className="group flex items-center justify-start gap-3 rounded-md px-1 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          aria-label={`View ${trainee.full_name || trainee.name || "trainee"} details`}
+                          aria-label={`View ${
+                            trainee.full_name || trainee.name || "trainee"
+                          } details`}
                         >
                           <ConsistentAvatar
                             user={{
@@ -901,7 +907,10 @@ export function TraineeMonitoringPage() {
                             }}
                             className="size-8"
                           />
-                          <div className="font-medium text-center group-hover:text-primary" dir="rtl">
+                          <div
+                            className="font-medium text-center group-hover:text-primary"
+                            dir="rtl"
+                          >
                             <span className="text-base">
                               {trainee.full_name || trainee.name || "-"}
                             </span>
@@ -974,7 +983,8 @@ export function TraineeMonitoringPage() {
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {trainee.improvement_sum >= 0 ? "+" : ""}
-                              {trainee.improvement_sum} / {trainee.total_post_score}
+                              {trainee.improvement_sum} /{" "}
+                              {trainee.total_post_score}
                             </div>
                           </div>
                         ) : (

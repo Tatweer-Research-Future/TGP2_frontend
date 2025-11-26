@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -37,6 +38,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TimePickerDialog } from "@/components/TimePickerDialog";
 import { AttendanceStatusBadge } from "@/components/AttendanceStatusBadge";
 import { useUserGroups } from "@/hooks/useUserGroups";
@@ -325,6 +334,14 @@ export function AttendancePage() {
   const [exportTrack, setExportTrack] = useState<string>("all");
   const [exportEvent, setExportEvent] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [noteDialogUser, setNoteDialogUser] = useState<{
+    userId: number;
+    name: string;
+    note: string;
+  } | null>(null);
+  const [noteDialogValue, setNoteDialogValue] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -404,8 +421,11 @@ export function AttendancePage() {
         event: selectedEvent,
         attendance_date: selectedDate,
         check_out_time: time || getCurrentTime(),
-        notes: "",
       };
+      const preservedNote = getExistingNoteForUser(userId);
+      if (preservedNote) {
+        (payload as CheckOutPayload & { notes: string }).notes = preservedNote;
+      }
       const response = await submitCheckOut(payload);
       if (response.success > 0) {
         toast.success("Checked out successfully");
@@ -534,13 +554,22 @@ export function AttendancePage() {
     if (!selectedEvent) return;
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: {
+        candidate_id: number;
+        event: number;
+        attendance_date: string;
+        break_start_time: string;
+        notes?: string;
+      } = {
         candidate_id: userId,
         event: selectedEvent,
         attendance_date: selectedDate,
         break_start_time: getCurrentTime(),
-        notes: "",
       };
+      const preservedNote = getExistingNoteForUser(userId);
+      if (preservedNote) {
+        payload.notes = preservedNote;
+      }
       const response = await submitAttendanceUpdate(payload);
       if (response.success > 0) {
         toast.success("Break started successfully");
@@ -564,13 +593,22 @@ export function AttendancePage() {
     if (!selectedEvent) return;
     setIsSubmitting(true);
     try {
-      const payload = {
+      const payload: {
+        candidate_id: number;
+        event: number;
+        attendance_date: string;
+        break_end_time: string;
+        notes?: string;
+      } = {
         candidate_id: userId,
         event: selectedEvent,
         attendance_date: selectedDate,
         break_end_time: getCurrentTime(),
-        notes: "",
       };
+      const preservedNote = getExistingNoteForUser(userId);
+      if (preservedNote) {
+        payload.notes = preservedNote;
+      }
       const response = await submitAttendanceUpdate(payload);
       if (response.success > 0) {
         toast.success("Break ended successfully");
@@ -605,6 +643,47 @@ export function AttendancePage() {
       handleBulkCheckIn(time);
     } else {
       handleBulkCheckOut(time);
+    }
+  };
+
+  const handleOpenNoteDialog = (
+    user: OverviewUserWithMeta,
+    existingNote: string | null | undefined
+  ) => {
+    setNoteDialogUser({
+      userId: user.user_id,
+      name: user.user_name ?? user.user_email ?? `User ${user.user_id}`,
+      note: existingNote ?? "",
+    });
+    setNoteDialogValue(existingNote ?? "");
+    setNoteDialogOpen(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (!noteDialogUser || !selectedEvent) return;
+    setIsSavingNote(true);
+    try {
+      const payload = {
+        candidate_id: noteDialogUser.userId,
+        event: selectedEvent,
+        attendance_date: selectedDate,
+        notes: noteDialogValue.trim(),
+      };
+      const response = await submitAttendanceUpdate(payload);
+      if (response.success > 0) {
+        toast.success("Notes updated");
+        setNoteDialogOpen(false);
+        setNoteDialogUser(null);
+        setNoteDialogValue("");
+        await fetchData();
+      } else {
+        toast.error(response.results[0]?.message || "Failed to update notes");
+      }
+    } catch (error) {
+      console.error("Note update error:", error);
+      toast.error("Failed to update notes");
+    } finally {
+      setIsSavingNote(false);
     }
   };
 
@@ -759,6 +838,22 @@ export function AttendancePage() {
     selectedEvent && data
       ? data.events.find((event) => event.id === selectedEvent) ?? null
       : null;
+
+  const getUserEventData = (userId: number) => {
+    if (!data || !selectedEvent) return null;
+    const user = data.users.find((u) => u.user_id === userId);
+    if (!user) return null;
+    return (
+      user.events.find((event) => event.event_id === selectedEvent) ?? null
+    );
+  };
+
+  const getExistingNoteForUser = (userId: number) => {
+    const eventData = getUserEventData(userId);
+    const note = eventData?.notes;
+    if (!note) return null;
+    return note.trim().length > 0 ? note : null;
+  };
 
   const handleStatusButtonClick = (
     value: Exclude<typeof statusFilter, "all">
@@ -1324,8 +1419,16 @@ export function AttendancePage() {
                 )}
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { label: "Present", value: "present", color: "bg-green-500" },
-                    { label: "On Break", value: "break", color: "bg-amber-500" },
+                    {
+                      label: "Present",
+                      value: "present",
+                      color: "bg-green-500",
+                    },
+                    {
+                      label: "On Break",
+                      value: "break",
+                      color: "bg-amber-500",
+                    },
                     { label: "Absent", value: "absent", color: "bg-red-500" },
                   ].map((option) => (
                     <Button
@@ -1478,14 +1581,6 @@ export function AttendancePage() {
                             >
                               {user.user_name}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {user.user_email}
-                            </div>
-                            {user.phone && (
-                              <div className="text-sm text-muted-foreground">
-                                {user.phone}
-                              </div>
-                            )}
                             {user.track && (
                               <div
                                 className={`text-xs font-medium mt-1 px-2 py-1 rounded-full border inline-block ${getTrackColor(
@@ -1593,6 +1688,16 @@ export function AttendancePage() {
                           >
                             {t("pages.attendance.checkOut")}
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleOpenNoteDialog(user, eventData?.notes)
+                            }
+                            disabled={isSubmitting}
+                          >
+                            Notes
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1644,6 +1749,49 @@ export function AttendancePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Notes Dialog */}
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="sm:max-w-md space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Notes</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {noteDialogUser
+                ? `${noteDialogUser.name} • ${selectedDate}`
+                : "Add note"}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={noteDialogValue}
+            onChange={(e) => setNoteDialogValue(e.target.value)}
+            placeholder="Add a short note about this trainee…"
+            className="min-h-[130px] resize-none"
+          />
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNoteDialogOpen(false);
+                setNoteDialogUser(null);
+                setNoteDialogValue("");
+              }}
+              disabled={isSavingNote}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveNote} disabled={isSavingNote}>
+              {isSavingNote ? (
+                <span className="flex items-center gap-2">
+                  <Loader className="size-4" />
+                  Saving…
+                </span>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Time Picker Dialog */}
       <TimePickerDialog
