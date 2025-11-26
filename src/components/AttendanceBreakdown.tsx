@@ -288,6 +288,8 @@ export function AttendanceBreakdown({
         checkInTime?: string;
         checkOutTime?: string;
         duration?: string;
+        breaks?: BreakIntervalEntry[];
+        totalBreakDuration?: string | null;
       }>
     >();
 
