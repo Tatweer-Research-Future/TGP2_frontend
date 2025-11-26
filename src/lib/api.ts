@@ -699,6 +699,7 @@ export type AttendanceUpdatePayload = {
   candidate_id: number;
   event: number;
   attendance_date: string;
+  check_in_time?: string;
   check_out_time?: string;
   break_start_time?: string;
   break_end_time?: string;
@@ -747,12 +748,18 @@ export async function submitCheckOut(
   });
 }
 
-// Submit a generic attendance update (check-out and/or break start/end)
+// Submit a generic attendance update (check-in/out and/or break start/end)
+type AttendanceUpdateOptions = {
+  method?: "POST" | "PUT";
+};
+
 export async function submitAttendanceUpdate(
-  payload: AttendanceUpdatePayload
+  payload: AttendanceUpdatePayload,
+  options?: AttendanceUpdateOptions
 ): Promise<AttendanceSubmitResponse> {
+  const method = options?.method ?? "PUT";
   return apiFetch<AttendanceSubmitResponse>("/attendance/submit/", {
-    method: "PUT",
+    method,
     body: payload,
     requireCsrf: true,
   });

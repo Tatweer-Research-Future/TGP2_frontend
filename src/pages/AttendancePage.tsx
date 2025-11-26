@@ -64,11 +64,13 @@ import {
   type BackendCandidate,
   type CheckInPayload,
   type CheckOutPayload,
+  type AttendanceUpdatePayload,
 } from "@/lib/api";
 
 type OverviewUserWithMeta = AttendanceOverviewUser & {
   track?: string | null;
   phone?: string | null;
+  full_name?: string | null;
 };
 
 interface AttendanceData extends AttendanceOverviewResponse {
@@ -220,6 +222,12 @@ function buildOverviewFromLogs({
       events: createEmptyEventEntries(),
       track: deriveTrackName(candidate),
       phone: candidate.phone ?? null,
+      full_name:
+        candidate.full_name ??
+        preferredName ??
+        candidate.email ??
+        candidate.name ??
+        null,
     };
     usersMap.set(candidate.id, user);
   });
@@ -242,6 +250,7 @@ function buildOverviewFromLogs({
           events: createEmptyEventEntries(),
           track: null,
           phone: null,
+          full_name: getTraineeName(log) || null,
         };
         usersMap.set(traineeId, fallback);
         return fallback;
@@ -288,6 +297,13 @@ function buildOverviewFromLogs({
     eventEntry.duration = log.duration ?? log.worked_duration ?? null;
     eventEntry.worked_duration = log.worked_duration ?? log.duration ?? null;
     eventEntry.log_id = log.id;
+    if (!user.full_name) {
+      user.full_name =
+        (typeof log.trainee !== "number" && log.trainee.full_name) ||
+        log.trainee_full_name ||
+        getTraineeName(log) ||
+        user.user_name;
+    }
   });
 
   return {
@@ -331,8 +347,6 @@ export function AttendancePage() {
   // Export section state
   const [exportFromDate, setExportFromDate] = useState<string>("");
   const [exportToDate, setExportToDate] = useState<string>("");
-  const [exportTrack, setExportTrack] = useState<string>("all");
-  const [exportEvent, setExportEvent] = useState<string>("all");
   const [isExporting, setIsExporting] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [noteDialogUser, setNoteDialogUser] = useState<{
@@ -389,15 +403,9 @@ export function AttendancePage() {
   const handleUserCheckIn = async (userId: number, time?: string) => {
     if (!selectedEvent) return;
     setIsSubmitting(true);
+    const checkInTimeValue = time || getCurrentTime();
     try {
-      const payload: CheckInPayload = {
-        candidate_id: userId,
-        event: selectedEvent,
-        attendance_date: selectedDate,
-        check_in_time: time || getCurrentTime(),
-        notes: "",
-      };
-      const response = await submitCheckIn(payload);
+      const response = await submitCheckInForUser(userId, checkInTimeValue);
       if (response.success > 0) {
         toast.success("Checked in successfully");
         await fetchData();
@@ -459,16 +467,10 @@ export function AttendancePage() {
         return;
       }
 
-      const promises = eligibleUsers.map((userId) => {
-        const payload: CheckInPayload = {
-          candidate_id: userId,
-          event: selectedEvent,
-          attendance_date: selectedDate,
-          check_in_time: time || getCurrentTime(),
-          notes: "",
-        };
-        return submitCheckIn(payload);
-      });
+      const checkInTimeValue = time || getCurrentTime();
+      const promises = eligibleUsers.map((userId) =>
+        submitCheckInForUser(userId, checkInTimeValue)
+      );
       const responses = await Promise.all(promises);
       const totalSuccess = responses.reduce((sum, res) => sum + res.success, 0);
       const totalErrors = responses.reduce((sum, res) => sum + res.errors, 0);
@@ -669,7 +671,18 @@ export function AttendancePage() {
         attendance_date: selectedDate,
         notes: noteDialogValue.trim(),
       };
-      const response = await submitAttendanceUpdate(payload);
+      const userEventData = getUserEventData(noteDialogUser.userId);
+      const hasMarkedAttendance = Boolean(
+        userEventData?.has_log ||
+          userEventData?.check_in_time ||
+          userEventData?.check_out_time ||
+          userEventData?.log_id
+      );
+      const requestMethod = hasMarkedAttendance ? "PUT" : "POST";
+      // Allow note creation for users without attendance logs by switching to POST
+      const response = await submitAttendanceUpdateWithOptions(payload, {
+        method: requestMethod,
+      });
       if (response.success > 0) {
         toast.success("Notes updated");
         setNoteDialogOpen(false);
@@ -855,6 +868,47 @@ export function AttendancePage() {
     return note.trim().length > 0 ? note : null;
   };
 
+  const submitAttendanceUpdateWithOptions =
+    submitAttendanceUpdate as unknown as (
+      payload: AttendanceUpdatePayload,
+      options?: { method?: "POST" | "PUT" }
+    ) => ReturnType<typeof submitAttendanceUpdate>;
+
+  const hasAttendanceLog = (userId: number) => {
+    const eventData = getUserEventData(userId);
+    return Boolean(eventData?.has_log || eventData?.log_id);
+  };
+
+  const submitCheckInForUser = async (
+    userId: number,
+    checkInTimeValue: string
+  ) => {
+    if (!selectedEvent) {
+      throw new Error("Cannot check in without a selected event");
+    }
+    const preservedNote = getExistingNoteForUser(userId);
+    if (hasAttendanceLog(userId)) {
+      return submitAttendanceUpdateWithOptions(
+        {
+          candidate_id: userId,
+          event: selectedEvent,
+          attendance_date: selectedDate,
+          check_in_time: checkInTimeValue,
+          ...(preservedNote ? { notes: preservedNote } : {}),
+        } as AttendanceUpdatePayload,
+        { method: "PUT" }
+      );
+    }
+    const payload: CheckInPayload = {
+      candidate_id: userId,
+      event: selectedEvent,
+      attendance_date: selectedDate,
+      check_in_time: checkInTimeValue,
+      notes: preservedNote ?? "",
+    };
+    return submitCheckIn(payload);
+  };
+
   const handleStatusButtonClick = (
     value: Exclude<typeof statusFilter, "all">
   ) => {
@@ -1019,8 +1073,6 @@ export function AttendancePage() {
       const blob = await exportAttendanceCSV({
         from_date: exportFromDate,
         to_date: exportToDate,
-        track: exportTrack !== "all" ? exportTrack : undefined,
-        event: exportEvent !== "all" ? exportEvent : undefined,
       });
 
       // Create download link
@@ -1031,16 +1083,7 @@ export function AttendancePage() {
       // Generate filename
       const fromDateStr = exportFromDate.replace(/-/g, "");
       const toDateStr = exportToDate.replace(/-/g, "");
-      const trackStr =
-        exportTrack !== "all"
-          ? `_${exportTrack.replace(/[^a-zA-Z0-9]/g, "_")}`
-          : "";
-      const eventStr =
-        exportEvent !== "all"
-          ? `_${exportEvent.replace(/[^a-zA-Z0-9]/g, "_")}`
-          : "";
-
-      link.download = `attendance_${fromDateStr}_to_${toDateStr}${trackStr}${eventStr}.csv`;
+      link.download = `attendance_${fromDateStr}_to_${toDateStr}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1172,7 +1215,7 @@ export function AttendancePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* From Date */}
             <div className="space-y-2">
               <label className="text-sm font-medium">From Date</label>
@@ -1193,42 +1236,6 @@ export function AttendancePage() {
                 onChange={(e) => setExportToDate(e.target.value)}
                 className="w-full"
               />
-            </div>
-
-            {/* Track Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Track (Optional)</label>
-              <Select value={exportTrack} onValueChange={setExportTrack}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Tracks" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tracks</SelectItem>
-                  {getAvailableTracks().map((track) => (
-                    <SelectItem key={track} value={track}>
-                      {track}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Event Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Event (Optional)</label>
-              <Select value={exportEvent} onValueChange={setExportEvent}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Events" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Events</SelectItem>
-                  {data?.events.map((event) => (
-                    <SelectItem key={event.id} value={event.title}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
@@ -1260,8 +1267,6 @@ export function AttendancePage() {
               <div>
                 Date Range: {exportFromDate} to {exportToDate}
               </div>
-              {exportTrack !== "all" && <div>Track: {exportTrack}</div>}
-              {exportEvent !== "all" && <div>Event: {exportEvent}</div>}
             </div>
           )}
         </CardContent>
@@ -1554,6 +1559,12 @@ export function AttendancePage() {
                       !!checkInTime && !checkOutTime && !isOnBreak;
                     const canBreakOut =
                       !!checkInTime && !checkOutTime && isOnBreak;
+                    const displayName =
+                      user.full_name ||
+                      user.user_name ||
+                      user.user_email ||
+                      user.phone ||
+                      "—";
                     return (
                       <TableRow key={user.user_id}>
                         <TableCell>
@@ -1579,7 +1590,7 @@ export function AttendancePage() {
                                   : undefined
                               }
                             >
-                              {user.user_name}
+                              {displayName}
                             </div>
                             {user.track && (
                               <div
