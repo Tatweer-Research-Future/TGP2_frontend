@@ -377,8 +377,13 @@ export async function getUserDetailById(
 
 // Trainee Performance API types and functions
 export type TraineePerformanceResponse = {
+  weeks?: number[];
+  period_from?: string;
+  period_to?: string;
   tracks: Array<{
     track: string;
+    period_from?: string;
+    period_to?: string;
     trainees: Array<{
       user_id: number;
       name: string;
@@ -388,15 +393,25 @@ export type TraineePerformanceResponse = {
       attendance_days: number;
       absent_days: number;
       post_score_sum: number;
+      improvement_sum?: number;
+      total_post_score?: number;
       order_sum: number;
       total_break_time?: number | string | null;
       total_break_hours?: number | string | null;
       break_hours?: number | string | null;
+      pre_scores?: Array<{
+        module_id: number;
+        module_title: string;
+        score_total: number;
+        score_max: number;
+      }>;
       post_scores: Array<{
         module_id: number;
         module_title: string;
         score_total: number;
         score_max: number;
+        improvement?: number | null;
+        improvement_percentage?: number | null;
       }>;
       module_orders: Array<{
         module_id: number;
@@ -407,14 +422,27 @@ export type TraineePerformanceResponse = {
   }>;
 };
 
+type TraineePerformanceParams = {
+  track?: string;
+  weeks?: number[];
+};
+
 export async function getTraineePerformance(
-  track?: string
+  params?: TraineePerformanceParams
 ): Promise<TraineePerformanceResponse> {
-  let path = `/trainee-performance/`;
-  if (track) {
-    const params = new URLSearchParams({ track });
-    path = `${path}?${params.toString()}`;
+  const query = new URLSearchParams();
+  if (params?.track) {
+    query.set("track", params.track);
   }
+  if (params?.weeks && params.weeks.length > 0) {
+    query.set("week", params.weeks.join(","));
+  }
+
+  const queryString = query.toString();
+  const path = queryString
+    ? `/trainee-performance/?${queryString}`
+    : `/trainee-performance/`;
+
   return apiFetch<TraineePerformanceResponse>(path);
 }
 

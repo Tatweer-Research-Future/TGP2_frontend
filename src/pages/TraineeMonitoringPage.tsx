@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IconCopy, IconRefresh } from "@tabler/icons-react";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconArrowsSort,
+  IconAward,
+  IconCalendar,
+  IconCopy,
+  IconCrown,
+  IconMedal,
+  IconRefresh,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { getTraineePerformance } from "@/lib/api";
 import { ConsistentAvatar } from "@/components/ui/consistent-avatar";
+
+const MAX_WEEKS = 14;
+const WEEK_OPTIONS = Array.from(
+  { length: MAX_WEEKS },
+  (_, index) => `Week ${index + 1}`
+);
+
+type PerformanceFetchOptions = {
+  track?: string;
+  weeks?: number[];
+};
 
 type Trainee = {
   user_id: number;
@@ -33,15 +60,25 @@ type Trainee = {
   attendance_days: number;
   absent_days: number;
   post_score_sum: number;
+  improvement_sum?: number;
+  total_post_score?: number;
   order_sum: number;
   total_break_time?: number | string | null;
   total_break_hours?: number | string | null;
   break_hours?: number | string | null;
+  pre_scores?: Array<{
+    module_id: number;
+    module_title: string;
+    score_total: number;
+    score_max: number;
+  }>;
   post_scores: Array<{
     module_id: number;
     module_title: string;
     score_total: number;
     score_max: number;
+    improvement?: number | null;
+    improvement_percentage?: number | null;
   }>;
   module_orders: Array<{
     module_id: number;
@@ -51,55 +88,126 @@ type Trainee = {
   track: string;
 };
 
+type WeekPeriod = {
+  from?: string | null;
+  to?: string | null;
+};
+
+type SortKey =
+  | "rank"
+  | "name"
+  | "attendance"
+  | "breakHours"
+  | "improvement"
+  | "modules";
+type SortDirection = "asc" | "desc";
+type SortConfig = {
+  key: SortKey;
+  direction: SortDirection;
+};
+
 export function TraineeMonitoringPage() {
   const { t } = useTranslation();
   const [selectedTrack, setSelectedTrack] = useState<string>("");
   const [selectedWeek, setSelectedWeek] = useState<string>("all");
   const [trainees, setTrainees] = useState<Trainee[]>([]);
+  const [availableTracks, setAvailableTracks] = useState<string[]>([]);
+  const [hasInitializedTracks, setHasInitializedTracks] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [weekPeriod, setWeekPeriod] = useState<WeekPeriod | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "rank",
+    direction: "asc",
+  });
 
-  // Fetch trainee performance data from backend
-  const fetchTraineePerformance = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await getTraineePerformance();
+  const fetchTraineePerformance = useCallback(
+    async (options?: PerformanceFetchOptions) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await getTraineePerformance({
+          track: options?.track,
+          weeks: options?.weeks,
+        });
 
-      // Flatten the tracks array into a single array of trainees with track info
-      const allTrainees: Trainee[] = [];
-      response.tracks.forEach((trackData) => {
-        trackData.trainees.forEach((trainee) => {
-          allTrainees.push({
-            ...trainee,
-            avatar: trainee.avatar ?? undefined,
-            track: trackData.track,
+        if (!hasInitializedTracks) {
+          const trackNames = response.tracks
+            .map((trackData) => trackData.track)
+            .filter((trackName): trackName is string => Boolean(trackName));
+          if (trackNames.length > 0) {
+            setAvailableTracks([...new Set(trackNames)].sort());
+            setHasInitializedTracks(true);
+          }
+        }
+
+        const allTrainees: Trainee[] = [];
+        response.tracks.forEach((trackData) => {
+          trackData.trainees.forEach((trainee) => {
+            allTrainees.push({
+              ...trainee,
+              avatar: trainee.avatar ?? undefined,
+              track: trackData.track,
+            });
           });
         });
-      });
 
-      setTrainees(allTrainees);
-      setSelectedTrack((current) => {
-        if (current) {
-          return current;
+        setTrainees(allTrainees);
+
+        const selectedTrackData = options?.track
+          ? response.tracks.find((trackData) => trackData.track === options.track)
+          : response.tracks[0];
+        const periodFrom =
+          selectedTrackData?.period_from ?? response.period_from ?? null;
+        const periodTo =
+          selectedTrackData?.period_to ?? response.period_to ?? null;
+
+        if (options?.weeks && options.weeks.length > 0) {
+          setWeekPeriod({ from: periodFrom, to: periodTo });
+        } else {
+          setWeekPeriod(null);
         }
-        return response.tracks[0]?.track || "";
-      });
-    } catch (err) {
-      console.error("Failed to fetch trainee performance:", err);
-      const error = err as { status?: number; message?: string };
-      const errorMessage =
-        error?.status === 404
-          ? "Trainee performance endpoint not found. Please ensure the API endpoint is available."
-          : error?.status === 401 || error?.status === 403
-          ? "You don't have permission to access trainee performance data."
-          : "Failed to load trainee performance data. Please try again.";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
+
+        if (!options?.track) {
+          setSelectedTrack((current) => {
+            if (current) {
+              return current;
+            }
+            return response.tracks[0]?.track || "";
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch trainee performance:", err);
+        const error = err as { status?: number; message?: string };
+        const errorMessage =
+          error?.status === 404
+            ? "Trainee performance endpoint not found. Please ensure the API endpoint is available."
+            : error?.status === 401 || error?.status === 403
+            ? "You don't have permission to access trainee performance data."
+            : "Failed to load trainee performance data. Please try again.";
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [hasInitializedTracks]
+  );
+
+  const parseSelectedWeek = () => {
+    if (selectedWeek === "all") {
+      return undefined;
     }
-  }, []);
+    const match = selectedWeek.match(/\d+/);
+    if (!match) {
+      return undefined;
+    }
+    const parsed = Number(match[0]);
+    if (Number.isNaN(parsed)) {
+      return undefined;
+    }
+    return [parsed];
+  };
 
   const trackStyleMap: Record<
     string,
@@ -148,69 +256,98 @@ export function TraineeMonitoringPage() {
       border: "border-gray-300/80",
     };
 
-  const formatBreakHours = (value?: number | string | null) => {
+  const getBreakHoursNumeric = (
+    value?: number | string | null
+  ): number | null => {
     if (value === null || value === undefined) {
       return null;
     }
     if (typeof value === "number") {
-      if (!Number.isFinite(value)) {
-        return null;
-      }
-      const formatted = value % 1 === 0 ? value.toString() : value.toFixed(2);
-      return `${formatted}h`;
+      return Number.isFinite(value) ? value : null;
     }
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    const numValue = parseFloat(value.trim());
+    return !isNaN(numValue) ? numValue : null;
   };
 
-  const getRankBadgeClasses = (rank?: number) => {
+  const formatBreakHours = (value?: number | string | null) => {
+    const numValue = getBreakHoursNumeric(value);
+    if (numValue === null) {
+      return null;
+    }
+    const hours = Math.floor(numValue);
+    const minutes = Math.round((numValue - hours) * 60);
+    if (hours === 0 && minutes === 0) {
+      return "0:00";
+    }
+    return `${hours}:${minutes.toString().padStart(2, "0")}`;
+  };
+
+  type RankBadgeMeta = {
+    badge: string;
+    icon?: JSX.Element | null;
+  };
+
+  const getRankBadgeMeta = (rank?: number): RankBadgeMeta => {
     if (!rank) {
-      return "bg-muted/30 text-muted-foreground border-border/50";
+      return {
+        badge: "bg-muted/30 text-muted-foreground border-border/50",
+      };
     }
     if (rank === 1) {
-      return "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-500/40";
+      return {
+        badge:
+          "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900 border border-amber-200 shadow-[0_1px_6px_rgba(251,191,36,0.18)]",
+        icon: <IconCrown className="size-3.5 text-amber-600" />,
+      };
     }
     if (rank === 2) {
-      return "bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-500/20 dark:text-slate-100 dark:border-slate-500/40";
+      return {
+        badge:
+          "bg-gradient-to-r from-slate-50 to-slate-100 text-slate-900 border border-slate-200 shadow-[0_1px_6px_rgba(148,163,184,0.18)]",
+        icon: <IconMedal className="size-3.5 text-slate-500" />,
+      };
     }
     if (rank === 3) {
-      return "bg-orange-100 text-orange-900 border-orange-200 dark:bg-orange-500/20 dark:text-orange-100 dark:border-orange-500/40";
+      return {
+        badge:
+          "bg-gradient-to-r from-orange-50 to-amber-100 text-orange-900 border border-orange-200 shadow-[0_1px_6px_rgba(249,115,22,0.18)]",
+        icon: <IconAward className="size-3.5 text-orange-500" />,
+      };
     }
-    return "bg-muted/20 text-foreground border-border/60";
+    return {
+      badge: "bg-muted/20 text-foreground border-border/60",
+    };
   };
 
-  // Available tracks derived from current data
-  const availableTracks = useMemo(() => {
-    const tracks = new Set<string>();
-    trainees.forEach((trainee) => {
-      if (trainee.track) {
-        tracks.add(trainee.track);
-      }
-    });
-    return Array.from(tracks).sort();
-  }, [trainees]);
+  const availableWeeks = WEEK_OPTIONS;
 
-  const availableWeeks = useMemo(() => {
-    const weeks = new Set<string>();
-    trainees.forEach((trainee) => {
-      if (selectedTrack && trainee.track !== selectedTrack) {
-        return;
-      }
-      trainee.post_scores.forEach((score) => {
-        if (score.module_title) {
-          weeks.add(score.module_title);
-        }
-      });
-      trainee.module_orders.forEach((order) => {
-        if (order.module_title) {
-          weeks.add(order.module_title);
-        }
-      });
+  const weekPeriodLabel = useMemo(() => {
+    if (!weekPeriod || (!weekPeriod.from && !weekPeriod.to)) {
+      return null;
+    }
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
-    return Array.from(weeks).sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true })
-    );
-  }, [trainees, selectedTrack]);
+    const formatDate = (value?: string | null) => {
+      if (!value) {
+        return null;
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return null;
+      }
+      return formatter.format(date);
+    };
+    const fromLabel = formatDate(weekPeriod.from);
+    const toLabel = formatDate(weekPeriod.to);
+    if (fromLabel && toLabel) {
+      return `${fromLabel} – ${toLabel}`;
+    }
+    return fromLabel || toLabel || null;
+  }, [weekPeriod]);
 
   useEffect(() => {
     fetchTraineePerformance();
@@ -218,28 +355,31 @@ export function TraineeMonitoringPage() {
 
   useEffect(() => {
     if (!availableTracks.length) {
-      if (selectedTrack) {
-        setSelectedTrack("");
-      }
       return;
     }
-    if (!selectedTrack) {
+    if (!selectedTrack || !availableTracks.includes(selectedTrack)) {
       setSelectedTrack(availableTracks[0]);
-      return;
-    }
-    if (!availableTracks.includes(selectedTrack)) {
-      setSelectedTrack(availableTracks[0] || "");
     }
   }, [availableTracks, selectedTrack]);
 
   useEffect(() => {
-    if (selectedWeek === "all") {
+    if (!selectedTrack || !hasInitializedTracks) {
       return;
     }
-    if (!availableWeeks.includes(selectedWeek)) {
-      setSelectedWeek("all");
+    const weeks = parseSelectedWeek();
+    if (!weeks || weeks.length === 0) {
+      setWeekPeriod(null);
     }
-  }, [availableWeeks, selectedWeek]);
+    fetchTraineePerformance({
+      track: selectedTrack,
+      weeks,
+    });
+  }, [
+    selectedTrack,
+    selectedWeek,
+    hasInitializedTracks,
+    fetchTraineePerformance,
+  ]);
 
   const trackRankings = useMemo(() => {
     const rankingMap = new Map<number, number>();
@@ -288,10 +428,56 @@ export function TraineeMonitoringPage() {
     return rankingMap;
   }, [trainees]);
 
-  const traineeHasWeekData = (trainee: Trainee, week: string) => {
+  const handleSort = (key: SortKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { key, direction: "asc" };
+    });
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortConfig.key !== key) {
+      return (
+        <IconArrowsSort
+          className="size-3.5 text-muted-foreground"
+          aria-hidden="true"
+        />
+      );
+    }
+    return sortConfig.direction === "asc" ? (
+      <IconArrowUp className="size-3.5 text-primary" aria-hidden="true" />
+    ) : (
+      <IconArrowDown className="size-3.5 text-primary" aria-hidden="true" />
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    key: SortKey,
+    alignment: "left" | "center" | "right" = "center"
+  ) => {
+    const alignmentClass =
+      alignment === "left"
+        ? "justify-start"
+        : alignment === "right"
+        ? "justify-end"
+        : "justify-center";
     return (
-      trainee.post_scores.some((score) => score.module_title === week) ||
-      trainee.module_orders.some((order) => order.module_title === week)
+      <button
+        type="button"
+        onClick={() => handleSort(key)}
+        className={`inline-flex items-center gap-1 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm ${alignmentClass} ${
+          sortConfig.key === key ? "text-foreground" : "text-muted-foreground"
+        }`}
+      >
+        <span>{label}</span>
+        {renderSortIcon(key)}
+      </button>
     );
   };
 
@@ -299,24 +485,111 @@ export function TraineeMonitoringPage() {
   const filteredTrainees = useMemo(() => {
     const filtered = trainees.filter((trainee) => {
       const matchesTrack = !selectedTrack || trainee.track === selectedTrack;
-
-      const matchesWeek =
-        selectedWeek === "all" || traineeHasWeekData(trainee, selectedWeek);
-
-      return matchesTrack && matchesWeek;
+      return matchesTrack;
     });
 
     const getRank = (trainee: Trainee) =>
       trackRankings.get(trainee.user_id) ?? Number.MAX_SAFE_INTEGER;
 
+    const getNameValue = (trainee: Trainee) =>
+      (trainee.full_name || trainee.name || "").toLowerCase();
+
+    const getAttendanceRate = (trainee: Trainee) => {
+      const totalDays = trainee.attendance_days + trainee.absent_days;
+      if (totalDays === 0) {
+        return null;
+      }
+      return (trainee.attendance_days / totalDays) * 100;
+    };
+
+    const getImprovementPercentage = (trainee: Trainee) => {
+      if (
+        trainee.improvement_sum === undefined ||
+        trainee.improvement_sum === null ||
+        trainee.total_post_score === undefined ||
+        trainee.total_post_score === null ||
+        trainee.total_post_score === 0
+      ) {
+        return null;
+      }
+      return (trainee.improvement_sum / trainee.total_post_score) * 100;
+    };
+
+    const getModuleOrderValue = (trainee: Trainee) =>
+      trainee.module_orders.length > 0
+        ? trainee.order_sum
+        : Number.MAX_SAFE_INTEGER;
+
+    const getBreakHoursValue = (trainee: Trainee) => {
+      const breakHoursValue =
+        trainee.total_break_time ??
+        trainee.total_break_hours ??
+        trainee.break_hours ??
+        null;
+      return getBreakHoursNumeric(breakHoursValue);
+    };
+
+    const getSortValue = (trainee: Trainee) => {
+      switch (sortConfig.key) {
+        case "rank":
+          return getRank(trainee);
+        case "name":
+          return getNameValue(trainee);
+        case "attendance":
+          return getAttendanceRate(trainee);
+        case "breakHours":
+          return getBreakHoursValue(trainee);
+        case "improvement":
+          return getImprovementPercentage(trainee);
+        case "modules":
+          return getModuleOrderValue(trainee);
+        default:
+          return null;
+      }
+    };
+
+    const compareValues = (
+      valueA: string | number | null,
+      valueB: string | number | null
+    ) => {
+      if (valueA === valueB) {
+        return 0;
+      }
+      if (valueA === null || valueA === undefined) {
+        return 1;
+      }
+      if (valueB === null || valueB === undefined) {
+        return -1;
+      }
+      if (typeof valueA === "string" && typeof valueB === "string") {
+        return valueA.localeCompare(valueB, undefined, { sensitivity: "base" });
+      }
+      return (valueA as number) - (valueB as number);
+    };
+
+    const directionFactor = sortConfig.direction === "asc" ? 1 : -1;
+
     return filtered.sort((a, b) => {
+      const valueA = getSortValue(a);
+      const valueB = getSortValue(b);
+      const comparison = compareValues(valueA, valueB);
+      if (comparison !== 0) {
+        return comparison * directionFactor;
+      }
       const rankDiff = getRank(a) - getRank(b);
       if (rankDiff !== 0) {
         return rankDiff;
       }
-      return (a.full_name || a.name).localeCompare(b.full_name || b.name);
+      return getNameValue(a).localeCompare(getNameValue(b));
     });
-  }, [trainees, selectedTrack, selectedWeek, trackRankings]);
+  }, [
+    trainees,
+    selectedTrack,
+    selectedWeek,
+    trackRankings,
+    sortConfig,
+    getBreakHoursNumeric,
+  ]);
 
   // Copy all visible names (all filtered trainees) to clipboard
   const handleCopyVisibleNames = async () => {
@@ -419,30 +692,42 @@ export function TraineeMonitoringPage() {
               {t("pages.trainee_monitoring.subtitle")}
             </p>
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             {/* Track Filter */}
-            <div className="flex gap-2 flex-wrap">
-              {availableTracks.map((track) => {
-                const trackStyle = getTrackStyle(track);
-                return (
-                  <Button
-                    key={track}
-                    variant={selectedTrack === track ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedTrack(track)}
-                    className={
-                      selectedTrack === track
-                        ? ""
-                        : `border-2 ${trackStyle.border}`
+            <div className="flex flex-col gap-2">
+              <span className="text-sm text-muted-foreground">
+                {t("pages.trainee_monitoring.trackFilter")}
+              </span>
+              <Select
+                value={selectedTrack || undefined}
+                onValueChange={(value) => setSelectedTrack(value)}
+                disabled={availableTracks.length === 0}
+              >
+                <SelectTrigger className="min-w-[220px]">
+                  <SelectValue
+                    placeholder={
+                      availableTracks.length === 0
+                        ? t("pages.trainee_monitoring.noTracksAvailable")
+                        : t("pages.trainee_monitoring.selectTrack")
                     }
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full mr-2 ${trackStyle.dot}`}
-                    />
-                    {track}
-                  </Button>
-                );
-              })}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTracks.map((track) => {
+                    const trackStyle = getTrackStyle(track);
+                    return (
+                      <SelectItem key={track} value={track}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${trackStyle.dot}`}
+                          />
+                          <span>{track}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             {/* Week Filter */}
             <div className="flex flex-col gap-2">
@@ -472,6 +757,22 @@ export function TraineeMonitoringPage() {
             </div>
           </div>
         </div>
+        {selectedWeek !== "all" && weekPeriodLabel && (
+          <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/20 px-4 py-2 text-sm text-foreground w-fit">
+            <IconCalendar className="size-4 text-muted-foreground" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-muted-foreground">
+                {t("pages.trainee_monitoring.weekPeriodLabel", {
+                  defaultValue: "Week period",
+                })}
+                :
+              </span>
+              <span className="font-semibold text-foreground">
+                {weekPeriodLabel}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Candidates Table */}
@@ -488,12 +789,16 @@ export function TraineeMonitoringPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-center">
-                  {t("table.headers.rank")}
+                  {renderSortButton(t("table.headers.rank"), "rank")}
                 </TableHead>
                 {/* Name column: left-align header and cells for better visual consistency */}
                 <TableHead className="text-left">
                   <div className="flex items-center justify-start gap-2">
-                    <span>{t("table.headers.name")}</span>
+                    {renderSortButton(
+                      t("table.headers.name"),
+                      "name",
+                      "left"
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
@@ -508,13 +813,26 @@ export function TraineeMonitoringPage() {
                   </div>
                 </TableHead>
                 <TableHead className="text-center">
-                  {t("pages.trainee_monitoring.attendanceStats")}
+                  {renderSortButton(
+                    t("pages.trainee_monitoring.attendanceStats"),
+                    "attendance"
+                  )}
                 </TableHead>
                 <TableHead className="text-center">
-                  {t("pages.trainee_monitoring.breakHours")}
+                  {renderSortButton(
+                    t("pages.trainee_monitoring.breakHours"),
+                    "breakHours"
+                  )}
                 </TableHead>
-                <TableHead className="text-center">Post Exam Scores</TableHead>
-                <TableHead className="text-center">Module Orders</TableHead>
+                <TableHead className="text-center">
+                  {renderSortButton(
+                    t("pages.trainee_monitoring.improvementPercentage"),
+                    "improvement"
+                  )}
+                </TableHead>
+                <TableHead className="text-center">
+                  {renderSortButton("Module Orders", "modules")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -541,23 +859,28 @@ export function TraineeMonitoringPage() {
                     0
                   );
                   const rank = trackRankings.get(trainee.user_id);
-                  const breakHours = formatBreakHours(
+                  const breakHoursValue =
                     trainee.total_break_time ??
-                      trainee.total_break_hours ??
-                      trainee.break_hours ??
-                      null
-                  );
+                    trainee.total_break_hours ??
+                    trainee.break_hours ??
+                    null;
+                  const breakHoursNumeric = getBreakHoursNumeric(breakHoursValue);
+                  const breakHours = formatBreakHours(breakHoursValue);
+                  const isBreakHoursOverLimit =
+                    breakHoursNumeric !== null && breakHoursNumeric > 4;
+                  const badgeMeta = getRankBadgeMeta(rank);
 
                   return (
                     <TableRow key={trainee.user_id}>
                       <TableCell className="text-center font-semibold">
                         {rank ? (
-                          <div
-                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full border text-sm ${getRankBadgeClasses(
-                              rank
-                            )}`}
-                          >
-                            #{rank}
+                          <div className="inline-flex items-center justify-center">
+                            <div
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold tracking-tight ${badgeMeta.badge}`}
+                            >
+                              {badgeMeta.icon}
+                              #{rank}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -565,7 +888,11 @@ export function TraineeMonitoringPage() {
                       </TableCell>
                       {/* Name column cells aligned with header (left) */}
                       <TableCell className="text-left">
-                        <div className="flex items-center justify-start gap-3">
+                        <Link
+                          to={`/candidates/${trainee.user_id}`}
+                          className="group flex items-center justify-start gap-3 rounded-md px-1 py-1 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`View ${trainee.full_name || trainee.name || "trainee"} details`}
+                        >
                           <ConsistentAvatar
                             user={{
                               name: trainee.full_name || trainee.name || "-",
@@ -574,12 +901,12 @@ export function TraineeMonitoringPage() {
                             }}
                             className="size-8"
                           />
-                          <div className="font-medium text-center" dir="rtl">
+                          <div className="font-medium text-center group-hover:text-primary" dir="rtl">
                             <span className="text-base">
                               {trainee.full_name || trainee.name || "-"}
                             </span>
                           </div>
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col gap-1 items-center">
@@ -606,7 +933,13 @@ export function TraineeMonitoringPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         {breakHours ? (
-                          <span className="text-sm font-medium">
+                          <span
+                            className={`text-sm font-medium ${
+                              isBreakHoursOverLimit
+                                ? "text-red-600 dark:text-red-400"
+                                : ""
+                            }`}
+                          >
                             {breakHours}
                           </span>
                         ) : (
@@ -616,24 +949,32 @@ export function TraineeMonitoringPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        {trainee.post_scores.length > 0 ? (
+                        {trainee.improvement_sum !== undefined &&
+                        trainee.improvement_sum !== null &&
+                        trainee.total_post_score !== undefined &&
+                        trainee.total_post_score !== null &&
+                        trainee.total_post_score > 0 ? (
                           <div className="flex flex-col gap-1 items-center">
                             <div className="text-sm font-medium">
-                              Total: {trainee.post_score_sum}
-                              {totalMaxScore > 0 && (
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  / {totalMaxScore}
-                                </span>
-                              )}
+                              <span
+                                className={
+                                  trainee.improvement_sum >= 0
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-red-600 dark:text-red-400"
+                                }
+                              >
+                                {trainee.improvement_sum >= 0 ? "+" : ""}
+                                {(
+                                  (trainee.improvement_sum /
+                                    trainee.total_post_score) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
                             </div>
-                            <div className="text-xs text-muted-foreground space-y-0.5">
-                              {trainee.post_scores.map((score) => (
-                                <div key={score.module_id}>
-                                  {score.module_title}: {score.score_total}/
-                                  {score.score_max}
-                                </div>
-                              ))}
+                            <div className="text-xs text-muted-foreground">
+                              {trainee.improvement_sum >= 0 ? "+" : ""}
+                              {trainee.improvement_sum} / {trainee.total_post_score}
                             </div>
                           </div>
                         ) : (
@@ -644,15 +985,59 @@ export function TraineeMonitoringPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         {trainee.module_orders.length > 0 ? (
-                          <div className="flex flex-col gap-1 items-center">
-                            <div className="text-xs text-muted-foreground space-y-0.5">
-                              {trainee.module_orders.map((order) => (
-                                <div key={order.module_id}>
-                                  {order.module_title}: {order.order}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex flex-col gap-0.5 items-center cursor-help">
+                                <div className="text-sm font-medium">
+                                  {trainee.order_sum}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {trainee.module_orders.length}{" "}
+                                  {trainee.module_orders.length === 1
+                                    ? "module"
+                                    : "modules"}
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <div className="flex flex-col gap-1.5">
+                                {trainee.module_orders.map((order) => {
+                                  const getOrderColor = (orderNum: number) => {
+                                    if (orderNum === 1) {
+                                      return "text-amber-300 dark:text-amber-400";
+                                    }
+                                    if (orderNum === 2) {
+                                      return "text-slate-300 dark:text-slate-400";
+                                    }
+                                    if (orderNum === 3) {
+                                      return "text-orange-300 dark:text-orange-400";
+                                    }
+                                    return "text-primary-foreground";
+                                  };
+                                  return (
+                                    <div
+                                      key={order.module_id}
+                                      className="text-left break-words leading-relaxed"
+                                    >
+                                      <span
+                                        className={`font-semibold ${getOrderColor(
+                                          order.order
+                                        )}`}
+                                      >
+                                        {order.order}
+                                      </span>
+                                      <span className="text-primary-foreground/70 mx-1.5">
+                                        -
+                                      </span>
+                                      <span className="text-primary-foreground/90 break-words">
+                                        {order.module_title}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <span className="text-muted-foreground text-sm">
                             -

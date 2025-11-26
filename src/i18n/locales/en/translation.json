@@ -82,7 +82,7 @@
   },
   "navigation": {
     "home": "Home",
-    "candidates": "Candidates",
+    "candidates": "Trainees",
     "trainee_monitoring": "Trainee Monitoring",
     "attendance": "Attendance",
     "overview": "Overview",
@@ -95,7 +95,7 @@
     "back_to_track": "Back to track",
     "assignments": "Assignments",
     "groups": {
-      "candidates": "Candidates",
+      "candidates": "Trainees",
       "forms": "Forms",
       "learning": "Learning",
       "analytics": "Analytics"
@@ -237,12 +237,12 @@
       "subtitle": "Enter your credentials to access your account"
     },
     "candidates": {
-      "title": "Candidates",
-      "subtitle": "Manage candidate information",
-      "addCandidate": "Add Candidate",
-      "searchCandidates": "Search candidates...",
-      "noCandidates": "No candidates found",
-      "totalCandidates": "Total candidates"
+      "title": "Trainees",
+      "subtitle": "Manage trainee information",
+      "addCandidate": "Add Trainee",
+      "searchCandidates": "Search trainees...",
+      "noCandidates": "No trainees found",
+      "totalCandidates": "Total trainees"
     },
     "trainee_monitoring": {
       "title": "Trainee Monitoring",
@@ -259,7 +259,11 @@
       "track": "Track",
       "breakHours": "Break Hours",
       "weekFilter": "Week Filter",
-      "allWeeks": "All Weeks"
+      "allWeeks": "All Weeks",
+      "trackFilter": "Track Filter",
+      "selectTrack": "Select Track",
+      "noTracksAvailable": "No tracks available",
+      "improvementPercentage": "Improvement Percentage"
     },
     "attendance": {
       "title": "Attendance",

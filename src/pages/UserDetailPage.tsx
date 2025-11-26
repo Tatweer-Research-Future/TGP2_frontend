@@ -29,6 +29,7 @@ import { Loader } from "@/components/ui/loader";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { AttendanceBreakdown } from "@/components/AttendanceBreakdown";
+import { CandidateWeekPerformanceCard } from "@/components/CandidateWeekPerformanceCard";
 import {
   Dialog,
   DialogContent,
@@ -139,6 +140,12 @@ type UserDetail = {
         date: string;
         check_in: string;
         check_out: string;
+        break_time?: string | null;
+        break_accumulated?: string | null;
+        break_intervals?: Array<{
+          start: string;
+          end: string | null;
+        }>;
       }>;
       absent_days: Array<{
         date: string;
@@ -1154,11 +1161,13 @@ if you read the cv from the link provided with the data add a short section name
         isLoading={isGeminiLoading}
         response={geminiResponse}
         defaultCollapsed={true}
+        defaultCardCollapsed={true}
       />
 
       {/* Main Tabs */}
-      <Tabs defaultValue="information" className="w-full gap-4">
-        <TabsList className="grid w-full grid-cols-3 mb-2">
+      <Tabs defaultValue="performance" className="w-full gap-4">
+        <TabsList className="grid w-full grid-cols-4 mb-2">
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="information">{t('common.labels.information')}</TabsTrigger>
           <TabsTrigger value="interview">{t('common.labels.interview')}</TabsTrigger>
           <TabsTrigger value="breakdown">{t('common.labels.breakdown')}</TabsTrigger>
@@ -2388,10 +2397,33 @@ if you read the cv from the link provided with the data add a short section name
               </Card>
             );
           })}
-
-          {/* Attendance History */}
-          <AttendanceBreakdown userId={id!} attendanceLog={user?.attendanceLog ?? null} />
         </TabsContent>
+        {user && (
+          <TabsContent value="performance" className="space-y-6">
+            <section className="space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Attendance & Weekly Performance
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Detailed attendance history plus week-by-week exam grades and rankings.
+                </p>
+              </div>
+              <div className="space-y-6">
+                <AttendanceBreakdown
+                  userId={id!}
+                  attendanceLog={user.attendanceLog ?? null}
+                  className="w-full"
+                />
+                <CandidateWeekPerformanceCard
+                  userId={id!}
+                  userName={user.fullName || user.fullNameArabic || user.email}
+                  className="w-full"
+                />
+              </div>
+            </section>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Submit Confirmation Dialog */}

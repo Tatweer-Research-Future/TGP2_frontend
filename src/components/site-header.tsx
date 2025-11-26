@@ -49,13 +49,13 @@ export function SiteHeader() {
     if (path === "/" || path === "/dashboard") {
       items.push({ label: "Home" });
     } else if (path === "/candidates") {
-      items.push({ label: "Candidates" });
+      items.push({ label: "Trainees" });
     } else if (path.startsWith("/candidates/")) {
-      items.push({ label: "Candidates", to: "/candidates" });
+      items.push({ label: "Trainees", to: "/candidates" });
       const id = path.match(/^\/candidates\/([^/]+)/)?.[1];
       if (id) {
         const candidate = getCandidateById(id);
-        items.push({ label: candidate?.fullName ?? `Candidate #${id}` });
+        items.push({ label: candidate?.fullName ?? `Trainee #${id}` });
       }
     } else if (path.startsWith("/forms")) {
       items.push({ label: "Forms" });

@@ -82,7 +82,7 @@
   },
   "navigation": {
     "home": "الرئيسية",
-    "candidates": "المرشحون",
+    "candidates": "المتدربون",
     "trainee_monitoring": "مراقبة المتدربين",
     "attendance": "الحضور",
     "overview": "نظرة عامة",
@@ -94,7 +94,7 @@
     "my_track": "مساري",
     "back_to_track": "العودة إلى المسار",
     "groups": {
-      "candidates": "المرشحون",
+      "candidates": "المتدربون",
       "forms": "النماذج",
       "learning": "التعلم",
       "analytics": "التحليلات"
@@ -236,12 +236,12 @@
       "subtitle": "أدخل بياناتك للوصول إلى حسابك"
     },
     "candidates": {
-      "title": "المرشحون",
-      "subtitle": "إدارة معلومات المرشحين",
-      "addCandidate": "إضافة مرشح",
-      "searchCandidates": "البحث في المرشحين...",
-      "noCandidates": "لا يوجد مرشحون",
-      "totalCandidates": "إجمالي المرشحين"
+      "title": "المتدربون",
+      "subtitle": "إدارة معلومات المتدربين",
+      "addCandidate": "إضافة متدرب",
+      "searchCandidates": "البحث في المتدربين...",
+      "noCandidates": "لا يوجد متدربون",
+      "totalCandidates": "إجمالي المتدربين"
     },
     "trainee_monitoring": {
       "title": "مراقبة المتدربين",
@@ -258,7 +258,11 @@
       "track": "المسار",
       "breakHours": "ساعات الاستراحة",
       "weekFilter": "تصفية حسب الأسبوع",
-      "allWeeks": "جميع الأسابيع"
+      "allWeeks": "جميع الأسابيع",
+      "trackFilter": "تصفية حسب المسار",
+      "selectTrack": "اختر المسار",
+      "noTracksAvailable": "لا توجد مسارات متاحة",
+      "improvementPercentage": "نسبة التحسن"
     },
     "attendance": {
       "title": "الحضور",

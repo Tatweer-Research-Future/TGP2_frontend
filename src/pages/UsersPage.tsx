@@ -387,27 +387,31 @@ export function UsersPage() {
                 paginatedCandidates.map((candidate) => {
                   const meta = getStatusMeta(t)[candidate.status];
                   return (
-                    <TableRow key={candidate.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <ConsistentAvatar
-                            user={{
-                              name: candidate.fullName,
-                              email: candidate.email,
-                              avatar: candidate.avatar,
-                            }}
-                            className="size-8"
-                          />
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {candidate.fullName}
-                            </span>
-                            <span className="text-sm text-muted-foreground md:hidden">
-                              {candidate.email}
-                            </span>
-                          </div>
+                  <TableRow key={candidate.id}>
+                    <TableCell>
+                      <Link
+                        to={`/candidates/${candidate.id}`}
+                        className="group flex items-center gap-3 rounded-md px-1 py-1 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`View ${candidate.fullName} details`}
+                      >
+                        <ConsistentAvatar
+                          user={{
+                            name: candidate.fullName,
+                            email: candidate.email,
+                            avatar: candidate.avatar,
+                          }}
+                          className="size-8"
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium group-hover:text-primary">
+                            {candidate.fullName}
+                          </span>
+                          <span className="text-sm text-muted-foreground md:hidden">
+                            {candidate.email}
+                          </span>
                         </div>
-                      </TableCell>
+                      </Link>
+                    </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <div className="font-medium text-right" dir="rtl">
                           <span className="text-base">
