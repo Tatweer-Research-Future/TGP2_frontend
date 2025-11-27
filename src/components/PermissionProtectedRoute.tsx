@@ -10,11 +10,18 @@ export function PermissionProtectedRoute({
   children,
   requiredPage,
 }: PermissionProtectedRouteProps) {
-  const { canAccessPage, getHomePage } = useUserGroups();
+  const { canAccessPage, getHomePage, isTrainee } = useUserGroups();
   const location = useLocation();
 
   // Check if user can access the current page
   const currentPath = location.pathname;
+  const isTraineeOnlyRoute = requiredPage === "/my-stats";
+
+  if (isTraineeOnlyRoute && !isTrainee) {
+    const homePage = getHomePage();
+    return <Navigate to={homePage} replace />;
+  }
+
   if (!canAccessPage(currentPath)) {
     // Redirect to user's home page
     const homePage = getHomePage();

@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
       } catch (error: any) {
         // If we are unauthorized, clear any stale user
-        if (error?.status === 401 || error?.status === 403) {
+        if (error?.status === 401) {
           localStorage.removeItem(USER_STORAGE_KEY);
           if (isMounted) {
             setUser(null);

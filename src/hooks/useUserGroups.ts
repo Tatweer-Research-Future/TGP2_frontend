@@ -58,6 +58,7 @@ export function useUserGroups() {
     groupId,
     permissions,
     isStaff,
+    isTrainee,
     hasInstructor,
     isInGroup: (groupName: string) =>
       user?.groups?.includes(groupName) || false,

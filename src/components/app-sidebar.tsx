@@ -64,7 +64,7 @@ const getNavItemDetails = (url: string, t: any) => {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
-  const { getNavigationItems } = useUserGroups();
+  const { getNavigationItems, isTrainee } = useUserGroups();
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isRTL = (i18n.language || "en").startsWith("ar");
@@ -77,10 +77,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Always include /home for everyone
   const homeItem = { url: "/home" };
-  const allItems = [
+  let allItems = [
     homeItem,
     ...permissionBasedItems.filter((item) => item.url !== "/home"),
   ];
+
+  if (!isTrainee) {
+    allItems = allItems.filter((item) => item.url !== "/my-stats");
+  }
 
   // If user is staff, ensure Forms Summary appears in nav
   if ((user as any)?.is_staff) {

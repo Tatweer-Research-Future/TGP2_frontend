@@ -133,7 +133,7 @@ export async function apiFetch<T>(
     }
 
     // Handle authentication errors
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       // Clear invalid tokens and user data
       setAccessToken(null);
       localStorage.removeItem("auth_user");
