@@ -67,6 +67,36 @@ export function TimePickerDialog({
     setMinutes(minute);
   };
 
+  const handleDirectTimeInput = (value: string) => {
+    setTime(value);
+    if (!value) return;
+
+    const timePattern = /^(\d{1,2}):(\d{2})$/;
+    const match = value.match(timePattern);
+    if (!match) return;
+
+    const parsedHours = Number(match[1]);
+    const parsedMinutes = Number(match[2]);
+
+    if (
+      Number.isNaN(parsedHours) ||
+      Number.isNaN(parsedMinutes) ||
+      parsedHours < 0 ||
+      parsedHours > 23 ||
+      parsedMinutes < 0 ||
+      parsedMinutes > 59
+    ) {
+      return;
+    }
+
+    const hours12 =
+      parsedHours === 0 ? 12 : parsedHours > 12 ? parsedHours - 12 : parsedHours;
+
+    setHours(hours12);
+    setMinutes(parsedMinutes);
+    setIsAM(parsedHours < 12);
+  };
+
   const handleSubmit = () => {
     if (time) {
       onTimeSelect(time);
@@ -158,9 +188,15 @@ export function TimePickerDialog({
             </Button>
           </div>
 
-          {/* Current Selection Display */}
-          <div className="text-lg font-mono bg-muted px-4 py-2 rounded">
-            {time}
+          {/* Current Selection Display (editable) */}
+          <div className="w-full flex justify-center">
+            <Input
+              type="time"
+              step="60"
+              value={time}
+              onChange={(event) => handleDirectTimeInput(event.target.value)}
+              className="text-lg font-mono w-40 text-center time-input-display"
+            />
           </div>
         </div>
         <DialogFooter>

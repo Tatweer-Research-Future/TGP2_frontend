@@ -197,3 +197,14 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+.time-input-display {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.time-input-display::-webkit-calendar-picker-indicator,
+.time-input-display::-webkit-clear-button,
+.time-input-display::-webkit-inner-spin-button {
+  display: none;
+}
