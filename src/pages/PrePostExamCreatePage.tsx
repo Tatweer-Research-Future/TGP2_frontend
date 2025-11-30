@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,15 @@ import {
   type CreateModuleTestPayload,
 } from "@/lib/api";
 import { toast } from "sonner";
-import { CalendarDays, FileQuestion, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Circle,
+  FileQuestion,
+  ListPlus,
+  Plus,
+  Settings,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
 
@@ -132,38 +140,101 @@ export default function PrePostExamCreatePage() {
     }
   }, [tracks, moduleId]);
 
+  const updateFloatingAddVisibility = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const target = addButtonRef.current;
+    if (!target) {
+      setShowFloatingAdd(false);
+      return;
+    }
+    if (questions.length === 0) {
+      setShowFloatingAdd(false);
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight || 0;
+    const isFullyVisible = rect.top >= 0 && rect.bottom <= viewportHeight;
+    const scrollTop =
+      window.scrollY ??
+      document.documentElement.scrollTop ??
+      document.body.scrollTop ??
+      0;
+    const scrolledPastForm = scrollTop > 280;
+    setShowFloatingAdd(!isFullyVisible || scrolledPastForm);
+  }, [questions.length]);
+
   // Show floating "Add Question" button when the original is out of view
   useEffect(() => {
-    const target = addButtonRef.current;
-    if (!target) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowFloatingAdd(!entry.isIntersecting);
-      },
-      { root: null, threshold: 0 }
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [addButtonRef]);
+    updateFloatingAddVisibility();
+    const handleScroll = () => updateFloatingAddVisibility();
+    const captureScroll = true;
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    document.addEventListener("scroll", handleScroll, captureScroll);
+    window.addEventListener("resize", updateFloatingAddVisibility);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener("scroll", handleScroll, captureScroll);
+      window.removeEventListener("resize", updateFloatingAddVisibility);
+      setShowFloatingAdd(false);
+    };
+  }, [updateFloatingAddVisibility]);
+
+  useEffect(() => {
+    updateFloatingAddVisibility();
+  }, [questions.length, updateFloatingAddVisibility]);
 
   const moduleLabel = useMemo(() => {
     const idNum = Number(moduleId);
     return modules.find((m) => m.id === idNum)?.label || "";
   }, [modules, moduleId]);
 
-  function addQuestion() {
+  const addQuestionLabel = useMemo(() => {
+    const label = t("exam.add_question");
+    return label.startsWith("+") ? label.replace(/^\+\s*/, "") : label;
+  }, [t]);
+
+  const questionsTitle = useMemo(() => {
+    const label = t("exam.questions");
+    return label.replace(/\s*\(.*optional.*\)/i, "").trim();
+  }, [t]);
+
+  const markCorrectLabel = useMemo(() => {
+    const label = t("exam.mark_correct", { defaultValue: "Mark as correct" });
+    return label === "exam.mark_correct" ? "Mark as correct" : label;
+  }, [t]);
+
+  function createQuestionTemplate(choiceCount = 4): DraftQuestion {
+    return {
+      title: "",
+      text: "",
+      imageFile: null,
+      choices: Array.from({ length: Math.max(choiceCount, 2) }, (_, idx) => ({
+        text: "",
+        is_correct: idx === 0,
+      })),
+    };
+  }
+
+  function addQuestion(choiceCount = 4) {
+    setQuestions((prev) => [...prev, createQuestionTemplate(choiceCount)]);
+  }
+
+  function bulkAddQuestions(questionCount = 10, choiceCount = 4) {
+    const safeCount = Math.max(questionCount, 1);
     setQuestions((prev) => [
       ...prev,
-      {
-        title: "",
-        text: "",
-        imageFile: null,
-        choices: [
-          { text: "", is_correct: true },
-          { text: "", is_correct: false },
-        ],
-      },
+      ...Array.from({ length: safeCount }, () =>
+        createQuestionTemplate(choiceCount)
+      ),
     ]);
+    toast.success(
+      t("exam.bulk_questions_added", {
+        defaultValue: `Added ${safeCount} blank questions`,
+        count: safeCount,
+      })
+    );
   }
 
   function removeQuestion(index: number) {
@@ -464,21 +535,37 @@ export default function PrePostExamCreatePage() {
               <div className="flex items-center gap-2">
                 <FileQuestion className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <CardTitle>{t("exam.questions")}</CardTitle>
+                  <CardTitle>{questionsTitle}</CardTitle>
                   <CardDescription>
                     {t("exam.questions_description")}
                   </CardDescription>
                 </div>
               </div>
-              <Button
-                type="button"
-                onClick={addQuestion}
-                ref={addButtonRef}
-                variant="outline"
-                size="sm"
-              >
-                {t("exam.add_question")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => bulkAddQuestions()}
+                >
+                  <ListPlus className="h-4 w-4" />
+                  <span>
+                    {t("exam.add_ten_blank", {
+                      defaultValue: "Add 10 blanks",
+                    })}
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => addQuestion()}
+                  ref={addButtonRef}
+                  variant="outline"
+                  size="sm"
+                >
+                  {addQuestionLabel}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -587,58 +674,71 @@ export default function PrePostExamCreatePage() {
                   <div className="space-y-3">
                     <Label>{t("exam.answer_choices")}</Label>
                     <div className="space-y-3">
-                      {q.choices.map((c, ci) => (
-                        <div
-                          key={ci}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                            c.is_correct
-                              ? "bg-green-50 border-green-200 ring-1 ring-green-200 dark:bg-emerald-500/10 dark:border-emerald-500/40 dark:ring-emerald-500/30"
-                              : "bg-muted/30 border-border hover:bg-muted/50 dark:bg-muted/20 dark:border-border dark:hover:bg-muted/30"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <input
-                              aria-label={`Mark choice ${ci + 1} as correct`}
-                              type="radio"
-                              name={`q-${qi}-correct`}
-                              checked={c.is_correct}
-                              onChange={() => setChoiceCorrect(qi, ci)}
-                              className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500"
-                            />
+                      {q.choices.map((c, ci) => {
+                        const optionLabel = String.fromCharCode(65 + ci);
+                        return (
+                          <div
+                            key={ci}
+                            className={`flex flex-col gap-3 rounded-lg border p-3 transition-colors md:flex-row md:items-center ${
+                              c.is_correct
+                                ? "bg-green-50 border-green-200 ring-1 ring-green-200 dark:bg-emerald-500/10 dark:border-emerald-500/40 dark:ring-emerald-500/30"
+                                : "bg-muted/30 border-border hover:bg-muted/50 dark:bg-muted/20 dark:border-border dark:hover:bg-muted/30"
+                            }`}
+                          >
+                            <div className="flex w-full items-center gap-3">
+                              <Badge
+                                variant="secondary"
+                                className="rounded-full px-3 py-1 text-xs font-bold tracking-wide"
+                              >
+                                {optionLabel}
+                              </Badge>
+                              <Input
+                                value={c.text}
+                                onChange={(e) =>
+                                  setChoiceText(qi, ci, e.target.value)
+                                }
+                                placeholder={`${t("exam.choice_placeholder")} ${ci + 1}`}
+                                className={`flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                                  c.is_correct ? "font-medium" : ""
+                                }`}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                onClick={() => setChoiceCorrect(qi, ci)}
+                                size="sm"
+                                aria-pressed={c.is_correct}
+                                className={`gap-2 rounded-full border px-4 text-xs font-semibold uppercase tracking-wide ${
+                                  c.is_correct
+                                    ? "border-green-500 bg-green-500 text-white hover:bg-green-500/90 hover:text-white dark:border-emerald-400 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                                    : "border-border bg-background text-muted-foreground hover:text-foreground dark:bg-muted"
+                                }`}
+                              >
+                                {c.is_correct ? (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                ) : (
+                                  <Circle className="h-4 w-4" />
+                                )}
+                                {c.is_correct
+                                  ? t("exam.correct_answer")
+                                  : markCorrectLabel}
+                              </Button>
+                              {q.choices.length > 2 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeChoice(qi, ci)}
+                                  className="text-muted-foreground hover:text-destructive"
+                                >
+                                  {t("exam.remove")}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <Input
-                              value={c.text}
-                              onChange={(e) =>
-                                setChoiceText(qi, ci, e.target.value)
-                              }
-                              placeholder={`${t("exam.choice_placeholder")} ${ci + 1}`}
-                              className={`border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                                c.is_correct ? "font-medium" : ""
-                              }`}
-                            />
-                          </div>
-                          {c.is_correct && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-800 text-xs dark:bg-emerald-500/20 dark:text-emerald-100"
-                            >
-                              {t("exam.correct_answer")}
-                            </Badge>
-                          )}
-                          {q.choices.length > 2 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeChoice(qi, ci)}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              {t("exam.remove")}
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                       <Button
                         type="button"
                         variant="outline"
@@ -650,7 +750,10 @@ export default function PrePostExamCreatePage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {t("exam.correct_answer_hint")}
+                      {t("exam.correct_answer_hint_updated", {
+                        defaultValue:
+                          "For best results, craft around 10 questions and add an option E labeled “I don’t know” so trainees can answer honestly.",
+                      })}
                     </p>
                   </div>
                 </CardContent>
@@ -659,7 +762,7 @@ export default function PrePostExamCreatePage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3 mt-10">
+        <div className="flex flex-wrap justify-start gap-3 mt-10">
           <Button type="button" variant="outline" asChild>
             <Link
               to={
@@ -688,13 +791,19 @@ export default function PrePostExamCreatePage() {
         </div>
       </form>
       {showFloatingAdd && (
-        <div className="fixed bottom-[5%] right-[40%] z-50">
+        <div className="fixed bottom-24 right-4 sm:bottom-14 sm:right-6 lg:bottom-10 lg:right-10 z-50 drop-shadow-2xl">
           <Button
             type="button"
-            onClick={addQuestion}
-            className="bg-primary text-white shadow-lg hover:bg-primary/90"
+            onClick={() => {
+              addQuestion();
+              requestAnimationFrame(updateFloatingAddVisibility);
+            }}
+            size="lg"
+            className="gap-2 rounded-full bg-primary text-primary-foreground shadow-xl hover:bg-primary/90"
+            aria-label={addQuestionLabel}
           >
-            {t("exam.add_question")}
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">{addQuestionLabel}</span>
           </Button>
         </div>
       )}
