@@ -1565,7 +1565,11 @@ export type ModuleTestListItem = {
   total_points: number;
 };
 
-export type ModuleTestChoicePublic = { id: number; text: string };
+export type ModuleTestChoicePublic = {
+  id: number;
+  text: string;
+  is_correct?: boolean;
+};
 
 export type ModuleTestQuestion = {
   id: number;
@@ -1685,6 +1689,38 @@ export async function createModuleTest(payload: CreateModuleTestPayload) {
   });
 
   return apiFetchFormData(`/portal/tests/`, form, { method: "POST" });
+}
+
+export type UpdateModuleTestPayload = {
+  title?: string;
+  description?: string | null;
+  publish_at_pre?: string | null;
+  expire_at_pre?: string | null;
+  publish_at_post?: string | null;
+  expire_at_post?: string | null;
+  is_disabled?: boolean;
+  questions?: Array<{
+    id?: number;
+    title: string;
+    text?: string | null;
+    order: number;
+    choices: Array<{
+      id?: number;
+      text: string;
+      is_correct: boolean;
+    }>;
+  }>;
+};
+
+export async function updateModuleTest(
+  id: number | string,
+  payload: UpdateModuleTestPayload
+) {
+  return apiFetch(`/portal/tests/${id}/`, {
+    method: "PATCH",
+    body: payload,
+    requireCsrf: true,
+  });
 }
 
 // Submit a test attempt (trainee)

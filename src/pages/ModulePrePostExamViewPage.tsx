@@ -3,7 +3,10 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +20,29 @@ import {
   getModuleTests,
   getPortalModules,
   deleteModuleTest,
+  updateModuleTest,
   type ModuleTestDetail,
   type ModuleTestListItem,
+  type ModuleTestQuestion,
   type PortalModule,
 } from "@/lib/api";
+import { toast } from "sonner";
+
+type EditableChoice = {
+  id?: number;
+  text: string;
+  is_correct: boolean;
+};
+
+type EditableQuestion = {
+  id: number;
+  order: number;
+  title: string;
+  text: string;
+  choices: EditableChoice[];
+};
+
+const MIN_CHOICES = 2;
 
 export default function ModulePrePostExamViewPage() {
   const { moduleId } = useParams();
@@ -32,6 +54,8 @@ export default function ModulePrePostExamViewPage() {
   const [test, setTest] = useState<ModuleTestDetail | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<EditableQuestion | null>(null);
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
 
   const moduleIdNum = useMemo(
     () => (moduleId ? Number(moduleId) : null),
@@ -99,6 +123,147 @@ export default function ModulePrePostExamViewPage() {
     } catch (e: any) {
       setError(e?.message || "Failed to delete exam");
       setIsDeleting(false);
+    }
+  }
+
+  function buildEditableQuestion(question: ModuleTestQuestion): EditableQuestion {
+    const choices = question.choices.map((choice) => ({
+      id: choice.id,
+      text: choice.text ?? "",
+      is_correct: Boolean(choice.is_correct),
+    }));
+    if (!choices.some((choice) => choice.is_correct) && choices.length > 0) {
+      choices[0] = { ...choices[0], is_correct: true };
+    }
+    return {
+      id: question.id,
+      order: question.order,
+      title: question.title,
+      text: question.text ?? "",
+      choices,
+    };
+  }
+
+  function mutateEditingQuestion(
+    updater: (prev: EditableQuestion) => EditableQuestion
+  ) {
+    setEditingQuestion((prev) => (prev ? updater(prev) : prev));
+  }
+
+  function startEditingQuestion(question: ModuleTestQuestion) {
+    setEditingQuestion(buildEditableQuestion(question));
+  }
+
+  function cancelEditingQuestion() {
+    if (isSavingQuestion) return;
+    setEditingQuestion(null);
+  }
+
+  function addChoiceToEditing() {
+    mutateEditingQuestion((prev) => ({
+      ...prev,
+      choices: [
+        ...prev.choices,
+        { text: "", is_correct: prev.choices.length === 0 },
+      ],
+    }));
+  }
+
+  function setChoiceText(index: number, value: string) {
+    mutateEditingQuestion((prev) => ({
+      ...prev,
+      choices: prev.choices.map((choice, i) =>
+        i === index ? { ...choice, text: value } : choice
+      ),
+    }));
+  }
+
+  function markChoiceAsCorrect(index: number) {
+    mutateEditingQuestion((prev) => ({
+      ...prev,
+      choices: prev.choices.map((choice, i) => ({
+        ...choice,
+        is_correct: i === index,
+      })),
+    }));
+  }
+
+  function removeChoiceFromEditing(index: number) {
+    mutateEditingQuestion((prev) => {
+      if (prev.choices.length <= MIN_CHOICES) return prev;
+      const newChoices = prev.choices
+        .filter((_, i) => i !== index)
+        .map((choice) => ({ ...choice }));
+      if (!newChoices.some((choice) => choice.is_correct) && newChoices.length) {
+        newChoices[0].is_correct = true;
+      }
+      return {
+        ...prev,
+        choices: newChoices,
+      };
+    });
+  }
+
+  function validateEditableQuestion(question: EditableQuestion): string | null {
+    if (!question.title.trim()) return "Question title is required.";
+    if (question.choices.length < MIN_CHOICES)
+      return "At least two choices are required.";
+    const correctCount = question.choices.filter((c) => c.is_correct).length;
+    if (correctCount !== 1)
+      return "Please mark exactly one choice as correct.";
+    for (let i = 0; i < question.choices.length; i++) {
+      if (!question.choices[i].text.trim()) {
+        return `Choice ${i + 1} needs text.`;
+      }
+    }
+    return null;
+  }
+
+  async function handleSaveEditedQuestion() {
+    if (!test || !editingQuestion) return;
+    const validationError = validateEditableQuestion(editingQuestion);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsSavingQuestion(true);
+    try {
+      const questionsPayload = (test.questions || []).map((question) => {
+        const isTarget = question.id === editingQuestion.id;
+        const title = isTarget ? editingQuestion.title : question.title;
+        const text = isTarget
+          ? editingQuestion.text
+          : question.text ?? "";
+        const sourceChoices = isTarget
+          ? editingQuestion.choices
+          : question.choices.map((choice) => ({
+              id: choice.id,
+              text: choice.text,
+              is_correct: Boolean(choice.is_correct),
+            }));
+        return {
+          id: question.id,
+          title: title.trim(),
+          text: text.trim() ? text.trim() : null,
+          order: question.order,
+          choices: sourceChoices.map((choice) => ({
+            id: choice.id,
+            text: choice.text.trim(),
+            is_correct: Boolean(choice.is_correct),
+          })),
+        };
+      });
+
+      await updateModuleTest(test.id, { questions: questionsPayload });
+      const refreshed = await getModuleTestById(test.id);
+      setTest(refreshed);
+      toast.success("Question updated");
+      setEditingQuestion(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update question");
+    } finally {
+      setIsSavingQuestion(false);
     }
   }
 
@@ -186,6 +351,14 @@ export default function ModulePrePostExamViewPage() {
                           <Badge variant="outline">Q{qi + 1}</Badge>
                           <div className="font-medium">{q.title}</div>
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditingQuestion(q)}
+                        >
+                          Edit
+                        </Button>
                       </div>
                       {q.text && (
                         <div className="text-sm text-foreground/90 mt-2 whitespace-pre-wrap">
@@ -203,7 +376,7 @@ export default function ModulePrePostExamViewPage() {
                       )}
                       <div className="mt-4 space-y-2">
                         {q.choices.map((c) => {
-                          const isCorrect = Boolean((c as any).is_correct);
+                          const isCorrect = Boolean(c.is_correct);
                           return (
                             <div
                               key={c.id}
@@ -235,6 +408,125 @@ export default function ModulePrePostExamViewPage() {
           </Card>
         </div>
       )}
+      <Dialog
+        open={Boolean(editingQuestion)}
+        onOpenChange={(open) => {
+          if (!open) {
+            cancelEditingQuestion();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit question</DialogTitle>
+            <DialogDescription>
+              Update the question text and its answer choices.
+            </DialogDescription>
+          </DialogHeader>
+          {editingQuestion && (
+            <div className="space-y-5 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="editing-question-title">Question</Label>
+                <Input
+                  id="editing-question-title"
+                  value={editingQuestion.title}
+                  onChange={(e) =>
+                    mutateEditingQuestion((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter question prompt"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editing-question-text">Additional text</Label>
+                <Textarea
+                  id="editing-question-text"
+                  value={editingQuestion.text}
+                  onChange={(e) =>
+                    mutateEditingQuestion((prev) => ({
+                      ...prev,
+                      text: e.target.value,
+                    }))
+                  }
+                  placeholder="Optional details or scenario"
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-3">
+                <Label>Answer choices</Label>
+                <div className="space-y-3">
+                  {editingQuestion.choices.map((choice, index) => (
+                    <div
+                      key={`choice-${choice.id ?? index}`}
+                      className="rounded-md border p-3 space-y-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="text-xs">
+                          {String.fromCharCode(65 + index)}
+                        </Badge>
+                        <Input
+                          value={choice.text}
+                          onChange={(e) => setChoiceText(index, e.target.value)}
+                          placeholder={`Choice ${index + 1}`}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 justify-between">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={choice.is_correct ? "default" : "outline"}
+                          onClick={() => markChoiceAsCorrect(index)}
+                        >
+                          {choice.is_correct ? "Correct answer" : "Mark correct"}
+                        </Button>
+                        {editingQuestion.choices.length > MIN_CHOICES && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => removeChoiceFromEditing(index)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addChoiceToEditing}
+                    className="w-full"
+                  >
+                    Add choice
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={cancelEditingQuestion}
+              disabled={isSavingQuestion}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveEditedQuestion}
+              disabled={isSavingQuestion}
+            >
+              {isSavingQuestion ? "Saving..." : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Confirm delete exam dialog */}
       <Dialog
         open={confirmDeleteOpen}
