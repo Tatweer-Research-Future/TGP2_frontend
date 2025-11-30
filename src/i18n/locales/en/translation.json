@@ -231,7 +231,10 @@
       "noContent": "No announcements or polls available",
       "loadError": "Failed to load content",
       "pollVoted": "Vote submitted!",
-      "pollVoteError": "Failed to submit vote"
+      "pollVoteError": "Failed to submit vote",
+      "global": "Global",
+      "track": "Track",
+      "trackUnspecified": "Track (unspecified)"
     },
     "login": {
       "title": "Sign In",

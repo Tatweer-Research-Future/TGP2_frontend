@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -91,6 +91,67 @@ const COMMON_REACTIONS = [
   { emoji: "🔥", label: "Fire" },
 ];
 
+const TRACK_ID_TO_NAME: Record<number, string> = {
+  1: "Software & App Development",
+  2: "AI & Data Analysis",
+  3: "Networking & Telecommunications",
+};
+
+function getTrackTheme(trackName?: string) {
+  const name = (trackName || "").toLowerCase();
+  if (name.includes("ai") || name.includes("data")) {
+    return {
+      gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
+      border: "border-[#34d399]",
+      borderColor: "#34d399",
+      ring: "ring-[#34d399]/50",
+      glow: "shadow-[#34d399]/50",
+      badge:
+        "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
+      text: "text-[#34d399] dark:text-[#34d399]",
+    };
+  }
+  if (
+    name.includes("software") ||
+    name.includes("app") ||
+    name.includes("development")
+  ) {
+    return {
+      gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
+      border: "border-[#6366f1]",
+      borderColor: "#6366f1",
+      ring: "ring-[#6366f1]/50",
+      glow: "shadow-[#6366f1]/50",
+      badge:
+        "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
+      text: "text-[#6366f1] dark:text-[#6366f1]",
+    };
+  }
+  if (name.includes("network") || name.includes("communication")) {
+    return {
+      gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
+      border: "border-[#0ea5e9]",
+      borderColor: "#0ea5e9",
+      ring: "ring-[#0ea5e9]/50",
+      glow: "shadow-[#0ea5e9]/50",
+      badge:
+        "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
+      text: "text-[#0ea5e9] dark:text-[#0ea5e9]",
+    };
+  }
+  // Fallback
+  return {
+    gradient: "bg-gradient-to-br from-yellow-400 to-yellow-600",
+    border: "border-yellow-400",
+    borderColor: "#eab308",
+    ring: "ring-yellow-400/50",
+    glow: "shadow-yellow-500/50",
+    badge:
+      "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+    text: "text-yellow-700 dark:text-yellow-300",
+  };
+}
+
 function AnnouncementCard({
   announcement,
   onEdit,
@@ -98,6 +159,7 @@ function AnnouncementCard({
   canEdit,
   currentUserId,
   isStaffUser,
+  trackLabel,
 }: {
   announcement: Announcement;
   onEdit?: (announcement: Announcement) => void;
@@ -105,6 +167,7 @@ function AnnouncementCard({
   canEdit?: boolean;
   currentUserId?: number;
   isStaffUser?: boolean;
+  trackLabel?: string;
 }) {
   const { t } = useTranslation();
   const isNew = isNewAnnouncement(announcement.publish_at);
@@ -113,6 +176,28 @@ function AnnouncementCard({
   const [isLoadingReactions, setIsLoadingReactions] = useState(true);
   const [isReacting, setIsReacting] = useState(false);
   const [showAddReactions, setShowAddReactions] = useState(false);
+  const isGlobalAnnouncement = announcement.scope === "GLOBAL";
+  const resolvedTrackLabel =
+    trackLabel?.trim() ||
+    (typeof announcement.track === "number"
+      ? TRACK_ID_TO_NAME[announcement.track] ||
+        t("pages.home.trackUnspecified", {
+          defaultValue: "Track (unspecified)",
+        })
+      : t("pages.home.trackUnspecified", {
+          defaultValue: "Track (unspecified)",
+        }));
+  const scopeBadgeLabel = isGlobalAnnouncement
+    ? t("pages.home.global", { defaultValue: "Global" })
+    : resolvedTrackLabel;
+  const trackTheme = !isGlobalAnnouncement
+    ? getTrackTheme(resolvedTrackLabel)
+    : null;
+  const scopeBadgeClasses = isGlobalAnnouncement
+    ? "bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-900/40 dark:text-sky-100 dark:border-sky-700"
+    : trackTheme
+    ? cn("border border-transparent", trackTheme.badge)
+    : "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-800";
 
   // Fetch reactions on mount
   useEffect(() => {
@@ -240,7 +325,7 @@ function AnnouncementCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
                 <h3 className="font-semibold text-base sm:text-lg">
                   {announcement.title}
                 </h3>
@@ -249,6 +334,14 @@ function AnnouncementCard({
                     NEW
                   </Badge>
                 )}
+                <Badge
+                  className={cn(
+                    "text-xs px-2 py-0.5 shrink-0 font-semibold",
+                    scopeBadgeClasses
+                  )}
+                >
+                  {scopeBadgeLabel}
+                </Badge>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge variant="secondary" className="text-sm">
@@ -546,23 +639,54 @@ export function HomePage() {
   const [formPublishAt, setFormPublishAt] = useState("");
   const [formExpireAt, setFormExpireAt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const canEditAnnouncements = isStaffUser || isInstructorUser;
+  const hasTrackScopedAnnouncements = announcements.some(
+    (announcement) =>
+      announcement.scope === "TRACK" && announcement.track !== null
+  );
+  const needsTrackData = canEditAnnouncements || hasTrackScopedAnnouncements;
+  const hasTrackOptions = tracks.length > 0;
+  const trackNameMap = useMemo(
+    () =>
+      tracks.reduce<Record<number, string>>((acc, track) => {
+        if (typeof track.id === "number" && track.name) {
+          acc[track.id] = track.name;
+        }
+        return acc;
+      }, {}),
+    [tracks]
+  );
+  const getTrackLabelForId = (trackId: number | null) => {
+    if (typeof trackId !== "number") return undefined;
+    return TRACK_ID_TO_NAME[trackId] || trackNameMap[trackId];
+  };
 
-  // Load tracks for staff/instructors only
+  // Load tracks when we need to show track-specific information
   useEffect(() => {
-    if (isStaffUser || isInstructorUser) {
-      setIsLoadingTracks(true);
-      getPortalTracks()
-        .then((data) => {
-          setTracks(data.results || []);
-        })
-        .catch((err) => {
-          console.error("Failed to load tracks:", err);
-        })
-        .finally(() => {
-          setIsLoadingTracks(false);
-        });
+    if (!needsTrackData || isLoadingTracks || hasTrackOptions) {
+      return;
     }
-  }, [isStaffUser, isInstructorUser]);
+
+    let isMounted = true;
+    setIsLoadingTracks(true);
+    getPortalTracks()
+      .then((data) => {
+        if (!isMounted) return;
+        setTracks(data.results || []);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("Failed to load tracks:", err);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoadingTracks(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasTrackOptions, isLoadingTracks, needsTrackData]);
 
   useEffect(() => {
     async function loadData() {
@@ -593,10 +717,6 @@ export function HomePage() {
     }
     loadData();
   }, [t, groupId]);
-
-  // Only staff and instructors can create/edit/delete announcements
-  // Trainees are read-only and should not see these buttons
-  const canEditAnnouncements = isStaffUser || isInstructorUser;
 
   const handleCreateAnnouncement = () => {
     setEditingAnnouncement(null);
@@ -784,62 +904,6 @@ export function HomePage() {
   const hasContent =
     announcements.length > 0 || polls.length > 0 || leaderboard.length > 0;
 
-  // Map track names to colors (matching TrackPage.tsx)
-  function getTrackTheme(trackName?: string) {
-    const name = (trackName || "").toLowerCase();
-    if (name.includes("ai") || name.includes("data")) {
-      return {
-        gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
-        border: "border-[#34d399]",
-        borderColor: "#34d399",
-        ring: "ring-[#34d399]/50",
-        glow: "shadow-[#34d399]/50",
-        badge:
-          "bg-[#34d399]/20 dark:bg-[#34d399]/30 text-[#34d399] dark:text-[#34d399]",
-        text: "text-[#34d399] dark:text-[#34d399]",
-      };
-    }
-    if (
-      name.includes("software") ||
-      name.includes("app") ||
-      name.includes("development")
-    ) {
-      return {
-        gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
-        border: "border-[#6366f1]",
-        borderColor: "#6366f1",
-        ring: "ring-[#6366f1]/50",
-        glow: "shadow-[#6366f1]/50",
-        badge:
-          "bg-[#6366f1]/20 dark:bg-[#6366f1]/30 text-[#6366f1] dark:text-[#6366f1]",
-        text: "text-[#6366f1] dark:text-[#6366f1]",
-      };
-    }
-    if (name.includes("network") || name.includes("communication")) {
-      return {
-        gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
-        border: "border-[#0ea5e9]",
-        borderColor: "#0ea5e9",
-        ring: "ring-[#0ea5e9]/50",
-        glow: "shadow-[#0ea5e9]/50",
-        badge:
-          "bg-[#0ea5e9]/20 dark:bg-[#0ea5e9]/30 text-[#0ea5e9] dark:text-[#0ea5e9]",
-        text: "text-[#0ea5e9] dark:text-[#0ea5e9]",
-      };
-    }
-    // Fallback
-    return {
-      gradient: "bg-gradient-to-br from-yellow-400 to-yellow-600",
-      border: "border-yellow-400",
-      borderColor: "#eab308",
-      ring: "ring-yellow-400/50",
-      glow: "shadow-yellow-500/50",
-      badge:
-        "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
-      text: "text-yellow-700 dark:text-yellow-300",
-    };
-  }
-
   // Helper to extract week label and topic from module title (e.g. "Week 3: UI UX")
   function parseModuleTitle(moduleTitle: string): {
     weekLabel: string;
@@ -888,10 +952,12 @@ export function HomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {leaderboard.map((item) => {
+              const displayTrackName =
+                TRACK_ID_TO_NAME[item.track_id] || item.track_name;
               const topTrainee = item.trainees[0];
               if (!topTrainee) return null;
 
-              const trackTheme = getTrackTheme(item.track_name);
+              const trackTheme = getTrackTheme(displayTrackName);
               const { topic } = parseModuleTitle(item.module_title);
 
               return (
@@ -994,7 +1060,7 @@ export function HomePage() {
                               trackTheme.badge
                             )}
                           >
-                            {item.track_name}
+                            {displayTrackName}
                           </Badge>
                           <h3
                             className={cn(
@@ -1064,6 +1130,7 @@ export function HomePage() {
               canEdit={canEditAnnouncements}
               currentUserId={user?.id}
               isStaffUser={isStaffUser}
+              trackLabel={getTrackLabelForId(announcement.track)}
             />
           ))}
         </div>

@@ -230,7 +230,10 @@
       "noContent": "لا توجد إعلانات أو استطلاعات متاحة",
       "loadError": "فشل تحميل المحتوى",
       "pollVoted": "تم إرسال التصويت!",
-      "pollVoteError": "فشل إرسال التصويت"
+      "pollVoteError": "فشل إرسال التصويت",
+      "global": "عام",
+      "track": "المسار",
+      "trackUnspecified": "مسار غير محدد"
     },
     "login": {
       "title": "تسجيل الدخول",
