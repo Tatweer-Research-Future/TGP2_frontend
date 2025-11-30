@@ -25,6 +25,7 @@ export type PageRoute =
   | "/modules/:id/exam/results"
   | "/modules/:id/exam/take"
   | "/modules/:moduleId/pre-post-exams/view" // Pre/Post Exam view (module-scoped)
+  | "/modules/:moduleId/pre-post-exams/results"; // Pre/Post Exam results (module-scoped)
   ; // Pre/Post Exams routes are module-scoped
 
 export type GroupPermissions = {
@@ -64,6 +65,7 @@ export const GROUP_PERMISSIONS: Record<number, GroupPermissions> = {
       "/modules/:id/exam/edit",
       "/modules/:id/exam/results",
       "/modules/:moduleId/pre-post-exams/view",
+      "/modules/:moduleId/pre-post-exams/results",
     ],
     homePage: "/forms",
     groupName: "INSTRUCTOR/DATA",
@@ -181,6 +183,8 @@ export function getUserPermissionsFromGroups(
         "/modules/session/:id/edit",
         "/modules/:id/exam/create",
         "/modules/:id/exam/results",
+        "/modules/:moduleId/pre-post-exams/view",
+        "/modules/:moduleId/pre-post-exams/results",
       ],
       homePage: "/forms", // Default to forms as home for instructor
       groupName: "INSTRUCTOR + ATTENDANCE_TRACKER",
@@ -324,6 +328,7 @@ export function getNavigationItems(
     "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:moduleId/pre-post-exams/results": { title: "navigation.exam" }, // Not shown in nav
   };
 
   // Build allowed pages: include group permissions + trainee-monitoring if staff
@@ -383,6 +388,7 @@ export function getNavigationItemsFromGroups(
     "/modules/:id/exam/results": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:id/exam/take": { title: "navigation.exam" }, // Not shown in nav
     "/modules/:moduleId/pre-post-exams/view": { title: "navigation.exam" }, // Not shown in nav
+    "/modules/:moduleId/pre-post-exams/results": { title: "navigation.exam" }, // Not shown in nav
   };
 
   // Build allowed pages: include group permissions + trainee-monitoring if staff
