@@ -2040,6 +2040,8 @@ export type TraineeStatsModule = {
   post_score_max: number;
   improvement: number;
   improvement_percentage: number;
+  assigned_order: number | null;
+  order_note: string | null;
 };
 
 export type TraineeStatsCurrentWeek = {

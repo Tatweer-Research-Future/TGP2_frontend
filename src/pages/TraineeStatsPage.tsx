@@ -36,67 +36,109 @@ import {
   IconMail,
   IconBrandGithub,
   IconBrandLinkedin,
+  IconNote,
 } from "@tabler/icons-react";
 import type { Icon as TablerIcon } from "@tabler/icons-react";
 
 type StatCardProps = {
   title: string;
   value: string;
-  helper?: string;
+  subValue?: string;
   icon: TablerIcon;
   accent?: "pink" | "blue" | "green" | "amber";
+  progress?: number;
 };
 
 const accentMap: Record<
   NonNullable<StatCardProps["accent"]>,
-  { bg: string; icon: string; border: string }
+  { bg: string; icon: string; border: string; glow: string; progressBg: string; progressFill: string }
 > = {
   pink: {
-    bg: "from-pink-500/20 to-purple-500/10",
+    bg: "from-pink-500/20 to-fuchsia-500/10",
     icon: "text-pink-500",
-    border: "border-pink-200/60 dark:border-pink-500/30",
+    border: "border-pink-300/40 dark:border-pink-500/30",
+    glow: "group-hover:shadow-pink-500/20",
+    progressBg: "bg-pink-500/10",
+    progressFill: "bg-gradient-to-r from-pink-500 to-fuchsia-500",
   },
   blue: {
     bg: "from-sky-500/20 to-blue-500/10",
     icon: "text-sky-500",
-    border: "border-sky-200/60 dark:border-sky-500/30",
+    border: "border-sky-300/40 dark:border-sky-500/30",
+    glow: "group-hover:shadow-sky-500/20",
+    progressBg: "bg-sky-500/10",
+    progressFill: "bg-gradient-to-r from-sky-500 to-blue-500",
   },
   green: {
-    bg: "from-emerald-500/20 to-lime-500/10",
+    bg: "from-emerald-500/20 to-teal-500/10",
     icon: "text-emerald-500",
-    border: "border-emerald-200/60 dark:border-emerald-500/30",
+    border: "border-emerald-300/40 dark:border-emerald-500/30",
+    glow: "group-hover:shadow-emerald-500/20",
+    progressBg: "bg-emerald-500/10",
+    progressFill: "bg-gradient-to-r from-emerald-500 to-teal-500",
   },
   amber: {
     bg: "from-amber-500/20 to-orange-500/10",
     icon: "text-amber-500",
-    border: "border-amber-200/60 dark:border-amber-500/30",
+    border: "border-amber-300/40 dark:border-amber-500/30",
+    glow: "group-hover:shadow-amber-500/20",
+    progressBg: "bg-amber-500/10",
+    progressFill: "bg-gradient-to-r from-amber-500 to-orange-500",
   },
 };
 
-function StatCard({ title, value, helper, icon: Icon, accent = "blue" }: StatCardProps) {
+function StatCard({ title, value, subValue, icon: Icon, accent = "blue", progress }: StatCardProps) {
   const accentClasses = accentMap[accent];
   return (
-    <Card className={cn("border-dashed", accentClasses.border)}>
-      <CardHeader className="gap-3 pb-0">
-        <div
-          className={cn(
-            "inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-br",
-            accentClasses.bg,
-            accentClasses.icon
+    <Card 
+      className={cn(
+        "group relative overflow-hidden border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-default",
+        accentClasses.border,
+        accentClasses.glow
+      )}
+    >
+      {/* Background decoration */}
+      <div className={cn(
+        "absolute -right-6 -top-6 size-24 rounded-full bg-gradient-to-br opacity-50 blur-2xl transition-opacity duration-300 group-hover:opacity-80",
+        accentClasses.bg
+      )} />
+      
+      <CardHeader className="relative z-10 pb-3">
+        <div className="flex items-start justify-between">
+          <div
+            className={cn(
+              "inline-flex size-12 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3",
+              accentClasses.bg,
+              accentClasses.icon
+            )}
+          >
+            <Icon className="size-6" />
+          </div>
+          {subValue && (
+            <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+              {subValue}
+            </span>
           )}
-        >
-          <Icon className="size-5" />
         </div>
-        <CardTitle className="text-base font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        <CardDescription className="text-3xl font-semibold text-foreground">
-          {value}
-        </CardDescription>
+        
+        <div className="mt-4 space-y-1">
+          <CardDescription className="text-sm font-medium text-muted-foreground">
+            {title}
+          </CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight text-foreground">
+            {value}
+          </CardTitle>
+        </div>
       </CardHeader>
-      {helper && (
-        <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground">{helper}</p>
+      
+      {progress !== undefined && (
+        <CardContent className="relative z-10 pt-0 pb-4">
+          <div className={cn("h-1.5 w-full rounded-full overflow-hidden", accentClasses.progressBg)}>
+            <div 
+              className={cn("h-full rounded-full transition-all duration-500 ease-out", accentClasses.progressFill)}
+              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+            />
+          </div>
         </CardContent>
       )}
     </Card>
@@ -303,73 +345,41 @@ export function TraineeStatsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title={t("pages.traineeStats.preScore", { defaultValue: "Total PRE Score" })}
-          value={
-            totalPreMax
-              ? `${stats.pre_score_sum || 0}/${totalPreMax}`
-              : `${stats.pre_score_sum || 0}`
-          }
-          helper={
-            totalPreMax
-              ? t("pages.traineeStats.preHelper", {
-                  defaultValue: "Before module assessments",
-                })
-              : undefined
-          }
+          title={t("pages.traineeStats.preScore", { defaultValue: "PRE Score" })}
+          value={`${stats.pre_score_sum || 0}`}
+          subValue={totalPreMax ? `/ ${totalPreMax}` : undefined}
           icon={IconGauge}
           accent="amber"
+          progress={totalPreMax ? ((stats.pre_score_sum || 0) / totalPreMax) * 100 : undefined}
         />
         <StatCard
-          title={t("pages.traineeStats.postScore", { defaultValue: "Total POST Score" })}
-          value={
-            stats.total_post_score
-              ? `${stats.post_score_sum || 0}/${stats.total_post_score}`
-              : `${stats.post_score_sum || 0}`
-          }
-          helper={
-            stats.total_post_score
-              ? t("pages.traineeStats.postScoreOutOf", {
-                  defaultValue: "Out of {{max}}",
-                  max: stats.total_post_score || 0,
-                })
-              : undefined
-          }
+          title={t("pages.traineeStats.postScore", { defaultValue: "POST Score" })}
+          value={`${stats.post_score_sum || 0}`}
+          subValue={stats.total_post_score ? `/ ${stats.total_post_score}` : undefined}
           icon={IconChartBar}
           accent="blue"
+          progress={stats.total_post_score ? ((stats.post_score_sum || 0) / stats.total_post_score) * 100 : undefined}
         />
         <StatCard
-          title={t("pages.traineeStats.improvement", { defaultValue: "Overall Improvement" })}
+          title={t("pages.traineeStats.improvement", { defaultValue: "Improvement" })}
           value={
             overallImprovementPercent
               ? `${overallImprovementPercent > 0 ? "+" : ""}${overallImprovementPercent}%`
               : `+${stats.improvement_sum || 0}`
           }
-          helper={
-            overallImprovementPercent
-              ? t("pages.traineeStats.improvementHelperPercent", {
-                  defaultValue: "Vs total PRE score",
-                })
-              : t("pages.traineeStats.improvementHelper", {
-                  defaultValue: "Across all completed modules",
-                })
-          }
+          subValue={overallImprovementPercent ? "growth" : undefined}
           icon={IconArrowUpRight}
           accent="green"
         />
         <StatCard
           title={t("pages.traineeStats.moduleCompletion", {
-            defaultValue: "Modules Completed",
+            defaultValue: "Completed",
           })}
-          value={
-            moduleCompletion.total
-              ? `${moduleCompletion.completed}/${moduleCompletion.total}`
-              : `${moduleCompletion.completed}`
-          }
-          helper={t("pages.traineeStats.postCompletionHelper", {
-            defaultValue: "Finished modules vs total weeks",
-          })}
+          value={`${moduleCompletion.completed}`}
+          subValue={moduleCompletion.total ? `/ ${moduleCompletion.total} modules` : undefined}
           icon={IconCalendarStats}
           accent="pink"
+          progress={moduleCompletion.total ? (moduleCompletion.completed / moduleCompletion.total) * 100 : undefined}
         />
       </div>
 
@@ -396,9 +406,11 @@ export function TraineeStatsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("pages.traineeStats.week", { defaultValue: "Week" })}</TableHead>
+                  <TableHead className="text-center">{t("pages.traineeStats.ranking", { defaultValue: "Ranking" })}</TableHead>
                   <TableHead>{t("pages.traineeStats.preScore", { defaultValue: "PRE Score" })}</TableHead>
                   <TableHead>{t("pages.traineeStats.postScore", { defaultValue: "POST Score" })}</TableHead>
                   <TableHead>{t("pages.traineeStats.improvement", { defaultValue: "Improvement" })}</TableHead>
+                  <TableHead>{t("pages.traineeStats.orderNote", { defaultValue: "Note" })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,6 +473,7 @@ function InfoItem({
 }
 
 function ModuleRow({ module }: { module: TraineeStatsModule }) {
+  const { t } = useTranslation();
   const prePercent = module.pre_score_max
     ? Math.round((module.pre_score_total / module.pre_score_max) * 100)
     : 0;
@@ -479,6 +492,37 @@ function ModuleRow({ module }: { module: TraineeStatsModule }) {
             {module.track || `Week ${module.module_order}`}
           </span>
         </div>
+      </TableCell>
+      <TableCell className="text-center">
+        {module.assigned_order != null ? (
+          <div
+            className={cn(
+              "inline-flex items-center justify-center size-9 rounded-full border",
+              module.assigned_order === 1 &&
+                "bg-gradient-to-br from-yellow-400/30 to-amber-500/20 border-yellow-500/50 shadow-[0_0_12px_rgba(234,179,8,0.3)]",
+              module.assigned_order === 2 &&
+                "bg-gradient-to-br from-slate-300/40 to-gray-400/20 border-slate-400/50 shadow-[0_0_10px_rgba(148,163,184,0.3)]",
+              module.assigned_order === 3 &&
+                "bg-gradient-to-br from-orange-400/30 to-amber-600/20 border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)]",
+              module.assigned_order > 3 &&
+                "bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/30"
+            )}
+          >
+            <span
+              className={cn(
+                "text-sm font-bold",
+                module.assigned_order === 1 && "text-yellow-600 dark:text-yellow-400",
+                module.assigned_order === 2 && "text-slate-500 dark:text-slate-300",
+                module.assigned_order === 3 && "text-orange-600 dark:text-orange-400",
+                module.assigned_order > 3 && "text-indigo-600 dark:text-indigo-400"
+              )}
+            >
+              {module.assigned_order}
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </TableCell>
       <TableCell>
         <Progress value={prePercent} label={`${module.pre_score_total}/${module.pre_score_max}`} />
@@ -503,6 +547,20 @@ function ModuleRow({ module }: { module: TraineeStatsModule }) {
           )}
           {`${isPositive ? "+" : "-"}${Math.abs(module.improvement)} (${isPositive ? "+" : "-"}${Math.abs(percent)}%)`}
         </Badge>
+      </TableCell>
+      <TableCell>
+        {module.order_note ? (
+          <div className="flex items-start gap-1.5 max-w-48 p-2 rounded-md bg-amber-500/10 border border-amber-500/20">
+            <IconNote className="size-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <span className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+              {module.order_note}
+            </span>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground italic">
+            {t("pages.traineeStats.noNote", { defaultValue: "No note" })}
+          </span>
+        )}
       </TableCell>
     </TableRow>
   );

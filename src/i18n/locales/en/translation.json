@@ -351,7 +351,10 @@
       "workExperience": "Work Experience",
       "noWork": "No work experience shared yet.",
       "courses": "Courses Taken",
-      "noCourses": "No courses added yet."
+      "noCourses": "No courses added yet.",
+      "ranking": "Ranking",
+      "orderNote": "Note",
+      "noNote": "No note"
     }
   },
   "table": {
