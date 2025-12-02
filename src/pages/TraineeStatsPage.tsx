@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   getTraineeStats,
+  getCurrentUser,
   type TraineeStatsAdditionalInformation,
   type TraineeStatsModule,
   type TraineeStatsResponse,
@@ -29,7 +30,6 @@ import { cn } from "@/lib/utils";
 import {
   IconArrowDownRight,
   IconArrowUpRight,
-  IconCalendarStats,
   IconChartBar,
   IconGauge,
   IconPhone,
@@ -37,6 +37,7 @@ import {
   IconBrandGithub,
   IconBrandLinkedin,
   IconNote,
+  IconTrophy,
 } from "@tabler/icons-react";
 import type { Icon as TablerIcon } from "@tabler/icons-react";
 
@@ -45,7 +46,7 @@ type StatCardProps = {
   value: string;
   subValue?: string;
   icon: TablerIcon;
-  accent?: "pink" | "blue" | "green" | "amber";
+  accent?: "pink" | "blue" | "green" | "amber" | "gold" | "silver" | "bronze";
   progress?: number;
 };
 
@@ -85,7 +86,40 @@ const accentMap: Record<
     progressBg: "bg-amber-500/10",
     progressFill: "bg-gradient-to-r from-amber-500 to-orange-500",
   },
+  // Top 3 rank special colors
+  gold: {
+    bg: "from-yellow-400/30 to-amber-500/20",
+    icon: "text-yellow-500",
+    border: "border-yellow-400/50 dark:border-yellow-500/40",
+    glow: "group-hover:shadow-yellow-500/30",
+    progressBg: "bg-yellow-500/10",
+    progressFill: "bg-gradient-to-r from-yellow-400 to-amber-500",
+  },
+  silver: {
+    bg: "from-slate-300/40 to-gray-400/20",
+    icon: "text-slate-400",
+    border: "border-slate-400/50 dark:border-slate-400/40",
+    glow: "group-hover:shadow-slate-400/30",
+    progressBg: "bg-slate-400/10",
+    progressFill: "bg-gradient-to-r from-slate-300 to-gray-400",
+  },
+  bronze: {
+    bg: "from-orange-400/30 to-amber-600/20",
+    icon: "text-orange-500",
+    border: "border-orange-400/50 dark:border-orange-500/40",
+    glow: "group-hover:shadow-orange-500/30",
+    progressBg: "bg-orange-500/10",
+    progressFill: "bg-gradient-to-r from-orange-400 to-amber-600",
+  },
 };
+
+// Helper to get accent color based on rank
+function getRankAccent(rank: number | null): StatCardProps["accent"] {
+  if (rank === 1) return "gold";
+  if (rank === 2) return "silver";
+  if (rank === 3) return "bronze";
+  return "pink";
+}
 
 function StatCard({ title, value, subValue, icon: Icon, accent = "blue", progress }: StatCardProps) {
   const accentClasses = accentMap[accent];
@@ -148,6 +182,7 @@ function StatCard({ title, value, subValue, icon: Icon, accent = "blue", progres
 export function TraineeStatsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<TraineeStatsResponse | null>(null);
+  const [totalRank, setTotalRank] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -157,9 +192,13 @@ export function TraineeStatsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await getTraineeStats();
+        const [response, currentUser] = await Promise.all([
+          getTraineeStats(),
+          getCurrentUser(),
+        ]);
         if (!cancelled) {
           setStats(response);
+          setTotalRank(currentUser.rank ?? null);
         }
       } catch (err) {
         const message =
@@ -205,14 +244,6 @@ export function TraineeStatsPage() {
     return Math.round((stats.improvement_sum / stats.total_post_score) * 100);
   }, [stats]);
 
-  const moduleCompletion = useMemo(() => {
-    if (!stats?.modules) return { completed: 0, total: 0 };
-    const total = stats.modules.length;
-    const completed = stats.modules.filter(
-      (module) => module.post_score_total > 0 || module.post_score_max === 0
-    ).length;
-    return { completed, total };
-  }, [stats]);
 
   const formatDate = (value?: string | null) => {
     if (!value) return t("pages.traineeStats.notAvailable", { defaultValue: "N/A" });
@@ -372,14 +403,13 @@ export function TraineeStatsPage() {
           accent="green"
         />
         <StatCard
-          title={t("pages.traineeStats.moduleCompletion", {
-            defaultValue: "Completed",
+          title={t("pages.traineeStats.totalRank", {
+            defaultValue: "Total Rank",
           })}
-          value={`${moduleCompletion.completed}`}
-          subValue={moduleCompletion.total ? `/ ${moduleCompletion.total} modules` : undefined}
-          icon={IconCalendarStats}
-          accent="pink"
-          progress={moduleCompletion.total ? (moduleCompletion.completed / moduleCompletion.total) * 100 : undefined}
+          value={totalRank != null ? `#${totalRank}` : "—"}
+          subValue={totalRank != null ? "overall" : undefined}
+          icon={IconTrophy}
+          accent={getRankAccent(totalRank)}
         />
       </div>
 

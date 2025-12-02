@@ -354,7 +354,8 @@
       "noCourses": "No courses added yet.",
       "ranking": "Ranking",
       "orderNote": "Note",
-      "noNote": "No note"
+      "noNote": "No note",
+      "totalRank": "Total Rank"
     }
   },
   "table": {

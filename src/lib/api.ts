@@ -246,6 +246,7 @@ export type CurrentUserResponse = {
   groups: string[];
   group_id?: number; // Add group_id field for permission system
   avatar?: string | null;
+  rank?: number | null; // Overall trainee rank (sum of all weeks)
 };
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
