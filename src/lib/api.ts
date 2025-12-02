@@ -397,6 +397,7 @@ export type TraineePerformanceResponse = {
       improvement_sum?: number;
       total_post_score?: number;
       order_sum: number;
+      rank?: number; // precomputed rank within the track (1 = best)
       total_break_time?: number | string | null;
       total_break_hours?: number | string | null;
       break_hours?: number | string | null;

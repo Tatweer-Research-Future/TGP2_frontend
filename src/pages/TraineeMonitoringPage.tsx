@@ -69,6 +69,7 @@ type Trainee = {
   improvement_sum?: number;
   total_post_score?: number;
   order_sum: number;
+  rank?: number; // precomputed rank from trainee-performance API (1 = best)
   total_break_time?: number | string | null;
   total_break_hours?: number | string | null;
   break_hours?: number | string | null;
@@ -389,53 +390,6 @@ export function TraineeMonitoringPage() {
     fetchTraineePerformance,
   ]);
 
-  const trackRankings = useMemo(() => {
-    const rankingMap = new Map<number, number>();
-    const trackGroups = trainees.reduce<Record<string, Trainee[]>>(
-      (acc, trainee) => {
-        if (!trainee.track) {
-          return acc;
-        }
-        if (!acc[trainee.track]) {
-          acc[trainee.track] = [];
-        }
-        acc[trainee.track].push(trainee);
-        return acc;
-      },
-      {}
-    );
-
-    const getOrderValue = (trainee: Trainee) =>
-      trainee.module_orders.length > 0
-        ? trainee.order_sum
-        : Number.MAX_SAFE_INTEGER;
-
-    Object.values(trackGroups).forEach((group) => {
-      group
-        .slice()
-        .sort((a, b) => {
-          const orderDiff = getOrderValue(a) - getOrderValue(b);
-          if (orderDiff !== 0) {
-            return orderDiff;
-          }
-          if (b.post_score_sum !== a.post_score_sum) {
-            return b.post_score_sum - a.post_score_sum;
-          }
-          if (b.attendance_days !== a.attendance_days) {
-            return b.attendance_days - a.attendance_days;
-          }
-          const nameA = a.full_name || a.name || "";
-          const nameB = b.full_name || b.name || "";
-          return nameA.localeCompare(nameB);
-        })
-        .forEach((trainee, index) => {
-          rankingMap.set(trainee.user_id, index + 1);
-        });
-    });
-
-    return rankingMap;
-  }, [trainees]);
-
   const handleSort = (key: SortKey) => {
     setSortConfig((prev) => {
       if (prev.key === key) {
@@ -497,7 +451,7 @@ export function TraineeMonitoringPage() {
     });
 
     const getRank = (trainee: Trainee) =>
-      trackRankings.get(trainee.user_id) ?? Number.MAX_SAFE_INTEGER;
+      trainee.rank ?? Number.MAX_SAFE_INTEGER;
 
     const getNameValue = (trainee: Trainee) =>
       (trainee.full_name || trainee.name || "").toLowerCase();
@@ -590,14 +544,7 @@ export function TraineeMonitoringPage() {
       }
       return getNameValue(a).localeCompare(getNameValue(b));
     });
-  }, [
-    trainees,
-    selectedTrack,
-    selectedWeek,
-    trackRankings,
-    sortConfig,
-    getBreakHoursNumeric,
-  ]);
+  }, [trainees, selectedTrack, selectedWeek, sortConfig, getBreakHoursNumeric]);
 
   // Copy all visible names (all filtered trainees) to clipboard
   const handleCopyVisibleNames = async () => {
@@ -862,7 +809,7 @@ export function TraineeMonitoringPage() {
                     (sum, score) => sum + score.score_max,
                     0
                   );
-                  const rank = trackRankings.get(trainee.user_id);
+                  const rank = trainee.rank ?? null;
                   const breakHoursValue =
                     trainee.total_break_time ??
                     trainee.total_break_hours ??
