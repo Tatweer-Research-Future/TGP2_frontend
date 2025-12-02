@@ -1164,6 +1164,97 @@ if you read the cv from the link provided with the data add a short section name
         defaultCardCollapsed={true}
       />
 
+      {/* Pinned User Info Card - Always visible above tabs */}
+      <Card className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-border/50 shadow-sm">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* Left: Avatar + Basic Info */}
+            <div className="flex items-center gap-4">
+              <ConsistentAvatar
+                user={{
+                  name: user.fullName,
+                  email: user.email,
+                  avatar: user.avatar,
+                }}
+                className="size-14 text-lg ring-2 ring-primary/20"
+              />
+              <div className="space-y-1">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl font-bold text-foreground">
+                    {user.fullName}
+                  </h1>
+                  {user.fullNameArabic && (
+                    <span className="text-lg text-muted-foreground" dir="rtl">
+                      {user.fullNameArabic}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {user.qualification || ""}
+                  {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Center: Quick Contact */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <IconMail className="size-4" />
+                <span className="hidden sm:inline">{user.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <IconPhone className="size-4" />
+                <span>{user.phoneNo || "-"}</span>
+              </div>
+              {(user.socials.github || user.socials.linkedin) && (
+                <div className="flex items-center gap-2">
+                  {user.socials.github && (
+                    <a
+                      href={user.socials.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="GitHub"
+                    >
+                      <FaGithub className="size-4" />
+                    </a>
+                  )}
+                  {user.socials.linkedin && (
+                    <a
+                      href={user.socials.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="LinkedIn"
+                    >
+                      <FaLinkedin className="size-4" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Quick Actions */}
+            <div className="flex items-center gap-2">
+              {user.resumeUrl ? (
+                <Button
+                  onClick={() => window.open(user.resumeUrl!, "_blank")}
+                  size="sm"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  <IconExternalLink className="size-4 mr-1.5" />
+                  Resume
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  No Resume
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Tabs */}
       <Tabs defaultValue="performance" className="w-full gap-4">
         <TabsList className="grid w-full grid-cols-4 mb-2">
@@ -1175,112 +1266,45 @@ if you read the cv from the link provided with the data add a short section name
 
         {/* Information Tab */}
         <TabsContent value="information" className="space-y-6">
-          {/* Header Section - Reverted layout */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-6">
-                <ConsistentAvatar
-                  user={{
-                    name: user.fullName,
-                    email: user.email,
-                    avatar: user.avatar,
-                  }}
-                  className="size-24 text-2xl"
-                />
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between flex-wrap">
-                        <h1 className="text-3xl font-bold text-foreground">
-                          {user.fullName}
-                        </h1>
-                        {user.fullNameArabic && (
-                          <h2 className="text-2xl font-semibold text-muted-foreground" dir="rtl">
-                            {user.fullNameArabic}
-                          </h2>
-                        )}
+          {/* Info cards grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch">
+            {/* Personal Details Card */}
+            <Card className="flex flex-col gap-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <IconCalendar className="size-5" />
+                  <span>Personal Details</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 flex-1">
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Birthdate</span>
+                    <span className="font-medium">
+                      {user.birthdate
+                        ? new Date(user.birthdate).toLocaleDateString()
+                        : "-"}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">City</span>
+                    <span className="font-medium">{user.city || "-"}</span>
+                  </div>
+                  {user.institution && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Institution</span>
+                        <span className="font-medium text-right max-w-[140px] truncate" title={user.institution}>
+                          {user.institution}
+                        </span>
                       </div>
-                    </div>
-                    <p className="text-lg text-muted-foreground">
-                      {user.qualification || ""}
-                      {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <IconMail className="size-4 text-muted-foreground" />
-                      <span>{user.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconPhone className="size-4 text-muted-foreground" />
-                      <span>{user.phoneNo || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {user.resumeUrl ? (
-                        <Button
-                          onClick={() => window.open(user.resumeUrl!, "_blank")}
-                          size="sm"
-                          className="h-auto py-1 px-2 bg-[#1EDE9E] text-white hover:bg-[#19c98c]"
-                        >
-                          <IconExternalLink className="size-4" />
-                          Open Resume
-                        </Button>
-                      ) : (
-                        <Button size="sm" className="h-auto py-1 px-2" disabled>
-                          No Resume
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconCalendar className="size-4 text-muted-foreground" />
-                      <span>
-                        {user.birthdate
-                          ? new Date(user.birthdate).toLocaleDateString()
-                          : "-"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconMapPin className="size-4 text-muted-foreground" />
-                      <span>{user.city || "-"}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {user.socials.github && (
-                        <a
-                          href={user.socials.github}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
-                          title="GitHub"
-                        >
-                          <FaGithub className="size-4" />
-                          <span className="text-sm">GitHub</span>
-                        </a>
-                      )}
-                      {user.socials.linkedin && (
-                        <a
-                          href={user.socials.linkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
-                          title="LinkedIn"
-                        >
-                          <FaLinkedin className="size-4" />
-                          <span className="text-sm">LinkedIn</span>
-                        </a>
-                      )}
-                      {/* {!user.socials.github && !user.socials.linkedin && (
-                        <span className="text-muted-foreground">-</span>
-                      )} */}
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* We add 'items-stretch' to the grid to make all cards in a row the same height */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              </CardContent>
+            </Card>
             {/* Card 1: Academic Performance (GPA) */}
             {/* IMPROVED: Added flex layout to the card for better vertical alignment and spacing. */}
             <Card className="flex flex-col gap-2">
@@ -1612,100 +1636,51 @@ if you read the cv from the link provided with the data add a short section name
         {/* Interview Tab */}
         <TabsContent
           value="interview"
-          className={`space-y-8 relative`}
+          className={`space-y-6 relative`}
         >
-          {/* Removed global overlay; we will disable per-form instead */}
-
-          {/* Interview Header - Professional Candidate Banner */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <ConsistentAvatar
-                    user={{
-                      name: user.fullName,
-                      email: user.email,
-                      avatar: user.avatar,
-                    }}
-                    className="size-20 text-xl"
-                  />
-                  <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2">
-                    <IconClipboardList className="size-4" />
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between flex-wrap">
-                        <h1 className="text-3xl font-bold text-foreground">
-                          {user.fullName}
-                        </h1>
-                        {user.fullNameArabic && (
-                          <h2 className="text-xl font-semibold text-muted-foreground" dir="rtl">
-                            {user.fullNameArabic}
-                          </h2>
+          {/* Interview Context Bar */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                  {user.presentationTopic && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <IconPresentation className="size-4 text-primary" />
+                      <span className="text-muted-foreground">Topic:</span>
+                      <span className="font-medium truncate max-w-md" title={user.presentationTopic}>
+                        {user.presentationTopic}
+                      </span>
+                    </div>
+                  )}
+                  {user.fieldsChosen.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <IconTags className="size-4 text-primary" />
+                      <div className="flex flex-wrap gap-1">
+                        {user.fieldsChosen.slice(0, 3).map((field, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {field}
+                          </Badge>
+                        ))}
+                        {user.fieldsChosen.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{user.fieldsChosen.length - 3}
+                          </Badge>
                         )}
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-sm">
-                      Interview in Progress
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <IconSchool className="size-4" />
-                      <span>
-                        {user.qualification || ""}
-                        {user.fieldOfStudy ? ` in ${user.fieldOfStudy}` : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <IconMail className="size-4" />
-                      <span>{user.email}</span>
-                    </div>
-                    {user.presentationTopic && (
-                      <div className="flex items-center gap-2">
-                        <IconPresentation className="size-4" />
-                        <span className="truncate max-w-[32rem]" title={user.presentationTopic}>
-                          {user.presentationTopic}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Fields of Interest:
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {user.fieldsChosen.slice(0, 2).map((field, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {field}
-                        </Badge>
-                      ))}
-                      {user.fieldsChosen.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{user.fieldsChosen.length - 2} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                <div className="text-right space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    Total Points
-                  </div>
-                  <div className="text-2xl font-bold text-primary">
-                    {form?.totalPoints ?? 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">Available</div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="secondary" className="text-sm">
+                    <IconClipboardList className="size-3.5 mr-1.5" />
+                    Interview Mode
+                  </Badge>
+                  {form && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-background border">
+                      <span className="text-xs text-muted-foreground">Points:</span>
+                      <span className="text-lg font-bold text-primary">{form.totalPoints}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
