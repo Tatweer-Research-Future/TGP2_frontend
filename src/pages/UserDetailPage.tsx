@@ -1291,13 +1291,13 @@ if you read the cv from the link provided with the data add a short section name
                     <span className="text-muted-foreground">City</span>
                     <span className="font-medium">{user.city || "-"}</span>
                   </div>
-                  {user.institution && (
+                  {user.institutionName && (
                     <>
                       <Separator />
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Institution</span>
-                        <span className="font-medium text-right max-w-[140px] truncate" title={user.institution}>
-                          {user.institution}
+                        <span className="font-medium text-right max-w-[140px] truncate" title={user.institutionName}>
+                          {user.institutionName}
                         </span>
                       </div>
                     </>
