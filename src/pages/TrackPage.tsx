@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   IconChevronRight,
   IconChevronLeft,
@@ -8,6 +16,8 @@ import {
   IconCode,
   IconNetwork,
   IconLoader2,
+  IconDotsVertical,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { RiBardFill } from "react-icons/ri";
 import { Loader } from "@/components/ui/loader";
@@ -35,13 +45,15 @@ export function TrackPage() {
   const [moduleErrors, setModuleErrors] = useState<Record<number, string>>({});
   const moduleTitleInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Map track names to a visual theme (gradient + background icon)
+  // Map track names to a visual theme (gradient + background icon + accent colors)
   function getTrackTheme(trackName?: string) {
     const name = (trackName || "").toLowerCase();
     if (name.includes("ai") || name.includes("data")) {
       return {
         gradient: "bg-gradient-to-br from-[#34d399] via-[#06b6d4] to-[#3b82f6]",
         icon: "star4" as const,
+        badgeColor: "rgb(10,184,208)",
+        badgeBg: "rgba(10,184,208,0.15)",
       };
     }
     if (
@@ -52,12 +64,18 @@ export function TrackPage() {
       return {
         gradient: "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#d946ef]",
         icon: "code" as const,
+        // Software track badge colors
+        badgeColor: "#905bf6",
+        badgeBg: "rgba(144,91,246,0.15)",
       };
     }
     if (name.includes("network") || name.includes("communication")) {
       return {
         gradient: "bg-gradient-to-br from-[#0ea5e9] via-[#22d3ee] to-[#34d399]",
         icon: "network" as const,
+        // Network track badge colors
+        badgeColor: "#0ea5e9",
+        badgeBg: "rgba(14,165,233,0.15)",
       };
     }
     // Fallback theme
@@ -65,6 +83,8 @@ export function TrackPage() {
       gradient:
         "bg-gradient-to-br from-primary/20 via-primary/10 to-background",
       icon: "code" as const,
+      badgeColor: "rgb(59,130,246)",
+      badgeBg: "rgba(59,130,246,0.15)",
     };
   }
 
@@ -231,12 +251,14 @@ export function TrackPage() {
     return groupId === 5 || hasInstructor;
   }, [groupId, groups]);
 
+  const trackTheme = getTrackTheme(trackTitle);
+
   // removed unused toggleWeek helper; we toggle inline on the header button
 
   return (
     <div className="px-4 lg:px-6">
       {(() => {
-        const theme = getTrackTheme(trackTitle);
+        const theme = trackTheme;
         return (
           <div
             className={
@@ -299,10 +321,22 @@ export function TrackPage() {
               const moduleError = moduleErrors[mod.id];
               const isEditingModule =
                 isInstructor && editingModuleId === mod.id;
+
+              const hasTest = !!mod.test;
+              const traineeCanTakeExam =
+                !isInstructor &&
+                hasTest &&
+                (mod.test!.is_active_pre || mod.test!.is_active_post);
+              const traineeExamLabel = traineeCanTakeExam
+                ? mod.test!.is_active_pre
+                  ? "Take Pre-Exam"
+                  : "Take Post-Exam"
+                : null;
+
               return (
                 <Card
                   key={mod.id}
-                  className="overflow-hidden gap-0 border-none shadow-none py-2"
+                  className="overflow-hidden gap-0 border border-border/60 bg-card shadow-sm rounded-xl py-2"
                 >
                   <CardHeader className="p-0">
                     {isEditingModule ? (
@@ -350,65 +384,205 @@ export function TrackPage() {
                         )}
                       </form>
                     ) : (
-                      <div className="group flex w-full items-center rounded-md bg-[#6d5cff]/10 transition-colors hover:bg-[#6d5cff]/15 focus-within:bg-[#6d5cff]/15">
-                        <button
-                          type="button"
-                          aria-expanded={isOpen}
-                          onClick={() =>
-                            setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
-                          }
-                          className="flex flex-1 items-center px-4 py-3 text-left outline-none focus-visible:outline-none focus-visible:ring-0"
-                        >
-                          <div className="flex flex-1 items-center">
-                            {isRTL ? (
-                              <IconChevronLeft
-                                className={`me-2 size-4 text-[#6d5cff] transition-transform ${
-                                  isOpen ? "-rotate-90" : "rotate-0"
-                                }`}
-                              />
-                            ) : (
-                              <IconChevronRight
-                                className={`me-2 size-4 text-[#6d5cff] transition-transform ${
-                                  isOpen ? "rotate-90" : "rotate-0"
-                                }`}
-                              />
-                            )}
-                            <span className="mx-2 h-5 w-px bg-[#6d5cff]/30" />
-                            <CardTitle className="m-0 p-0 text-base font-medium">
-                              {mod.title}
-                            </CardTitle>
-                          </div>
-                        </button>
-                        {isInstructor && (
-                          <div className="ms-auto flex items-center gap-2 px-4 py-3">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                navigate(`/modules/${mod.id}/ranking`, {
-                                  state: {
-                                    weekOrder: mod.order,
-                                    moduleTitle: mod.title,
-                                  },
-                                });
+                      <div className="group w-full rounded-xl ">
+                        {/* Top row: badge + week title + inline edit control */}
+                        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              variant="outline"
+                              style={{
+                                backgroundColor: trackTheme.badgeBg,
+                                color: trackTheme.badgeColor,
                               }}
+                              className="size-8 rounded-full border-border bg-muted/60 text-xs font-semibold text-foreground flex items-center justify-center"
                             >
-                              Rank Trainees
-                            </Button>
+                              {mod.order}
+                            </Badge>
+                            <div className="flex flex-col">
+                              <CardTitle className="m-0 p-0 text-base font-semibold">
+                                {mod.title}
+                              </CardTitle>
+                            </div>
+                          </div>
+                          {isInstructor && (
                             <button
                               type="button"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 handleStartEditingModule(mod);
                               }}
-                              className="text-[#6d5cff] opacity-0 transition-opacity duration-150 group-hover:opacity-80 focus-visible:opacity-100"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                               aria-label={`Edit ${mod.title}`}
                             >
                               <IconPencil className="size-4" />
+                              <span className="hidden sm:inline">Edit</span>
                             </button>
+                          )}
+                        </div>
+
+                        <div className="border-t border-border/60" />
+
+                        {/* Second row: view details toggle + role-specific actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                          <button
+                            type="button"
+                            aria-expanded={isOpen}
+                            onClick={() =>
+                              setOpenWeeks((p) => ({ ...p, [mod.id]: !isOpen }))
+                            }
+                            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            <span>View week details</span>
+                            {isRTL ? (
+                              <IconChevronDown
+                                className={`size-4 transition-transform ${
+                                  isOpen ? "rotate-180" : "rotate-0"
+                                }`}
+                              />
+                            ) : (
+                              <IconChevronDown
+                                className={`size-4 transition-transform ${
+                                  isOpen ? "rotate-180" : "rotate-0"
+                                }`}
+                              />
+                            )}
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            {isInstructor ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate(`/modules/${mod.id}/ranking`, {
+                                      state: {
+                                        weekOrder: mod.order,
+                                        moduleTitle: mod.title,
+                                      },
+                                    });
+                                  }}
+                                >
+                                  Rank trainees
+                                </Button>
+                                <ButtonGroup
+                                  style={{ border: "none", boxShadow: "none" }}
+                                >
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      if (hasTest) {
+                                        navigate(
+                                          `/modules/${mod.id}/pre-post-exams/view`,
+                                          {
+                                            state: { testId: mod.test?.id },
+                                          }
+                                        );
+                                      } else {
+                                        navigate(
+                                          `/modules/${mod.id}/pre-post-exams/new`
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    Pre/Post Exam
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="px-2 rounded-tr-md rounded-br-md rounded-tl-none rounded-bl-none border-l-0"
+                                        onClick={(event) =>
+                                          event.stopPropagation()
+                                        }
+                                      >
+                                        <IconDotsVertical className="size-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onSelect={(event) => {
+                                          event.preventDefault();
+                                          navigate(
+                                            `/modules/${mod.id}/pre-post-exams/new`
+                                          );
+                                        }}
+                                      >
+                                        Create exam
+                                      </DropdownMenuItem>
+                                      {hasTest && (
+                                        <>
+                                          <DropdownMenuItem
+                                            onSelect={(event) => {
+                                              event.preventDefault();
+                                              navigate(
+                                                `/modules/${mod.id}/pre-post-exams/view`,
+                                                {
+                                                  state: {
+                                                    testId: mod.test?.id,
+                                                  },
+                                                }
+                                              );
+                                            }}
+                                          >
+                                            View exam
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onSelect={(event) => {
+                                              event.preventDefault();
+                                              navigate(
+                                                `/modules/${mod.id}/pre-post-exams/results`,
+                                                {
+                                                  state: {
+                                                    testId: mod.test?.id,
+                                                  },
+                                                }
+                                              );
+                                            }}
+                                          >
+                                            View results
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onSelect={(event) => {
+                                              event.preventDefault();
+                                              navigate(
+                                                `/modules/${mod.id}/exam/edit`
+                                              );
+                                            }}
+                                          >
+                                            Edit exam
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </ButtonGroup>
+                              </>
+                            ) : (
+                              traineeCanTakeExam &&
+                              traineeExamLabel && (
+                                <Button
+                                  size="sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const kind = mod.test!.is_active_pre
+                                      ? "PRE"
+                                      : "POST";
+                                    navigate(`/modules/${mod.id}/exam/take`, {
+                                      state: { kind },
+                                    });
+                                  }}
+                                >
+                                  {traineeExamLabel}
+                                </Button>
+                              )
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     )}
                     {!isEditingModule && moduleError && (
@@ -463,93 +637,6 @@ export function TrackPage() {
                                     </td>
                                   </tr>
                                 ))}
-                              {isInstructor && !mod.test && (
-                                <tr className="border-b-0">
-                                  <td
-                                    colSpan={3}
-                                    className="px-4 py-3 text-right"
-                                  >
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(
-                                          `/modules/${mod.id}/pre-post-exams/new`
-                                        );
-                                      }}
-                                    >
-                                      Create Exam
-                                    </Button>
-                                  </td>
-                                </tr>
-                              )}
-                              {isInstructor && mod.test && (
-                                <tr className="border-b-0">
-                                  <td
-                                    colSpan={3}
-                                    className="px-4 py-3 text-right"
-                                  >
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="secondary"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigate(
-                                            `/modules/${mod.id}/pre-post-exams/view`,
-                                            { state: { testId: mod.test?.id } }
-                                          );
-                                        }}
-                                      >
-                                        View Exam
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigate(
-                                            `/modules/${mod.id}/pre-post-exams/results`,
-                                            { state: { testId: mod.test?.id } }
-                                          );
-                                        }}
-                                      >
-                                        View Results
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                              {!isInstructor &&
-                                mod.test &&
-                                (mod.test.is_active_pre ||
-                                  mod.test.is_active_post) && (
-                                  <tr className="border-b-0">
-                                    <td
-                                      colSpan={3}
-                                      className="px-4 py-3 text-right"
-                                    >
-                                      <Button
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const kind = mod.test!.is_active_pre
-                                            ? "PRE"
-                                            : "POST";
-                                          navigate(
-                                            `/modules/${mod.id}/exam/take`,
-                                            {
-                                              state: { kind },
-                                            }
-                                          );
-                                        }}
-                                      >
-                                        {mod.test.is_active_pre
-                                          ? "Take Pre-Exam"
-                                          : "Take Post-Exam"}
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                )}
                             </tbody>
                           </table>
                         </div>
