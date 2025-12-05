@@ -809,7 +809,7 @@ export function TraineeMonitoringPage() {
                     (sum, score) => sum + score.score_max,
                     0
                   );
-                  const rank = trainee.rank ?? null;
+                  const rank = trainee.rank ?? undefined;
                   const breakHoursValue =
                     trainee.total_break_time ??
                     trainee.total_break_hours ??
